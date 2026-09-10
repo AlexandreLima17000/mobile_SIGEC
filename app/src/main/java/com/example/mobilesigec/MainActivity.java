@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
 
@@ -17,6 +18,8 @@ import androidx.navigation.ui.NavigationUI;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobilesigec.databinding.ActivityMainBinding;
+
+import java.sql.Connection;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -58,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         boolean result = super.onCreateOptionsMenu(menu);
@@ -68,6 +72,16 @@ public class MainActivity extends AppCompatActivity {
             // The navigation drawer already has the items including the items in the overflow menu
             // We only inflate the overflow menu if the navigation drawer isn't visible
             getMenuInflater().inflate(R.menu.overflow, menu);
+
+            Connection conexao = ConexaoMySQL.conectar();
+            if (conexao != null) {
+                Log.d("Conexão", "Conexão estabelecida com sucesso!");
+// Faça suas operações de banco de dados aqui
+                ConexaoMySQL.fecharConexao(conexao);
+            } else {
+                Log.d("Conexão", "Erro ao conectar ao banco de dados!");
+            }
+
         }
         return result;
     }
