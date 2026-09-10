@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="45dp"
+    android:height="45dp"
+    android:viewportWidth="45"
+    android:viewportHeight="45">
+
+    <!-- Laranja com 25% de opacidade (#40ED7B23) -->
+    <path
+        android:fillColor="#40ED7B23"
+        android:pathData="M0,0 L45,0 L45,45 Z" />
+</vector>
