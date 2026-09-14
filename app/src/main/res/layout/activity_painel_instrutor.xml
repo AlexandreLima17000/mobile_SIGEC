@@ -143,54 +143,71 @@
 
                         <ImageView
                             android:layout_width="96dp"
-                            android:layout_height="96dp"
+                            android:layout_height="125dp"
                             android:layout_marginEnd="14dp"
                             android:scaleType="fitCenter"
-                            android:src="@drawable/img_chef_profile"/>
+                            android:src="@drawable/img_chef_profile" />
                     </LinearLayout>
                 </FrameLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Seletor de Turma / Laboratório -->
-            <LinearLayout
+            <!-- Seletor de Turma / Laboratório (Estilo Imagem 1: Sombra + Borda Azul/Laranja) -->
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_spinner_outline"
-                android:orientation="horizontal"
-                android:padding="16dp"
                 android:layout_marginBottom="18dp"
-                android:gravity="center_vertical">
+                app:cardCornerRadius="10dp"
+                app:cardElevation="10dp"
+                android:outlineSpotShadowColor="#000000"
+                android:outlineAmbientShadowColor="#000000"
+                app:cardBackgroundColor="#FFFFFF">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:background="@drawable/bg_spinner_outline"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="16dp"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="TURMA / LABORATÓRIO"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Turma 2024.1.A - Padaria Lab 01"
-                        android:textColor="@color/primary"
-                        android:textSize="19sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="3dp"/>
+                        <!-- Rótulo Superior em Azul-Marinho / Negrito -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="TURMA / LABORATÓRIO"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.02" />
+
+                        <!-- Título Principal em Azul-Marinho / Negrito Forte -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Turma 2024.1.A - Padaria Lab 01"
+                            android:textColor="@color/primary"
+                            android:textSize="19sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="3dp"/>
+                    </LinearLayout>
+
+                    <!-- Ícone de Seta (Chevron) com traço encorpado em Azul-Marinho -->
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_chevron_down"
+                        app:tint="@color/primary" />
                 </LinearLayout>
-
-                <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:src="@drawable/ic_chevron_down"
-                    app:tint="@color/primary" />
-            </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- CARD CENTRAL: Receitas de Hoje -->
             <androidx.cardview.widget.CardView
@@ -198,24 +215,28 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="18dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="6dp"
+                app:cardElevation="12dp"
+                android:outlineSpotShadowColor="#000000"
+                android:outlineAmbientShadowColor="#000000"
                 app:cardBackgroundColor="@color/primary">
 
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <!-- Triângulo Laranja no Canto Superior Direito -->
+                    <!-- Triângulo Escuro no Canto Superior Direito -->
                     <ImageView
                         android:layout_width="45dp"
                         android:layout_height="45dp"
                         android:layout_gravity="top|end"
-                        android:src="@drawable/bg_card_corner_accent" />
+                        android:src="@drawable/bg_card_corner_accent"
+                        app:tint="#40000000"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:paddingBottom="10dp">
 
                         <!-- Topo do Card -->
                         <LinearLayout
@@ -254,8 +275,11 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp"
-                            android:background="#EAE6F8">
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_marginBottom="14dp"
+                            android:padding="10dp"
+                            android:background="#D1D9E6">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -272,7 +296,7 @@
                                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12:00" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
                                 </LinearLayout>
 
-                                <View android:layout_width="1dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
+                                <View android:layout_width="1.5dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
 
                                 <LinearLayout
                                     android:layout_width="0dp"
@@ -284,8 +308,8 @@
                                 </LinearLayout>
 
                                 <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
                                     android:src="@drawable/ic_check_circle"
                                     app:tint="#15803d" />
                             </LinearLayout>
@@ -301,17 +325,18 @@
                                 android:layout_marginTop="2dp"/>
                         </LinearLayout>
 
-                        <View android:layout_width="match_parent" android:layout_height="2dp" android:background="@color/primary"/>
-
                         <!-- ITEM 2: Em Andamento -->
                         <androidx.constraintlayout.widget.ConstraintLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="#FFFFFF">
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_marginBottom="14dp"
+                            android:background="#D1D9E6">
 
                             <View
                                 android:id="@+id/barralaranja"
-                                android:layout_width="7dp"
+                                android:layout_width="5dp"
                                 android:layout_height="0dp"
                                 android:background="@color/secondary_container"
                                 app:layout_constraintTop_toTopOf="parent"
@@ -331,10 +356,10 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:orientation="horizontal"
-                                    android:paddingTop="12dp"
-                                    android:paddingBottom="8dp"
-                                    android:paddingStart="10dp"
-                                    android:paddingEnd="12dp"
+                                    android:paddingTop="10dp"
+                                    android:paddingBottom="6dp"
+                                    android:paddingStart="8dp"
+                                    android:paddingEnd="10dp"
                                     android:gravity="center_vertical">
 
                                     <LinearLayout
@@ -346,7 +371,12 @@
                                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="17:30" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
                                     </LinearLayout>
 
-                                    <View android:layout_width="1dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
+                                    <View
+                                        android:layout_width="1.5dp"
+                                        android:layout_height="40dp"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_marginEnd="10dp"
+                                        android:background="@color/secondary_container" />
 
                                     <LinearLayout
                                         android:layout_width="0dp"
@@ -358,9 +388,9 @@
                                     </LinearLayout>
 
                                     <ImageView
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
-                                        android:src="@drawable/ic_schedule"
+                                        android:layout_width="32dp"
+                                        android:layout_height="32dp"
+                                        android:src="@drawable/ic_notifications"
                                         app:tint="@color/secondary_container" />
                                 </LinearLayout>
 
@@ -368,9 +398,9 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:orientation="horizontal"
-                                    android:paddingStart="14dp"
-                                    android:paddingEnd="12dp"
-                                    android:paddingBottom="8dp">
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="10dp"
+                                    android:paddingBottom="6dp">
 
                                     <TextView
                                         android:layout_width="0dp"
@@ -378,7 +408,7 @@
                                         android:layout_weight="1"
                                         android:text="VER RECEITA"
                                         android:textColor="@color/secondary_container"
-                                        android:textSize="11sp"
+                                        android:textSize="10sp"
                                         android:textStyle="bold"/>
 
                                     <TextView
@@ -393,15 +423,16 @@
                             </LinearLayout>
                         </androidx.constraintlayout.widget.ConstraintLayout>
 
-                        <View android:layout_width="match_parent" android:layout_height="2dp" android:background="@color/primary"/>
-
                         <!-- ITEM 3: Pendente -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="12dp"
-                            android:background="#EAE6F8">
+                            android:layout_marginStart="8dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_marginBottom="4dp"
+                            android:padding="10dp"
+                            android:background="#D1D9E6">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -418,7 +449,7 @@
                                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="22:30" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
                                 </LinearLayout>
 
-                                <View android:layout_width="1dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
+                                <View android:layout_width="1.5dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
 
                                 <LinearLayout
                                     android:layout_width="0dp"
@@ -430,9 +461,9 @@
                                 </LinearLayout>
 
                                 <ImageView
-                                    android:layout_width="30dp"
-                                    android:layout_height="30dp"
-                                    android:src="@drawable/ic_schedule"
+                                    android:layout_width="32dp"
+                                    android:layout_height="32dp"
+                                    android:src="@drawable/ic_notifications"
                                     app:tint="@color/on_surface_variant" />
                             </LinearLayout>
 
@@ -548,7 +579,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- CONTAINER DA BARRA INFERIOR (Estica até o final) -->
+    <!-- CONTAINER DA BARRA INFERIOR (Com 3 Ícones) -->
     <LinearLayout
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
@@ -557,14 +588,14 @@
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- Barra de Ícones (Tamanho FIXO de 72dp para nunca amassar os ícones) -->
+        <!-- Barra de Ícones -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="72dp"
             android:orientation="horizontal"
             android:gravity="center">
 
-            <!-- Botão Home com a moldura -->
+            <!-- Botão 1: Home (Com a moldura) -->
             <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -585,6 +616,7 @@
                 </LinearLayout>
             </FrameLayout>
 
+            <!-- Botão 2: Calendário -->
             <ImageView
                 android:layout_width="0dp"
                 android:layout_height="34dp"
@@ -592,6 +624,7 @@
                 android:src="@drawable/ic_calendar"
                 app:tint="@color/outline_variant"/>
 
+            <!-- Botão 3: Livro/Receitas -->
             <ImageView
                 android:layout_width="0dp"
                 android:layout_height="34dp"
@@ -599,22 +632,9 @@
                 android:src="@drawable/ic_book"
                 app:tint="@color/outline_variant"/>
 
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="34dp"
-                android:layout_weight="1"
-                android:src="@drawable/ic_notifications"
-                app:tint="@color/outline_variant"/>
-
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="34dp"
-                android:layout_weight="1"
-                android:src="@drawable/ic_person"
-                app:tint="@color/outline_variant"/>
         </LinearLayout>
 
-        <!-- ESPAÇO FANTASMA: Vai crescer sozinho via Java -->
+        <!-- ESPAÇO FANTASMA: Mantido para a barra de gestos do celular -->
         <View
             android:id="@+id/systemBarSpacer"
             android:layout_width="match_parent"
