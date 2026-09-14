@@ -15,7 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MobileSIGEC">
         <activity
-            android:name=".MainActivity"
+            android:name=".HomePageActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:resizeableActivity="true"
