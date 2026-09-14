@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_notificacoes"
+        android:icon="@drawable/ic_bell"
+        android:title="@string/menu_notificacoes"
+        app:iconTint="@color/white"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_perfil"
+        android:title="@string/menu_perfil"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_configuracao"
+        android:title="@string/menu_configuracao"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_sair"
+        android:icon="@android:drawable/ic_menu_close_clear_cancel"
+        android:title="@string/menu_sair"
+        app:showAsAction="never" />
+</menu>
