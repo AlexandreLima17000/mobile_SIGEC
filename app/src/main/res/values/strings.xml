@@ -22,4 +22,15 @@
     <string name="image_view_item_transform_content_description">Represents an image view in the
         item
     </string>
+
+    <!-- Login Screen -->
+    <string name="login_system_name">Sistema de Gerenciamento de Estoque da Cozinha</string>
+    <string name="login_portal_instructor">PORTAL DO INSTRUTOR</string>
+    <string name="login_welcome">Bem-vindo(a)</string>
+    <string name="login_access_account">Acesse sua conta</string>
+    <string name="login_email_hint">E-MAIL</string>
+    <string name="login_password_hint">SENHA</string>
+    <string name="login_forgot_password">Esqueci minha senha</string>
+    <string name="login_button_enter">Entrar</string>
+    <string name="login_logo_description">Logo SIGEC</string>
 </resources>
