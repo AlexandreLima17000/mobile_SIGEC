@@ -8,6 +8,7 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.example.mobilesigec.home.HomePageFragment;
 import com.google.android.material.button.MaterialButton;
 
 import androidx.activity.EdgeToEdge;
@@ -69,10 +70,11 @@ public class LoginActivity extends AppCompatActivity {
                         stmt.setString(2, senha);
                         rs = stmt.executeQuery();
 
-
                         if (rs.next()) {
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
+
+
                         } else {
                             Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                         }
