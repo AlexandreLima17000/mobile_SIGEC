@@ -1,0 +1,5 @@
+- `[x]` Update `values/themes.xml` to inherit from Material 3
+- `[x]` Update `values-night/themes.xml` to inherit from Material 3
+- `[x]` Verify `activity_login.xml` styles
+- `[x]` Verify `MainActivity` theme compatibility
+- `[x]` Build and verify the application

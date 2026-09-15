@@ -1,21 +1,13 @@
 package com.example.mobilesigec
 
-import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.widget.Button
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class perfil : AppCompatActivity() {
-    private var btnTrocarFoto: Button? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,39 +20,25 @@ class perfil : AppCompatActivity() {
             insets
         }
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-
-        // Estilizar o item Sair para vermelho
-        val menu = toolbar.menu
-        val sairItem = menu.findItem(R.id.action_sair)
-        if (sairItem != null) {
-            val s = SpannableString(sairItem.title)
-            s.setSpan(ForegroundColorSpan(Color.RED), 0, s.length, 0)
-            sairItem.title = s
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragment_container, PerfilFragment())
+                .commit()
         }
 
-        toolbar.setOnMenuItemClickListener(Toolbar.OnMenuItemClickListener { item ->
-            val itemId = item.itemId
-            if (itemId == R.id.action_notificacoes) {
-                Toast.makeText(this, "Notificações clicadas", Toast.LENGTH_SHORT).show()
-                return@OnMenuItemClickListener true
-            } else if (itemId == R.id.action_perfil) {
-                // Já está no perfil, nada a fazer ou recarregar
-                return@OnMenuItemClickListener true
-            } else if (itemId == R.id.action_configuracao) {
-                val intent = Intent(this@perfil, configurar::class.java)
-                startActivity(intent)
-                return@OnMenuItemClickListener true
-            } else if (itemId == R.id.action_sair) {
-                finishAffinity() // Fecha o app
-                return@OnMenuItemClickListener true
+        val bottomNavigation = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_inicio -> {
+                    // Limpa a backstack e volta para o Perfil inicial se desejado
+                    supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.fragment_container, PerfilFragment())
+                        .commit()
+                    true
+                }
+                else -> false
             }
-            false
-        })
-
-        btnTrocarFoto = findViewById(R.id.btnTrocarFoto)
-        btnTrocarFoto?.setOnClickListener {
-            Toast.makeText(this, "Trocar Foto clicado", Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -4,28 +4,22 @@ import android.graphics.Color
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
+import android.view.View
+import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
 import com.google.android.material.appbar.MaterialToolbar
 
-class configurar : AppCompatActivity() {
+class ConfigurarFragment : Fragment(R.layout.fragment_configurar) {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        this.enableEdgeToEdge()
-        setContentView(R.layout.activity_configurar)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
+        val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
+        toolbar.setNavigationOnClickListener {
+            parentFragmentManager.popBackStack()
         }
-
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
-        toolbar.setNavigationOnClickListener { finish() }
 
         // Estilizar o item Sair para vermelho
         val menu = toolbar.menu
@@ -39,20 +33,27 @@ class configurar : AppCompatActivity() {
         toolbar.setOnMenuItemClickListener { item ->
             val itemId = item.itemId
             if (itemId == R.id.action_notificacoes) {
-                Toast.makeText(this, "Notificações clicadas", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Notificações clicadas", Toast.LENGTH_SHORT).show()
                 true
             } else if (itemId == R.id.action_perfil) {
-                finish() // Volta para a tela de perfil
+                parentFragmentManager.popBackStack() // Volta para a tela de perfil
                 true
             } else if (itemId == R.id.action_configuracao) {
                 // Já está em configurações
                 true
             } else if (itemId == R.id.action_sair) {
-                finishAffinity() // Fecha o app
+                activity?.let {
+                    ActivityCompat.finishAffinity(it)
+                }
                 true
             } else {
                 false
             }
+        }
+
+        val tvVoltarPerfil = view.findViewById<TextView>(R.id.tvVoltarPerfil)
+        tvVoltarPerfil?.setOnClickListener {
+            parentFragmentManager.popBackStack()
         }
     }
 }
