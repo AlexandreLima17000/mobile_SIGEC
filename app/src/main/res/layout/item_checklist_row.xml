@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="8dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/edit_text_bg">
+
+    <CheckBox
+        android:id="@+id/cb_item"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:buttonTint="@color/primary"/>
+
+    <TextView
+        android:id="@+id/tv_item_nome"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Nome do Item"
+        android:textColor="@color/on_surface"
+        android:textSize="14sp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"/> <!-- Margem adicionada para não colar na quantidade -->
+
+    <!-- Quantidade -->
+    <TextView
+        android:id="@+id/tv_item_quantidade"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0/0 Unidade"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="13sp"
+        android:textStyle="bold"/>
+</LinearLayout>
