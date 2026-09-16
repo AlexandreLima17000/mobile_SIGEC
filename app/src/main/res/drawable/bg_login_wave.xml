@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="360dp"
+    android:height="800dp"
+    android:viewportWidth="360"
+    android:viewportHeight="800">
+
+    <!-- Fundo Claro Superior -->
+    <path
+        android:fillColor="#F4F5F8"
+        android:pathData="M0,0h360v800h-360z" />
+
+    <!-- Padronagem sutil de listras em marcas d'água -->
+    <path
+        android:fillColor="#0B000000"
+        android:pathData="M-50,100 L150,0 L180,0 L-20,100 Z M50,200 L250,100 L280,100 L80,200 Z M-50,300 L250,150 L280,150 L-20,300 Z M100,400 L350,270 L380,270 L130,400 Z M-50,500 L300,350 L330,350 L-20,500 Z" />
+
+    <!-- Onda Laranja (Acento Superior) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F7941D"
+        android:strokeWidth="6"
+        android:pathData="M 0,655 C 90,610 180,675 360,600" />
+
+    <!-- Onda Azul Escuro (Preenchimento Inferior) -->
+    <path
+        android:fillColor="#002747"
+        android:pathData="M 0,658 C 90,613 180,678 360,603 L 360,800 L 0,800 Z" />
+
+</vector>
