@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,6 +33,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ChecklistUtensiliosFragment extends Fragment {
 
@@ -46,13 +49,14 @@ public class ChecklistUtensiliosFragment extends Fragment {
     private LinearProgressIndicator progressBarUtensilios;
     private TextView tvProgressoTexto;
     private TextView tvProgressoPorcentagem;
+    private ProgressBar progressLoading;
 
     private MaterialButton btnLimparUtensilios;
     private MaterialButton btnConfirmarUtensilios;
     private AppCompatButton btnSolicitarUtensilio;
 
     public ChecklistUtensiliosFragment() {
-
+        // Required empty public constructor
     }
 
     @Override
@@ -75,6 +79,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
         progressBarUtensilios = view.findViewById(R.id.progress_bar_utensilios);
         tvProgressoTexto = view.findViewById(R.id.tv_progresso_texto_utensilios);
         tvProgressoPorcentagem = view.findViewById(R.id.tv_progresso_porcentagem_utensilios);
+        progressLoading = view.findViewById(R.id.progress_loading_utensilios);
 
         btnLimparUtensilios = view.findViewById(R.id.btn_limpar_utensilios);
         btnConfirmarUtensilios = view.findViewById(R.id.btn_confirmar_utensilios);
@@ -88,93 +93,121 @@ public class ChecklistUtensiliosFragment extends Fragment {
     }
 
     private void carregarReceitasNoSpinner() {
-        List<ReceitaModelo> listaReceitas = new ArrayList<>();
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
 
         if (idUsuarioLogado == -1) return;
 
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-                String sql = "SELECT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
-                        "FROM ficha f " +
-                        "INNER JOIN turma t ON f.id_turma = t.id_turma " +
-                        "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                        "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                        "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando"
+        spinnerReceitas.setEnabled(false); // Desativa o spinner para evitar cliques acidentais
 
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idUsuarioLogado);
-                ResultSet rs = stmt.executeQuery();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            List<ReceitaModelo> listaReceitas = new ArrayList<>();
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql = "SELECT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
+                            "FROM ficha f " +
+                            "INNER JOIN turma t ON f.id_turma = t.id_turma " +
+                            "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                            "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                            "WHERE ut.id_usuario = ? AND t.situação = 'A'";
 
-                while (rs.next()) {
-                    listaReceitas.add(new ReceitaModelo(
-                            rs.getInt("id_ficha"),
-                            rs.getString("nome_ficha"),
-                            rs.getString("nome_turma"),
-                            rs.getString("nome_laboratorio")
-                    ));
+                    PreparedStatement stmt = con.prepareStatement(sql);
+                    stmt.setInt(1, idUsuarioLogado);
+                    ResultSet rs = stmt.executeQuery();
+
+                    while (rs.next()) {
+                        listaReceitas.add(new ReceitaModelo(
+                                rs.getInt("id_ficha"),
+                                rs.getString("nome_ficha"),
+                                rs.getString("nome_turma"),
+                                rs.getString("nome_laboratorio")
+                        ));
+                    }
+                    rs.close(); stmt.close(); con.close();
                 }
-                rs.close(); stmt.close(); con.close();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
-        if (getContext() != null && !listaReceitas.isEmpty()) {
-            ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
-            spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spinnerReceitas.setAdapter(spinnerAdapter);
+            // Volta para a thread principal (UI Thread) para atualizar a tela
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    spinnerReceitas.setEnabled(true);
 
-            spinnerReceitas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    ReceitaModelo receitaSelecionada = (ReceitaModelo) parent.getItemAtPosition(position);
-                    tvReceitaSelecionada.setText("Receita: " + receitaSelecionada.getNomeReceita());
-                    tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
-                    tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
+                    if (!listaReceitas.isEmpty() && getContext() != null) {
+                        ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
+                        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                        spinnerReceitas.setAdapter(spinnerAdapter);
 
-                    carregarUtensiliosDaReceita(receitaSelecionada.getIdReceita());
-                }
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {}
-            });
-        }
+                        spinnerReceitas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                            @Override
+                            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                                ReceitaModelo receitaSelecionada = (ReceitaModelo) parent.getItemAtPosition(position);
+                                tvReceitaSelecionada.setText("Receita: " + receitaSelecionada.getNomeReceita());
+                                tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
+                                tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
+
+                                carregarUtensiliosDaReceita(receitaSelecionada.getIdReceita());
+                            }
+                            @Override
+                            public void onNothingSelected(AdapterView<?> parent) {}
+                        });
+                    }
+                });
+            }
+        });
     }
 
     private void carregarUtensiliosDaReceita(int idFicha) {
+        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando" para a lista
         listaUtensiliosAtual.clear();
 
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-
-                String sql = "SELECT u.id_utensilio, u.nome_utensilio, u.quantidade " +
-                        "FROM checklist_utensilho cu " +
-                        "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
-                        "WHERE cu.id_ficha = ? AND cu.situacao = 'A'";
-
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idFicha);
-                ResultSet rs = stmt.executeQuery();
-
-                while (rs.next()) {
-                    int idUtensilio = rs.getInt("id_utensilio");
-                    String nome = rs.getString("nome_utensilio");
-                    String qtd = String.valueOf(rs.getInt("quantidade"));
-
-                    listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
-                }
-                rs.close(); stmt.close(); con.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
         }
 
-        adapter = new UtensilioAdapter(listaUtensiliosAtual, () -> atualizarProgresso());
-        rvUtensilios.setAdapter(adapter);
-        atualizarProgresso();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql = "SELECT u.id_utensilio, u.nome_utensilio, u.quantidade " +
+                            "FROM checklist_utensilho cu " +
+                            "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
+                            "WHERE cu.id_ficha = ? AND cu.situacao = 'A'";
+
+                    PreparedStatement stmt = con.prepareStatement(sql);
+                    stmt.setInt(1, idFicha);
+                    ResultSet rs = stmt.executeQuery();
+
+                    while (rs.next()) {
+                        int idUtensilio = rs.getInt("id_utensilio");
+                        String nome = rs.getString("nome_utensilio");
+                        String qtd = String.valueOf(rs.getInt("quantidade"));
+
+                        listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
+                    }
+                    rs.close(); stmt.close(); con.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // Volta para a tela para injetar a lista
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+
+                    adapter = new UtensilioAdapter(listaUtensiliosAtual, () -> atualizarProgresso());
+                    rvUtensilios.setAdapter(adapter);
+                    atualizarProgresso();
+                });
+            }
+        });
     }
 
     private void atualizarProgresso() {

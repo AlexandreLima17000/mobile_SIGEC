@@ -134,12 +134,6 @@
                                 android:textSize="30sp"
                                 android:textStyle="bold" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Você tem 3 turmas hoje. A próxima começa às 13:30."
-                                android:textColor="@color/primary_fixed_dim"
-                                android:textSize="16sp"/>
                         </LinearLayout>
 
                     </LinearLayout>
@@ -247,12 +241,6 @@
                                 android:textSize="22sp"
                                 android:textStyle="bold" />
 
-                            <ImageView
-                                android:layout_width="30dp"
-                                android:layout_height="30dp"
-                                android:src="@drawable/ic_chevron_down"
-                                android:rotation="180"
-                                app:tint="#FFFFFF" />
                         </LinearLayout>
 
                         <!-- Container vazio mantido para injetarmos as receitas na próxima etapa -->
