@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="18dp"
+        android:paddingBottom="24dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:clipToPadding="false">
+
+        <!-- MOLDURA EXTERNA DA RECEITA -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="8dp"
+            android:outlineSpotShadowColor="#000000"
+            app:cardBackgroundColor="#FFFFFF">
+
+            <!-- ESTRUTURA COM FAIXA LARANJA LATERAL -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- Faixa Laranja Contínua na Esquerda -->
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/secondary_container" />
+
+                <!-- CONTEÚDO DA RECEITA -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <!-- 1. CABEÇALHO ESCURO -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/primary">
+
+                        <!-- Triângulo de detalhe -->
+                        <ImageView
+                            android:layout_width="45dp"
+                            android:layout_height="45dp"
+                            android:layout_gravity="top|end"
+                            android:src="@drawable/bg_card_corner_accent"
+                            app:tint="#40000000" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="MEXICANA 🇲🇽"
+                                android:textColor="@color/secondary_container"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Tacos de Carnitas"
+                                android:textColor="@color/secondary_container"
+                                android:textSize="26sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="4dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="DISPONÍVEL"
+                                android:textColor="#FFFFFF"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:background="#15803D"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingBottom="3dp"
+                                android:layout_gravity="end"
+                                android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <!-- 2. CORPO DA RECEITA (Fundo Branco) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Descrição (Caixa Cinza) -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Tacos mexicanos com carne de porco desfiada e levemente crocante, servidos em tortillas quentes com pico de gallo e limão."
+                            android:textColor="#333333"
+                            android:textSize="15sp"
+                            android:background="#E2E8F0"
+                            android:padding="12dp"
+                            android:layout_marginBottom="20dp" />
+
+                        <!-- INGREDIENTES -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ingredientes Necessários"
+                            android:textColor="@color/secondary_container"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginBottom="24dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="600g de carne de porco" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="2 dentes de alho" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tortillas de milho" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Coentro fresco" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="1 laranja (suco)" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="1 colher de cominho" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Cebola roxa picada" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Limão" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center"/>
+                        </LinearLayout>
+
+                        <!-- UTENSÍLIOS -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Utensílios Utilizados"
+                            android:textColor="@color/secondary_container"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginBottom="24dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Panela grande com tampa" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Faca de chef" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Espremedor de citrinos" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Frigideira" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tábua de corte" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center" android:layout_marginBottom="6dp"/>
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dois garfos (para desfiar)" android:textColor="@color/primary" android:textSize="15sp" android:textStyle="bold" android:background="@drawable/bg_info_box" android:padding="10dp" android:textAlignment="center"/>
+                        </LinearLayout>
+
+                        <!-- MODO DE PREPARO -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Modo de Preparo Passo a Passo"
+                            android:textColor="@color/secondary_container"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <!-- Passo 1 -->
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@color/primary" android:orientation="horizontal" android:padding="12dp" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1" android:textColor="#FFFFFF" android:textSize="40sp" android:textStyle="bold" android:layout_marginEnd="16dp"/>
+                                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tempere a Carne" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tempere a carne de porco com sal, cominho e alho amassado." android:textColor="#FFFFFF" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Passo 2 -->
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@color/primary" android:orientation="horizontal" android:padding="12dp" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2" android:textColor="#FFFFFF" android:textSize="40sp" android:textStyle="bold" android:layout_marginEnd="16dp"/>
+                                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cozinhe Lentamente" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cozinhe a carne com suco de laranja em fogo baixo até ficarem macia." android:textColor="#FFFFFF" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Passo 3 -->
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@color/primary" android:orientation="horizontal" android:padding="12dp" android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3" android:textColor="#FFFFFF" android:textSize="40sp" android:textStyle="bold" android:layout_marginEnd="16dp"/>
+                                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Desfie e doure" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Desfie a carne e leve à frigideira quente para dourar as bordas." android:textColor="#FFFFFF" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Passo 4 -->
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@color/primary" android:orientation="horizontal" android:padding="12dp" android:gravity="center_vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="4" android:textColor="#FFFFFF" android:textSize="40sp" android:textStyle="bold" android:layout_marginEnd="16dp"/>
+                                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Monte os tacos" android:textColor="#FFFFFF" android:textSize="16sp" android:textStyle="bold"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sirva a carne em tortillas quentes com cebola roxa, coentro e limão." android:textColor="#FFFFFF" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </LinearLayout>
+</ScrollView>

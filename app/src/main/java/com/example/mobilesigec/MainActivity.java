@@ -59,6 +59,13 @@ public class MainActivity extends AppCompatActivity {
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
         }
+
+        // CARREGA A TELA DA LISTA DE RECEITAS AO INICIAR O APP
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.nav_host_fragment_content_main, new ListaReceitasFragment())
+                    .commit();
+        }
     }
 
 
@@ -76,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             Connection conexao = ConexaoMySQL.conectar();
             if (conexao != null) {
                 Log.d("Conexão", "Conexão estabelecida com sucesso!");
-// Faça suas operações de banco de dados aqui
+                // Faça suas operações de banco de dados aqui
                 ConexaoMySQL.fecharConexao(conexao);
             } else {
                 Log.d("Conexão", "Erro ao conectar ao banco de dados!");
@@ -101,4 +108,5 @@ public class MainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
+
 }
