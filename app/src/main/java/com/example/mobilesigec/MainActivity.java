@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow, R.id.nav_settings)
+                    R.id.nav_home,  R.id.nav_settings)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNavigationView = binding.appBarMain.contentMain.bottomNavView;
         if (bottomNavigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow)
+                    R.id.nav_home)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
             Connection conexao = ConexaoMySQL.conectar();
             if (conexao != null) {
                 Log.d("Conexão", "Conexão estabelecida com sucesso!");
-// Faça suas operações de banco de dados aqui
+                // Faça suas operações de banco de dados aqui
                 ConexaoMySQL.fecharConexao(conexao);
             } else {
                 Log.d("Conexão", "Erro ao conectar ao banco de dados!");

@@ -66,11 +66,6 @@
                     android:textSize="17sp"
                     android:textStyle="bold" />
 
-                <ImageView
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:src="@drawable/ic_more_vert"
-                    app:tint="@color/primary" />
             </LinearLayout>
 
             <View
@@ -117,23 +112,27 @@
                             android:orientation="vertical"
                             android:padding="18dp">
 
+                            <!-- ID ATUALIZADO: textDataHome -->
                             <TextView
+                                android:id="@+id/textDataHome"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="QUARTA-FEIRA, 02 DE SETEMBRO"
                                 android:textColor="@color/secondary_container"
                                 android:textSize="14sp"
-                                android:textStyle="bold"/>
+                                android:textStyle="bold" />
 
+                            <!-- ID ATUALIZADO: textSaudacao -->
                             <TextView
+                                android:id="@+id/textSaudacao"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginBottom="8dp"
                                 android:text="Bom dia, Fulano!"
                                 android:textColor="#FFFFFF"
                                 android:textSize="30sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="6dp"
-                                android:layout_marginBottom="8dp"/>
+                                android:textStyle="bold" />
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -143,17 +142,11 @@
                                 android:textSize="16sp"/>
                         </LinearLayout>
 
-                        <ImageView
-                            android:layout_width="96dp"
-                            android:layout_height="125dp"
-                            android:layout_marginEnd="14dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/img_chef_profile" />
                     </LinearLayout>
                 </FrameLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Seletor de Turma / Laboratório (Estilo Imagem 1: Sombra + Borda Azul/Laranja) -->
+            <!-- Seletor de Turma / Laboratório -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -168,12 +161,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_spinner_outline"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
                     android:paddingTop="14dp"
-                    android:paddingBottom="16dp"
-                    android:gravity="center_vertical">
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="16dp">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -181,33 +174,24 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <!-- Rótulo Superior em Azul-Marinho / Negrito -->
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="TURMA / LABORATÓRIO"
+                            android:layout_marginTop="3dp"
+                            android:text="Turma / Laboratório"
                             android:textColor="@color/primary"
                             android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.02" />
+                            android:textStyle="bold" />
 
-                        <!-- Título Principal em Azul-Marinho / Negrito Forte -->
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <!-- ID ATUALIZADO: spinnerTurmasHome -->
+                        <Spinner
+                            android:id="@+id/spinnerTurmasHome"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Turma 2024.1.A - Padaria Lab 01"
-                            android:textColor="@color/primary"
-                            android:textSize="19sp"
-                            android:textStyle="bold"
-                            android:layout_marginTop="3dp"/>
+                            android:background="@null"
+                            android:popupBackground="@drawable/bg_spinner_popup" />
                     </LinearLayout>
 
-                    <!-- Ícone de Seta (Chevron) com traço encorpado em Azul-Marinho -->
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
-                        android:src="@drawable/ic_chevron_down"
-                        app:tint="@color/primary" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -226,7 +210,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <!-- Triângulo Escuro no Canto Superior Direito -->
                     <ImageView
                         android:layout_width="45dp"
                         android:layout_height="45dp"
@@ -272,213 +255,13 @@
                                 app:tint="#FFFFFF" />
                         </LinearLayout>
 
-                        <!-- ITEM 1: Concluído -->
+                        <!-- Container vazio mantido para injetarmos as receitas na próxima etapa -->
                         <LinearLayout
+                            android:id="@+id/container_receitas"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginEnd="8dp"
-                            android:layout_marginBottom="14dp"
-                            android:padding="10dp"
-                            android:background="#D1D9E6">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <LinearLayout
-                                    android:layout_width="55dp"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="08:00" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp"/>
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12:00" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                </LinearLayout>
-
-                                <View android:layout_width="1.5dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Técnicas Básicas de Confeitaria" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp" android:singleLine="true"/>
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cozinha Pedagógica 02 • Turma 2024.1.C" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                </LinearLayout>
-
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:src="@drawable/ic_check_circle"
-                                    app:tint="#15803d" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="end"
-                                android:text="CONCLUÍDO"
-                                android:textColor="#15803d"
-                                android:textSize="10sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
-
-                        <!-- ITEM 2: Em Andamento -->
-                        <androidx.constraintlayout.widget.ConstraintLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginEnd="8dp"
-                            android:layout_marginBottom="14dp"
-                            android:background="#D1D9E6">
-
-                            <View
-                                android:id="@+id/barralaranja"
-                                android:layout_width="5dp"
-                                android:layout_height="0dp"
-                                android:background="@color/secondary_container"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toStartOf="parent" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                app:layout_constraintTop_toTopOf="parent"
-                                app:layout_constraintBottom_toBottomOf="parent"
-                                app:layout_constraintStart_toEndOf="@id/barralaranja"
-                                app:layout_constraintEnd_toEndOf="parent">
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:paddingTop="10dp"
-                                    android:paddingBottom="6dp"
-                                    android:paddingStart="8dp"
-                                    android:paddingEnd="10dp"
-                                    android:gravity="center_vertical">
-
-                                    <LinearLayout
-                                        android:layout_width="55dp"
-                                        android:layout_height="wrap_content"
-                                        android:orientation="vertical"
-                                        android:gravity="center">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="13:30" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp"/>
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="17:30" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                    </LinearLayout>
-
-                                    <View
-                                        android:layout_width="1.5dp"
-                                        android:layout_height="40dp"
-                                        android:layout_marginStart="8dp"
-                                        android:layout_marginEnd="10dp"
-                                        android:background="@color/secondary_container" />
-
-                                    <LinearLayout
-                                        android:layout_width="0dp"
-                                        android:layout_height="wrap_content"
-                                        android:layout_weight="1"
-                                        android:orientation="vertical">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Panificação Clássica Européia" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp" android:singleLine="true"/>
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Padaria Lab 01 • Turma 2024.1.A" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                    </LinearLayout>
-
-                                    <ImageView
-                                        android:layout_width="32dp"
-                                        android:layout_height="32dp"
-                                        android:src="@drawable/ic_notifications"
-                                        app:tint="@color/secondary_container" />
-                                </LinearLayout>
-
-                                <LinearLayout
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:paddingStart="12dp"
-                                    android:paddingEnd="10dp"
-                                    android:paddingBottom="6dp">
-
-                                    <TextView
-                                        android:layout_width="0dp"
-                                        android:layout_height="wrap_content"
-                                        android:layout_weight="1"
-                                        android:text="VER RECEITA"
-                                        android:textColor="@color/secondary_container"
-                                        android:textSize="10sp"
-                                        android:textStyle="bold"/>
-
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="EM ANDAMENTO"
-                                        android:textColor="@color/secondary_container"
-                                        android:textSize="10sp"
-                                        android:textStyle="bold"/>
-                                </LinearLayout>
-
-                            </LinearLayout>
-                        </androidx.constraintlayout.widget.ConstraintLayout>
-
-                        <!-- ITEM 3: Pendente -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginEnd="8dp"
-                            android:layout_marginBottom="4dp"
-                            android:padding="10dp"
-                            android:background="#D1D9E6">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="center_vertical">
-
-                                <LinearLayout
-                                    android:layout_width="55dp"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="vertical"
-                                    android:gravity="center">
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="19:00" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp"/>
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="22:30" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                </LinearLayout>
-
-                                <View android:layout_width="1.5dp" android:layout_height="40dp" android:background="@color/outline_variant" android:layout_marginEnd="10dp" android:layout_marginStart="8dp"/>
-
-                                <LinearLayout
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cozinha Internacional: Ásia" android:textStyle="bold" android:textColor="@color/primary" android:textSize="15sp" android:singleLine="true"/>
-                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cozinha Pedagógica 04 • Turma 2024.2.N" android:textSize="12sp" android:textColor="@color/on_surface_variant"/>
-                                </LinearLayout>
-
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:src="@drawable/ic_notifications"
-                                    app:tint="@color/on_surface_variant" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="end"
-                                android:text="PENDENTE"
-                                android:textColor="@color/on_surface_variant"
-                                android:textSize="10sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:padding="8dp" />
 
                     </LinearLayout>
                 </FrameLayout>
@@ -493,6 +276,10 @@
 
                 <!-- Botão 1: Insumos -->
                 <androidx.cardview.widget.CardView
+                    android:id="@+id/card_checklist_insumos"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
                     android:layout_width="0dp"
                     android:layout_height="115dp"
                     android:layout_weight="1"
@@ -536,6 +323,10 @@
 
                 <!-- Botão 2: Utensílios -->
                 <androidx.cardview.widget.CardView
+                    android:id="@+id/card_checklist_utensilios"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
                     android:layout_width="0dp"
                     android:layout_height="115dp"
                     android:layout_weight="1"
@@ -581,7 +372,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- CONTAINER DA BARRA INFERIOR (Com 3 Ícones) -->
+    <!-- CONTAINER DA BARRA INFERIOR -->
     <LinearLayout
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
@@ -589,52 +380,6 @@
         android:background="@color/primary"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent">
-
-        <!-- Barra de Ícones -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="72dp"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <!-- Botão 1: Home (Com a moldura) -->
-            <FrameLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:padding="10dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/bg_bottom_nav_active"
-                    android:gravity="center">
-
-                    <ImageView
-                        android:layout_width="34dp"
-                        android:layout_height="34dp"
-                        android:src="@drawable/ic_home"
-                        app:tint="@color/secondary_container"/>
-                </LinearLayout>
-            </FrameLayout>
-
-            <!-- Botão 2: Calendário -->
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="34dp"
-                android:layout_weight="1"
-                android:src="@drawable/ic_calendar"
-                app:tint="@color/outline_variant"/>
-
-            <!-- Botão 3: Livro/Receitas -->
-            <ImageView
-                android:layout_width="0dp"
-                android:layout_height="34dp"
-                android:layout_weight="1"
-                android:src="@drawable/ic_book"
-                app:tint="@color/outline_variant"/>
-
-        </LinearLayout>
 
         <!-- ESPAÇO FANTASMA: Mantido para a barra de gestos do celular -->
         <View

@@ -26,7 +26,6 @@ public class LoginActivity extends AppCompatActivity {
 
     EditText emailLogin, senhaLogin;
     Button btnEntrar;
-    
 
     Connection con = null;
     PreparedStatement stmt = null;
@@ -64,17 +63,27 @@ public class LoginActivity extends AppCompatActivity {
 
                     try {
                         con = ConexaoMySQL.conectar();
-                        sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
+                        sql = "SELECT id_usuario, nome_usuario FROM usuario WHERE email = ? AND senha = ?";
                         stmt = con.prepareStatement(sql);
                         stmt.setString(1, email);
                         stmt.setString(2, senha);
                         rs = stmt.executeQuery();
 
                         if (rs.next()) {
+
+                            int idUsuario = rs.getInt("id_usuario");
+                            String nomeUsuario = rs.getString("nome_usuario");
+
+                            // Salva  no SharedPreferences
+                            getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                    .edit()
+                                    .putInt("ID_USUARIO", idUsuario) // Salvando o ID na sessão
+                                    .putString("NOME_USUARIO", nomeUsuario)
+                                    .apply();
+
+                            // Vai para a próxima tela
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
-
-
                         } else {
                             Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                         }
