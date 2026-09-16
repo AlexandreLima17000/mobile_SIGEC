@@ -107,7 +107,6 @@ public class CalendarioBlankFragment extends Fragment {
             ImageView dot1 = dayView.findViewById(R.id.dot1);
             ImageView dot2 = dayView.findViewById(R.id.dot2);
             ImageView dotWeekend = dayView.findViewById(R.id.dot_weekend);
-
             dayText.setText(String.valueOf(day));
 
             int dayOfWeek = (day + startOffset - 1) % 7;
@@ -146,7 +145,7 @@ public class CalendarioBlankFragment extends Fragment {
             grid.addView(dayView);
         }
 
-        // Fill the rest of the grid if necessary
+
         int totalCells = startOffset + daysInMonth;
         int remaining = (7 - (totalCells % 7)) % 7;
         for (int i = 0; i < remaining; i++) {
