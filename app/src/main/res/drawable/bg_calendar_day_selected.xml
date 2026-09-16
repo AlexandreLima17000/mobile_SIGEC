@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <solid android:color="@color/sigec_weekday_bg" />
+            <stroke android:width="2dp" android:color="@color/sigec_orange" />
+        </shape>
+    </item>
+    <item>
+        <clip
+            android:clipOrientation="horizontal|vertical"
+            android:gravity="top|right">
+            <rotate
+                android:fromDegrees="45"
+                android:pivotX="100%"
+                android:pivotY="0%"
+                android:toDegrees="45">
+                <shape android:shape="rectangle">
+                    <solid android:color="#40F57C00" />
+                </shape>
+            </rotate>
+        </clip>
+    </item>
+</layer-list>

@@ -1,14 +1,300 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".CalendarioBlankFragment">
+    android:background="#f0f0f0">
 
-    <!-- TODO: Update blank fragment layout -->
+    <!-- Watermark Background (SIGEC Slogan) -->
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:alpha="0.08"
+        android:text="SIGEC"
+        android:textColor="@color/sigec_dark_blue"
+        android:textSize="120sp"
+        android:textStyle="bold" />
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        tools:context=".CalendarioBlankFragment">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Main Header Card with Orange Side Border -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <View
+                    android:id="@+id/orange_border"
+                    android:layout_width="4dp"
+                    android:layout_height="wrap_content"
+                    android:layout_alignBottom="@+id/main_card"
+                    android:layout_alignTop="@+id/main_card"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@color/sigec_orange"
+                    android:elevation="5dp" />
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/main_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    app:cardBackgroundColor="@color/sigec_calendar_header"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/ic_calendar_white" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Planejamento de Aulas"
+                                    android:textColor="@android:color/white"
+                                    android:textSize="22sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Chef Fulano - Instrutor Gastronomia"
+                                    android:textColor="@android:color/white"
+                                    android:textSize="14sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Search Bar -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_search_bar"
+                            android:gravity="center_vertical"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_search_white" />
+
+                            <EditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:background="@android:color/transparent"
+                                android:hint="Buscar receita, turma..."
+                                android:textColor="@android:color/white"
+                                android:textColorHint="#BDC3C7"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <!-- Calendar Content Container -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@color/sigec_calendar_container_bg"
+                            android:orientation="vertical"
+                            android:padding="2dp">
+
+                            <!-- Month Navigation -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@color/sigec_calendar_header"
+                                android:gravity="center_vertical"
+                                android:padding="8dp">
+
+                                <ImageView
+                                    android:layout_width="28dp"
+                                    android:layout_height="28dp"
+                                    android:src="@drawable/ic_menu_white"
+                                    app:tint="@android:color/white" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1" />
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_chevron_left_white" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginHorizontal="12dp"
+                                    android:text="SETEMBRO 2026."
+                                    android:textColor="@android:color/white"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_chevron_right_white" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1" />
+                            </LinearLayout>
+
+                            <!-- Days Header -->
+                            <GridLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:columnCount="7"
+                                android:paddingTop="2dp"
+                                android:paddingBottom="2dp"
+                                android:background="#BDC8D1">
+
+                                <TextView style="@style/CalendarDayHeader" android:text="DOM" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="SEG" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="TER" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="QUA" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="QUI" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="SEX" android:textSize="10sp"/>
+                                <TextView style="@style/CalendarDayHeader" android:text="SÁB" android:textSize="10sp"/>
+                            </GridLayout>
+
+                            <!-- Days Grid -->
+                            <GridLayout
+                                android:id="@+id/calendar_grid"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:columnCount="7"
+                                android:background="@color/sigec_calendar_container_bg">
+                            </GridLayout>
+
+                            <!-- Legends -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#BDC8D1"
+                                android:gravity="center"
+                                android:orientation="horizontal"
+                                android:padding="4dp">
+
+                                <View
+                                    android:layout_width="12dp"
+                                    android:layout_height="12dp"
+                                    android:background="@drawable/ic_dot"
+                                    android:backgroundTint="@color/sigec_orange" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Com aula agendada"
+                                    android:textColor="@color/sigec_orange"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+
+                                <View
+                                    android:layout_width="12dp"
+                                    android:layout_height="12dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/ic_dot"
+                                    android:backgroundTint="#C0392B" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Com aula agendada"
+                                    android:textColor="#C0392B"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+
+                                <View
+                                    android:layout_width="12dp"
+                                    android:layout_height="12dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/ic_dot_black" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="Fim de semana"
+                                    android:textColor="#000000"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- Details Area -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="#f5f5f5"
+                                android:orientation="vertical"
+                                android:padding="8dp">
+
+                                <TextView
+                                    android:id="@+id/text_current_date"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="2 de setembro de 2026"
+                                    android:textColor="@color/sigec_orange"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="FICHAS ALOCADAS (AGENDA DO DIA)"
+                                    android:textColor="@color/sigec_calendar_header"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:text="Nenhuma aula ou ficha programada para este dia."
+                                    android:textColor="@color/sigec_text_gray"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </RelativeLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
 </FrameLayout>

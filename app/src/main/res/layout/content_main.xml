@@ -22,7 +22,12 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav_view"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:layout_gravity="bottom"
+        android:background="@color/sigec_dark_blue"
+        app:itemIconSize="32dp"
+        app:itemIconTint="@null"
+        app:itemTextColor="@color/sigec_white"
+        app:labelVisibilityMode="unlabeled"
         app:menu="@menu/bottom_navigation" />
 </LinearLayout>
