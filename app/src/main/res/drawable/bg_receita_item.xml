@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cor de fundo cinza que você já estava usando -->
+    <solid android:color="#D1D9E6" />
+    <!-- Curvatura das bordas (12dp para combinar com os outros cards) -->
+    <corners android:radius="12dp" />
+</shape>
