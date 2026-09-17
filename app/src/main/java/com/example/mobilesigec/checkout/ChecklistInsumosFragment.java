@@ -1,5 +1,6 @@
 package com.example.mobilesigec.checkout;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -31,6 +33,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -78,7 +81,7 @@ public class ChecklistInsumosFragment extends Fragment {
         progressBarInsumos = view.findViewById(R.id.progress_bar_insumos);
         tvProgressoTexto = view.findViewById(R.id.tv_progresso_texto_insumos);
         tvProgressoPorcentagem = view.findViewById(R.id.tv_progresso_porcentagem_insumos);
-        progressLoading = view.findViewById(R.id.progress_loading); // Vinculando
+        progressLoading = view.findViewById(R.id.progress_loading);
 
         btnLimparInsumos = view.findViewById(R.id.btn_limpar_insumos);
         btnConfirmarInsumos = view.findViewById(R.id.btn_confirmar_insumos);
@@ -88,7 +91,9 @@ public class ChecklistInsumosFragment extends Fragment {
         btnLimparInsumos.setOnClickListener(v -> limparChecklist());
         btnConfirmarInsumos.setOnClickListener(v -> confirmarSeparacao());
         btnNovaReceita.setOnClickListener(v -> Toast.makeText(getContext(), "Redirecionar para criação", Toast.LENGTH_SHORT).show());
-        btnSolicitarInsumo.setOnClickListener(v -> Toast.makeText(getContext(), "Abrir formulário", Toast.LENGTH_SHORT).show());
+
+        // Chamada atualizada para o novo formulário
+        btnSolicitarInsumo.setOnClickListener(v -> abrirDialogSolicitarInsumo());
 
         carregarReceitasNoSpinner();
     }
@@ -99,8 +104,8 @@ public class ChecklistInsumosFragment extends Fragment {
 
         if (idUsuarioLogado == -1) return;
 
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando"
-        spinnerReceitas.setEnabled(false); // Desativa o spinner para evitar toques apressados
+        progressLoading.setVisibility(View.VISIBLE);
+        spinnerReceitas.setEnabled(false);
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -133,10 +138,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // VOLTA PARA A THREAD PRINCIPAL PARA ATUALIZAR A TELA
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
@@ -164,11 +168,11 @@ public class ChecklistInsumosFragment extends Fragment {
     }
 
     private void carregarInsumosDaReceita(int idFicha) {
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando" para a lista também!
+        progressLoading.setVisibility(View.VISIBLE);
         listaInsumosAtual.clear();
 
         if (adapter != null) {
-            adapter.notifyDataSetChanged(); // Limpa a tela rapidamente antes de buscar o novo
+            adapter.notifyDataSetChanged();
         }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -199,10 +203,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // VOLTA PARA A TELA PARA INJETAR A LISTA
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
 
                     adapter = new InsumoAdapter(listaInsumosAtual, () -> atualizarProgresso());
                     rvInsumos.setAdapter(adapter);
@@ -256,7 +259,6 @@ public class ChecklistInsumosFragment extends Fragment {
             }
         }
 
-        // Executando em Background também para não travar
         progressLoading.setVisibility(View.VISIBLE);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -282,6 +284,109 @@ public class ChecklistInsumosFragment extends Fragment {
                         Toast.makeText(getContext(), "Separação confirmada!", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(getContext(), "Erro ao confirmar no banco.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void abrirDialogSolicitarInsumo() {
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        if (receitaSelecionada == null) {
+            Toast.makeText(getContext(), "Selecione uma receita primeiro.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.dialog_solicitar_insumo, null);
+        builder.setView(view);
+
+        AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        EditText etNome = view.findViewById(R.id.et_nome_insumo);
+        EditText etQuantidade = view.findViewById(R.id.et_quantidade_insumo);
+        EditText etUnidade = view.findViewById(R.id.et_unidade_insumo);
+        EditText etObservacao = view.findViewById(R.id.et_observacao_insumo);
+
+        view.findViewById(R.id.btn_fechar_dialog).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btn_cancelar_dialog).setOnClickListener(v -> dialog.dismiss());
+
+        view.findViewById(R.id.btn_adicionar_dialog).setOnClickListener(v -> {
+            String nome = etNome.getText().toString().trim();
+            String qtdStr = etQuantidade.getText().toString().trim();
+            String unidade = etUnidade.getText().toString().trim();
+            String observacao = etObservacao.getText().toString().trim();
+
+            if (nome.isEmpty() || qtdStr.isEmpty() || unidade.isEmpty()) {
+                Toast.makeText(getContext(), "Preencha os campos obrigatórios.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int quantidade = Integer.parseInt(qtdStr);
+            inserirInsumoExtra(nome, quantidade, unidade, observacao, receitaSelecionada.getIdReceita(), dialog);
+        });
+
+        dialog.show();
+    }
+
+    private void inserirInsumoExtra(String nome, int quantidade, String unidade, String observacao, int idFicha, AlertDialog dialog) {
+        progressLoading.setVisibility(View.VISIBLE);
+        dialog.dismiss();
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            boolean sucesso = false;
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    con.setAutoCommit(false); // Inicia transação
+
+                    //  Inserir o novo produto com o NOME LIMPO
+                    String sqlProduto = "INSERT INTO produto (nome_produto, unidade, id_categoria, situação) VALUES (?, ?, 1, 'A')";
+                    PreparedStatement stmtProduto = con.prepareStatement(sqlProduto, Statement.RETURN_GENERATED_KEYS);
+                    stmtProduto.setString(1, nome);
+                    stmtProduto.setString(2, unidade);
+                    stmtProduto.executeUpdate();
+
+                    ResultSet rsKeys = stmtProduto.getGeneratedKeys();
+                    int idProdutoGerado = -1;
+                    if (rsKeys.next()) {
+                        idProdutoGerado = rsKeys.getInt(1);
+                    }
+                    rsKeys.close();
+                    stmtProduto.close();
+
+                    //  Inserir o insumo com a flag extra = 'S'
+                    if (idProdutoGerado != -1) {
+                        String sqlInsumo = "INSERT INTO insumo (quantidade, cancelado, id_produto, id_ficha, extra) VALUES (?, 'N', ?, ?, 'S')";
+                        PreparedStatement stmtInsumo = con.prepareStatement(sqlInsumo);
+                        stmtInsumo.setInt(1, quantidade);
+                        stmtInsumo.setInt(2, idProdutoGerado);
+                        stmtInsumo.setInt(3, idFicha);
+                        stmtInsumo.executeUpdate();
+                        stmtInsumo.close();
+
+                        con.commit(); // Confirma transação
+                        sucesso = true;
+                    } else {
+                        con.rollback(); // Desfaz se falhou
+                    }
+                    con.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final boolean finalSucesso = sucesso;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE);
+                    if (finalSucesso) {
+                        Toast.makeText(getContext(), "Insumo extra adicionado!", Toast.LENGTH_SHORT).show();
+                        carregarInsumosDaReceita(idFicha); // Atualiza a lista automaticamente
+                    } else {
+                        Toast.makeText(getContext(), "Erro ao adicionar insumo.", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
