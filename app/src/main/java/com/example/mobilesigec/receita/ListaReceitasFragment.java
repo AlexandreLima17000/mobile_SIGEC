@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.receita;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -9,6 +9,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+
+import com.example.mobilesigec.R;
 
 public class ListaReceitasFragment extends Fragment {
 
