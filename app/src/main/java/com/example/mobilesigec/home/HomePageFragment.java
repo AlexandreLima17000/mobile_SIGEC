@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -39,7 +41,8 @@ import java.util.Locale;
 public class HomePageFragment extends Fragment {
 
     TextView textSaudacao, textDataHome;
-     Spinner spinnerTurmasHome;
+    Spinner spinnerTurmasHome;
+    private ExecutorService databaseExecutor;
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -79,6 +82,7 @@ public class HomePageFragment extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        databaseExecutor = Executors.newSingleThreadExecutor();
     }
 
     @Override
@@ -139,137 +143,175 @@ public class HomePageFragment extends Fragment {
 
 
     private void carregarTurmasNoSpinner(View view) {
-         spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
-        List<TurmaModelo> listaTurmas = new ArrayList<>();
-
+        spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
+        
         //  Resgata o ID do professor que logou
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        final int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
 
         if (idUsuarioLogado == -1) {
             Toast.makeText(getContext(), "Erro de sessão do usuário.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        //  Conecta no banco e busca as turmas
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-                // INNER JOIN para pegar Nome da Turma e Nome do Laboratório onde o professor dá aula
-                String sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
-                        "FROM turma t " +
-                        "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                        "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                        "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+        databaseExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final List<TurmaModelo> listaTurmas = new ArrayList<>();
+                //  Conecta no banco e busca as turmas
+                try {
+                    Connection con = ConexaoMySQL.conectar();
+                    if (con != null) {
+                        // INNER JOIN para pegar Nome da Turma e Nome do Laboratório onde o professor dá aula
+                        String sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                "FROM turma t " +
+                                "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                                "WHERE ut.id_usuario = ? AND t.situação = 'A'";
 
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idUsuarioLogado);
-                ResultSet rs = stmt.executeQuery();
+                        PreparedStatement stmt = con.prepareStatement(sql);
+                        stmt.setInt(1, idUsuarioLogado);
+                        ResultSet rs = stmt.executeQuery();
 
-                //  Monta a lista
-                while (rs.next()) {
-                    int idTurma = rs.getInt("id_turma");
-                    String nomeTurma = rs.getString("nome_turma");
-                    String nomeLab = rs.getString("nome_laboratorio");
+                        //  Monta a lista
+                        while (rs.next()) {
+                            int idTurma = rs.getInt("id_turma");
+                            String nomeTurma = rs.getString("nome_turma");
+                            String nomeLab = rs.getString("nome_laboratorio");
 
-                    listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
-                }
+                            listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
+                        }
 
-                rs.close();
-                stmt.close();
-                con.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(getContext(), "Erro ao carregar turmas", Toast.LENGTH_SHORT).show();
-        }
-
-        //  Injeta a lista no Spinner usando o ArrayAdapter
-        if (getContext() != null) {
-            ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
-                    getContext(),
-                    android.R.layout.simple_spinner_item,
-                    listaTurmas
-            );
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spinnerTurmasHome.setAdapter(adapter);
-            spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                    TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
-                    // Chama a função que busca as receitas passando o ID da turma
-                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
-                }
-
-                @Override
-                public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-            });
-        }
-}
-    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
-        //  Encontra o container vazio na tela
-        android.widget.LinearLayout containerReceitas = requireView().findViewById(R.id.container_receitas);
-
-        //  Limpa o container (para apagar as receitas da turma anterior, se houver)
-        containerReceitas.removeAllViews();
-        android.view.LayoutInflater inflater = android.view.LayoutInflater.from(getContext());
-
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-                // Busca a ficha técnica e o status no agendamento
-                String sql = "SELECT f.nome_ficha, a.concluido " +
-                        "FROM ficha f " +
-                        "INNER JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                        "WHERE f.id_turma = ?";
-
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idTurma);
-                ResultSet rs = stmt.executeQuery();
-
-                // Para cada receita encontrada no banco, criamos um item na tela
-                while (rs.next()) {
-                    String nomeFicha = rs.getString("nome_ficha");
-                    String concluido = rs.getString("concluido"); // 'S' ou 'N'
-
-                    // Pega o nosso "molde" XML
-                    View itemReceita = inflater.inflate(R.layout.item_receita, containerReceitas, false);
-
-                    // Encontra os campos dentro do molde
-                    android.widget.TextView tvNome = itemReceita.findViewById(R.id.tv_nome_receita);
-                    android.widget.TextView tvDetalhes = itemReceita.findViewById(R.id.tv_detalhes_receita);
-                    android.widget.TextView tvStatusText = itemReceita.findViewById(R.id.tv_status_text);
-                    android.widget.ImageView ivStatusIcon = itemReceita.findViewById(R.id.iv_status_icon);
-
-                    // Preenche os dados
-                    tvNome.setText(nomeFicha);
-                    tvDetalhes.setText(nomeLaboratorio);
-
-                    // Configura as cores e ícones baseados no status do banco (S ou N)
-                    if ("S".equals(concluido)) {
-                        tvStatusText.setText("CONCLUÍDO");
-                        tvStatusText.setTextColor(android.graphics.Color.parseColor("#15803d")); // Verde
-                        ivStatusIcon.setImageResource(R.drawable.ic_check_circle);
-                        ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#15803d"));
-                    } else {
-                        tvStatusText.setText("PENDENTE");
-                        tvStatusText.setTextColor(android.graphics.Color.parseColor("#42474f")); // Cinza
-                        ivStatusIcon.setImageResource(R.drawable.ic_notifications);
-                        ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#42474f"));
+                        rs.close();
+                        stmt.close();
+                        con.close();
                     }
-
-                    // Finalmente, injeta o item pronto dentro da tela!
-                    containerReceitas.addView(itemReceita);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    if (getActivity() != null) {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getContext(), "Erro ao carregar turmas", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
                 }
 
-                rs.close();
-                stmt.close();
-                con.close();
+                // Injeta a lista no Spinner na Main Thread
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (getContext() != null) {
+                                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
+                                        getContext(),
+                                        android.R.layout.simple_spinner_item,
+                                        listaTurmas
+                                );
+                                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                                spinnerTurmasHome.setAdapter(adapter);
+                                spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                                    @Override
+                                    public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                                        TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
+                                        // Chama a função que busca as receitas passando o ID da turma
+                                        carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
+                                    }
+
+                                    @Override
+                                    public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+                                });
+                            }
+                        }
+                    });
+                }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
     }
 
+    private void carregarReceitasDaTurma(final int idTurma, final String nomeLaboratorio) {
+        final android.widget.LinearLayout containerReceitas = requireView().findViewById(R.id.container_receitas);
+        containerReceitas.removeAllViews();
+        final LayoutInflater inflater = LayoutInflater.from(getContext());
 
+        databaseExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final List<View> viewsReceitas = new ArrayList<>();
+                try {
+                    Connection con = ConexaoMySQL.conectar();
+                    if (con != null) {
+                        // Busca a ficha técnica e o status no agendamento
+                        String sql = "SELECT f.nome_ficha, a.concluido " +
+                                "FROM ficha f " +
+                                "INNER JOIN agendamento a ON f.id_ficha = a.id_ficha " +
+                                "WHERE f.id_turma = ?";
+
+                        PreparedStatement stmt = con.prepareStatement(sql);
+                        stmt.setInt(1, idTurma);
+                        ResultSet rs = stmt.executeQuery();
+
+                        // Para cada receita encontrada no banco, criamos um item estruturado
+                        while (rs.next()) {
+                            final String nomeFicha = rs.getString("nome_ficha");
+                            final String concluido = rs.getString("concluido"); // 'S' ou 'N'
+
+                            if (getActivity() != null) {
+                                // Criar a View temporária para preencher em background (inflater seguro)
+                                View itemReceita = inflater.inflate(R.layout.item_receita, containerReceitas, false);
+
+                                android.widget.TextView tvNome = itemReceita.findViewById(R.id.tv_nome_receita);
+                                android.widget.TextView tvDetalhes = itemReceita.findViewById(R.id.tv_detalhes_receita);
+                                android.widget.TextView tvStatusText = itemReceita.findViewById(R.id.tv_status_text);
+                                android.widget.ImageView ivStatusIcon = itemReceita.findViewById(R.id.iv_status_icon);
+
+                                tvNome.setText(nomeFicha);
+                                tvDetalhes.setText(nomeLaboratorio);
+
+                                if ("S".equals(concluido)) {
+                                    tvStatusText.setText("CONCLUÍDO");
+                                    tvStatusText.setTextColor(android.graphics.Color.parseColor("#15803d")); // Verde
+                                    ivStatusIcon.setImageResource(R.drawable.ic_check_circle);
+                                    ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#15803d"));
+                                } else {
+                                    tvStatusText.setText("PENDENTE");
+                                    tvStatusText.setTextColor(android.graphics.Color.parseColor("#42474f")); // Cinza
+                                    ivStatusIcon.setImageResource(R.drawable.ic_notifications);
+                                    ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#42474f"));
+                                }
+                                viewsReceitas.add(itemReceita);
+                            }
+                        }
+
+                        rs.close();
+                        stmt.close();
+                        con.close();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                // Injeta todas as views prontas no container pela UI Thread
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            for (View item : viewsReceitas) {
+                                containerReceitas.addView(item);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (databaseExecutor != null) {
+            databaseExecutor.shutdown();
+        }
+    }
 }
