@@ -63,6 +63,10 @@ public class LoginActivity extends AppCompatActivity {
 
                     try {
                         con = ConexaoMySQL.conectar();
+                        if (con == null) {
+                            Toast.makeText(LoginActivity.this, "Erro de conexão com o banco de dados.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
                         sql = "SELECT id_usuario, nome_usuario FROM usuario WHERE email = ? AND senha = ?";
                         stmt = con.prepareStatement(sql);
                         stmt.setString(1, email);
