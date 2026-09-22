@@ -9,7 +9,7 @@ import java.sql.SQLException;
 public class ConexaoMySQL {
     private static final String URL = "jdbc:mysql://mysql-1d28e263-sigec-5373.j.aivencloud.com:28873/db_sigec";
     private static final String USUARIO = "avnadmin"; //super usuario do banco de dados
-    private static final String SENHA = "AVNS_IE8GbetcX33ik0HL6db";
+    private static final String SENHA = "";
 
 
 
