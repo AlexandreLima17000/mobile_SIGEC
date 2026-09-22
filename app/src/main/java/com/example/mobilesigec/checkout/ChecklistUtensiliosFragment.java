@@ -112,7 +112,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
                             "INNER JOIN turma t ON f.id_turma = t.id_turma " +
                             "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                             "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+                            "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idUsuarioLogado);

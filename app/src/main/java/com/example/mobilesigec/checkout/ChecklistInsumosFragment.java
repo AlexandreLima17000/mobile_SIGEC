@@ -118,7 +118,7 @@ public class ChecklistInsumosFragment extends Fragment {
                             "INNER JOIN turma t ON f.id_turma = t.id_turma " +
                             "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                             "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+                            "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idUsuarioLogado);
@@ -343,7 +343,7 @@ public class ChecklistInsumosFragment extends Fragment {
                     con.setAutoCommit(false); // Inicia transação
 
                     //  Inserir o novo produto com o NOME LIMPO
-                    String sqlProduto = "INSERT INTO produto (nome_produto, unidade, id_categoria, situação) VALUES (?, ?, 1, 'A')";
+                    String sqlProduto = "INSERT INTO produto (nome_produto, unidade, id_categoria, situacao) VALUES (?, ?, 1, 'A')";
                     PreparedStatement stmtProduto = con.prepareStatement(sqlProduto, Statement.RETURN_GENERATED_KEYS);
                     stmtProduto.setString(1, nome);
                     stmtProduto.setString(2, unidade);
