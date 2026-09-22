@@ -59,10 +59,6 @@ public class MainActivity extends AppCompatActivity {
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
         }
-
-        if (getIntent().getBooleanExtra("OPEN_RECEITAS", false)) {
-            navController.navigate(R.id.nav_receitas);
-        }
     }
 
 
