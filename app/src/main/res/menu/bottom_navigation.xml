@@ -15,6 +15,10 @@
             android:id="@+id/nav_calendario"
             android:icon="@drawable/ic_calendar"
             android:title="@string/menu_calendario" />
+        <item
+            android:id="@+id/nav_receita"
+            android:icon="@drawable/ic_book"
+            android:title="@string/menu_receita" />
 
 
 

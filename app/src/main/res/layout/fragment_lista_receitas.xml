@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -13,43 +14,39 @@
         android:paddingTop="18dp"
         android:paddingBottom="24dp"
         android:paddingStart="14dp"
-        android:paddingEnd="14dp"
-        android:clipToPadding="false">
+        android:paddingEnd="14dp">
 
-        <!-- MOLDURA EXTERNA (Tudo fica aqui dentro) -->
+        <!-- MOLDURA -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
             app:cardElevation="10dp"
-            android:outlineSpotShadowColor="#000000"
-            app:cardBackgroundColor="#E2E8F0"> <!-- Fundo cinza claro padrão -->
+            app:cardBackgroundColor="#E2E8F0">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- FAIXA LARANJA LATERAL ESQUERDA -->
+                <!-- FAIXA LATERAL -->
                 <View
                     android:layout_width="6dp"
                     android:layout_height="match_parent"
                     android:background="@color/secondary_container" />
 
-                <!-- CONTEÚDO PRINCIPAL (Cabeçalho azul + Corpo cinza) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
-                    <!-- TOPO DA MOLDURA: "Pesquisar receita" -->
+                    <!-- CABEÇALHO -->
                     <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/primary">
 
-                        <!-- Triângulo Escuro no Canto -->
                         <ImageView
                             android:layout_width="50dp"
                             android:layout_height="50dp"
@@ -61,10 +58,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:paddingStart="16dp"
-                            android:paddingEnd="16dp"
-                            android:paddingTop="16dp"
-                            android:paddingBottom="20dp">
+                            android:padding="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -73,18 +67,15 @@
                                 android:textColor="#FFFFFF"
                                 android:textSize="22sp"
                                 android:textStyle="bold"
-                                android:layout_marginBottom="14dp"/>
+                                android:layout_marginBottom="14dp" />
 
-                            <!-- BARRA DE PESQUISA (Cinza-azulado com contorno) -->
+                            <!-- PESQUISA -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:background="@drawable/bg_search_bar"
                                 android:gravity="center_vertical"
-                                android:paddingStart="12dp"
-                                android:paddingEnd="12dp"
-                                android:paddingTop="10dp"
-                                android:paddingBottom="10dp">
+                                android:padding="10dp">
 
                                 <ImageView
                                     android:layout_width="26dp"
@@ -92,61 +83,46 @@
                                     android:src="@drawable/ic_search"
                                     app:tint="#B0C4DE" />
 
-                                <TextView
+                                <EditText
+                                    android:id="@+id/edtPesquisaReceita"
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:layout_marginStart="12dp"
-                                    android:text="Buscar ou filtrar receita..."
-                                    android:textColor="#B0C4DE"
+                                    android:hint="Buscar receita..."
+                                    android:textColor="#FFFFFF"
+                                    android:textColorHint="#B0C4DE"
                                     android:textSize="15sp"
-                                    android:singleLine="true" />
+                                    android:singleLine="true"
+                                    android:background="@android:color/transparent" />
 
-                                <!-- Ícone de Menu Hambúrguer -->
-                                <ImageView
-                                    android:layout_width="26dp"
-                                    android:layout_height="26dp"
-                                    android:src="@drawable/ic_menu"
-                                    app:tint="#B0C4DE" />
                             </LinearLayout>
+
                         </LinearLayout>
+
                     </FrameLayout>
 
-                    <!-- CORPO INTERNO (Listas e Botões) -->
+
+                    <!-- CORPO -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:paddingStart="16dp"
-                        android:paddingEnd="16dp"
-                        android:paddingTop="16dp"
-                        android:paddingBottom="24dp">
+                        android:padding="16dp">
 
-                        <!-- CONTADOR DE RESULTADOS -->
-                        <LinearLayout
+                        <!-- QUANTIDADE -->
+                        <TextView
+                            android:id="@+id/txtQuantidadeReceitas"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginBottom="16dp">
+                            android:text="RESULTADO DOS FILTROS: 0 receitas encontradas"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="16dp" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="RESULTADO DOS FILTROS: 9 "
-                                android:textColor="@color/primary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="receitas encontradas"
-                                android:textColor="@color/secondary_container"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <!-- BOTÕES DE FILTRO -->
+                        <!-- FILTROS VISUAIS -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -155,6 +131,7 @@
                             android:weightSum="3">
 
                             <TextView
+                                android:id="@+id/filtroTodas"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
@@ -169,6 +146,7 @@
                                 android:layout_marginEnd="6dp" />
 
                             <TextView
+                                android:id="@+id/filtroDisponiveis"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
@@ -183,6 +161,7 @@
                                 android:layout_marginEnd="6dp" />
 
                             <TextView
+                                android:id="@+id/filtroDatadas"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
@@ -193,211 +172,31 @@
                                 android:background="@drawable/bg_filter_button"
                                 android:paddingTop="8dp"
                                 android:paddingBottom="8dp"
-                                android:textAlignment="center"/>
+                                android:textAlignment="center" />
+
                         </LinearLayout>
 
-                        <!-- GRID DE RECEITAS COM OS 9 CARDS -->
+
+                        <!--
+                            IMPORTANTE:
+                            O JAVA VAI CRIAR OS CARDS AQUI.
+                        -->
+
                         <GridLayout
+                            android:id="@+id/gridReceitas"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:columnCount="2"
-                            android:alignmentMode="alignMargins">
+                            android:alignmentMode="alignMargins" />
 
-                            <!-- CARD 1: Italiana -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ITALIANA 🇮🇹" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Risoto de Funghi" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 2: Brasileira -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BRASILEIRA 🇧🇷" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Feijoada Completa" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 3: Japonesa -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="JAPONESA 🇯🇵" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Sushi de Salmão" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DATADAS" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#1E3A8A" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 4: Mexicana (SELECIONADO) -->
-                            <androidx.cardview.widget.CardView
-                                android:id="@+id/card_tacos"
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="8dp"
-                                android:outlineSpotShadowColor="#ED7B23"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp" android:background="@drawable/bg_card_selected_outline">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MEXICANA 🇲🇽" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Tacos de Carnitas" android:textColor="@color/secondary_container" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 5: Francesa -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="FRANCESA 🇫🇷" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Ratatouille" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DATADAS" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#1E3A8A" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 6: Italiana 2 -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ITALIANA 🇮🇹" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Lasanha à Bolonhesa" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 7: Brasileira (Moqueca) -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BRASILEIRA 🇧🇷" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Moqueca de Peixe" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 8: Tailandesa (Pad Thai) -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TAILANDESA 🇹🇭" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Pad Thai de Camarão" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                            <!-- CARD 9: Espanhola (Paella) -->
-                            <androidx.cardview.widget.CardView
-                                android:layout_width="0dp"
-                                android:layout_height="125dp"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="6dp"
-                                android:layout_marginBottom="12dp"
-                                app:cardCornerRadius="10dp"
-                                app:cardElevation="6dp"
-                                app:cardBackgroundColor="@color/primary">
-
-                                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
-                                    <ImageView android:layout_width="35dp" android:layout_height="35dp" android:layout_gravity="top|end" android:src="@drawable/bg_card_corner_accent" app:tint="#40FFFFFF" />
-                                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ESPANHOLA 🇪🇸" android:textColor="@color/secondary_container" android:textSize="10sp" android:textStyle="bold" />
-                                        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="Paella de Frutos do Mar" android:textColor="#FFFFFF" android:textSize="17sp" android:textStyle="bold" android:gravity="center" />
-                                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISPONÍVEL" android:textColor="#FFFFFF" android:textSize="9sp" android:textStyle="bold" android:background="#15803D" android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:layout_gravity="end" />
-                                    </LinearLayout>
-                                </FrameLayout>
-                            </androidx.cardview.widget.CardView>
-
-                        </GridLayout>
                     </LinearLayout>
+
                 </LinearLayout>
+
             </LinearLayout>
+
         </androidx.cardview.widget.CardView>
+
     </LinearLayout>
+
 </ScrollView>

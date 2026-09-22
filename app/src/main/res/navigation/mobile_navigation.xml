@@ -40,6 +40,11 @@
 
 
 
+    <fragment
+        android:id="@+id/nav_receita"
+        android:name="com.example.mobilesigec.receita.ListaReceitasFragment"
+        android:label="@string/menu_receita"
+        tools:layout="@layout/fragment_lista_receitas" />
 
     <fragment
         android:id="@+id/nav_calendario"
