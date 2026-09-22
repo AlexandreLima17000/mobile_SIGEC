@@ -146,16 +146,6 @@
                     android:layout_marginBottom="20dp"/>
 
                 <!-- Botão Adicionar Extra -->
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btn_solicitar_utensilio"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_dashed_orange"
-                    android:text="+ Adicionar utensílio extra"
-                    android:textColor="@color/senac_orange"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="20dp"/>
 
                 <!-- Botões de Ação Final (Altura padronizada e quebra de linha) -->
                 <LinearLayout

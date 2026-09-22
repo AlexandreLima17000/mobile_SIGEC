@@ -146,16 +146,6 @@
                     android:layout_marginBottom="20dp"/>
 
                 <!-- Botão Adicionar Extra -->
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btn_solicitar_insumo"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_dashed_orange"
-                    android:text="+ Solicitar insumo extra"
-                    android:textColor="@color/senac_orange"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="20dp"/>
 
                 <!-- Botões de Ação Final -->
                 <LinearLayout
@@ -174,17 +164,6 @@
                         android:textSize="12sp"
                         android:textColor="@color/primary"
                         app:strokeColor="@color/primary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_nova_receita"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
-                        android:text="Criar Nova\nReceita"
-                        android:textSize="12sp"
-                        app:backgroundTint="@color/primary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_confirmar_insumos"

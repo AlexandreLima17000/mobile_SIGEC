@@ -1,12 +1,10 @@
 package com.example.mobilesigec.checkout;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatButton;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,7 +14,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -33,7 +30,6 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -56,8 +52,6 @@ public class ChecklistInsumosFragment extends Fragment {
 
     private MaterialButton btnLimparInsumos;
     private MaterialButton btnConfirmarInsumos;
-    private MaterialButton btnNovaReceita;
-    private AppCompatButton btnSolicitarInsumo;
 
     public ChecklistInsumosFragment() {}
 
@@ -85,15 +79,9 @@ public class ChecklistInsumosFragment extends Fragment {
 
         btnLimparInsumos = view.findViewById(R.id.btn_limpar_insumos);
         btnConfirmarInsumos = view.findViewById(R.id.btn_confirmar_insumos);
-        btnNovaReceita = view.findViewById(R.id.btn_nova_receita);
-        btnSolicitarInsumo = view.findViewById(R.id.btn_solicitar_insumo);
 
         btnLimparInsumos.setOnClickListener(v -> limparChecklist());
         btnConfirmarInsumos.setOnClickListener(v -> confirmarSeparacao());
-        btnNovaReceita.setOnClickListener(v -> Toast.makeText(getContext(), "Redirecionar para criação", Toast.LENGTH_SHORT).show());
-
-        // Chamada atualizada para o novo formulário
-        btnSolicitarInsumo.setOnClickListener(v -> abrirDialogSolicitarInsumo());
 
         carregarReceitasNoSpinner();
     }
@@ -252,126 +240,57 @@ public class ChecklistInsumosFragment extends Fragment {
             return;
         }
 
+        // 1. Filtrar apenas os itens que foram realmente marcados pelo instrutor
+        List<InsumoModelo> insumosUtilizados = new ArrayList<>();
         for (InsumoModelo insumo : listaInsumosAtual) {
-            if (!insumo.isMarcado()) {
-                Toast.makeText(getContext(), "Marque todos os insumos!", Toast.LENGTH_SHORT).show();
-                return;
+            if (insumo.isMarcado()) {
+                insumosUtilizados.add(insumo);
             }
         }
 
-        progressLoading.setVisibility(View.VISIBLE);
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
-            boolean sucesso = false;
-            try {
-                Connection con = ConexaoMySQL.conectar();
-                if (con != null) {
-                    String sql = "UPDATE agendamento SET concluido = 'S' WHERE id_ficha = ?";
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, receitaSelecionada.getIdReceita());
-                    if(stmt.executeUpdate() > 0) sucesso = true;
-                    stmt.close(); con.close();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            final boolean finalSucesso = sucesso;
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE);
-                    if (finalSucesso) {
-                        Toast.makeText(getContext(), "Separação confirmada!", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(getContext(), "Erro ao confirmar no banco.", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            }
-        });
-    }
-
-    private void abrirDialogSolicitarInsumo() {
-        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
-        if (receitaSelecionada == null) {
-            Toast.makeText(getContext(), "Selecione uma receita primeiro.", Toast.LENGTH_SHORT).show();
+        // 2. Valida se ele marcou pelo menos alguma coisa
+        if (insumosUtilizados.isEmpty()) {
+            Toast.makeText(getContext(), "Marque pelo menos um insumo utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
             return;
         }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
-        View view = getLayoutInflater().inflate(R.layout.dialog_solicitar_insumo, null);
-        builder.setView(view);
-
-        AlertDialog dialog = builder.create();
-        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-
-        EditText etNome = view.findViewById(R.id.et_nome_insumo);
-        EditText etQuantidade = view.findViewById(R.id.et_quantidade_insumo);
-        EditText etUnidade = view.findViewById(R.id.et_unidade_insumo);
-        EditText etObservacao = view.findViewById(R.id.et_observacao_insumo);
-
-        view.findViewById(R.id.btn_fechar_dialog).setOnClickListener(v -> dialog.dismiss());
-        view.findViewById(R.id.btn_cancelar_dialog).setOnClickListener(v -> dialog.dismiss());
-
-        view.findViewById(R.id.btn_adicionar_dialog).setOnClickListener(v -> {
-            String nome = etNome.getText().toString().trim();
-            String qtdStr = etQuantidade.getText().toString().trim();
-            String unidade = etUnidade.getText().toString().trim();
-            String observacao = etObservacao.getText().toString().trim();
-
-            if (nome.isEmpty() || qtdStr.isEmpty() || unidade.isEmpty()) {
-                Toast.makeText(getContext(), "Preencha os campos obrigatórios.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            int quantidade = Integer.parseInt(qtdStr);
-            inserirInsumoExtra(nome, quantidade, unidade, observacao, receitaSelecionada.getIdReceita(), dialog);
-        });
-
-        dialog.show();
-    }
-
-    private void inserirInsumoExtra(String nome, int quantidade, String unidade, String observacao, int idFicha, AlertDialog dialog) {
         progressLoading.setVisibility(View.VISIBLE);
-        dialog.dismiss();
-
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             boolean sucesso = false;
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    con.setAutoCommit(false); // Inicia transação
+                    // Desliga o commit automático para garantir que a baixa de estoque
+                    // e o agendamento sejam salvos juntos (Transação Segura)
+                    con.setAutoCommit(false);
 
-                    //  Inserir o novo produto com o NOME LIMPO
-                    String sqlProduto = "INSERT INTO produto (nome_produto, unidade, id_categoria, situacao) VALUES (?, ?, 1, 'A')";
-                    PreparedStatement stmtProduto = con.prepareStatement(sqlProduto, Statement.RETURN_GENERATED_KEYS);
-                    stmtProduto.setString(1, nome);
-                    stmtProduto.setString(2, unidade);
-                    stmtProduto.executeUpdate();
+                    // Passo A: Atualizar o agendamento da aula para concluído
+                    String sqlAgendamento = "UPDATE agendamento SET concluido = 'S' WHERE id_ficha = ?";
+                    PreparedStatement stmtAgendamento = con.prepareStatement(sqlAgendamento);
+                    stmtAgendamento.setInt(1, receitaSelecionada.getIdReceita());
+                    stmtAgendamento.executeUpdate();
+                    stmtAgendamento.close();
 
-                    ResultSet rsKeys = stmtProduto.getGeneratedKeys();
-                    int idProdutoGerado = -1;
-                    if (rsKeys.next()) {
-                        idProdutoGerado = rsKeys.getInt(1);
+                    // Passo B: Registrar a SAÍDA no estoque apenas para os insumos marcados na tela
+                    // O sub-select '(SELECT id_produto...)' acha a qual produto aquele insumo pertence.
+                    String sqlEstoque = "INSERT INTO movimentacao_estoque (tipo_movimentacao, quantidade, id_produto, id_insumo, observacao) " +
+                            "VALUES ('SAIDA', ?, (SELECT id_produto FROM insumo WHERE id_insumo = ?), ?, 'Baixa confirmada pelo instrutor')";
+
+                    PreparedStatement stmtEstoque = con.prepareStatement(sqlEstoque);
+
+                    // Roda o INSERT para cada item que estava com a caixa marcada (isMarcado = true)
+                    for (InsumoModelo insumo : insumosUtilizados) {
+                        stmtEstoque.setDouble(1, Double.parseDouble(insumo.getQuantidade())); // Quantidade gasta
+                        stmtEstoque.setInt(2, insumo.getIdInsumo()); // Usado no sub-select para achar o produto
+                        stmtEstoque.setInt(3, insumo.getIdInsumo()); // Preenche a coluna id_insumo
+                        stmtEstoque.executeUpdate();
                     }
-                    rsKeys.close();
-                    stmtProduto.close();
+                    stmtEstoque.close();
 
-                    //  Inserir o insumo com a flag extra = 'S'
-                    if (idProdutoGerado != -1) {
-                        String sqlInsumo = "INSERT INTO insumo (quantidade, cancelado, id_produto, id_ficha, extra) VALUES (?, 'N', ?, ?, 'S')";
-                        PreparedStatement stmtInsumo = con.prepareStatement(sqlInsumo);
-                        stmtInsumo.setInt(1, quantidade);
-                        stmtInsumo.setInt(2, idProdutoGerado);
-                        stmtInsumo.setInt(3, idFicha);
-                        stmtInsumo.executeUpdate();
-                        stmtInsumo.close();
-
-                        con.commit(); // Confirma transação
-                        sucesso = true;
-                    } else {
-                        con.rollback(); // Desfaz se falhou
-                    }
+                    // Passo C: Salva tudo de forma definitiva no banco
+                    con.commit();
+                    sucesso = true;
                     con.close();
                 }
             } catch (Exception e) {
@@ -383,10 +302,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     if (finalSucesso) {
-                        Toast.makeText(getContext(), "Insumo extra adicionado!", Toast.LENGTH_SHORT).show();
-                        carregarInsumosDaReceita(idFicha); // Atualiza a lista automaticamente
+                        Toast.makeText(getContext(), "Separação e baixa de estoque concluídas com sucesso!", Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(getContext(), "Erro ao adicionar insumo.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Erro ao processar a baixa no estoque.", Toast.LENGTH_SHORT).show();
                     }
                 });
             }

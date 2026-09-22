@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatButton;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -53,7 +52,6 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
     private MaterialButton btnLimparUtensilios;
     private MaterialButton btnConfirmarUtensilios;
-    private AppCompatButton btnSolicitarUtensilio;
 
     public ChecklistUtensiliosFragment() {
         // Required empty public constructor
@@ -83,11 +81,9 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         btnLimparUtensilios = view.findViewById(R.id.btn_limpar_utensilios);
         btnConfirmarUtensilios = view.findViewById(R.id.btn_confirmar_utensilios);
-        btnSolicitarUtensilio = view.findViewById(R.id.btn_solicitar_utensilio);
 
         btnLimparUtensilios.setOnClickListener(v -> limparChecklist());
         btnConfirmarUtensilios.setOnClickListener(v -> confirmarUtensilios());
-        btnSolicitarUtensilio.setOnClickListener(v -> Toast.makeText(getContext(), "Abrir formulário de utensílio extra", Toast.LENGTH_SHORT).show());
 
         carregarReceitasNoSpinner();
     }
