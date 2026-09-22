@@ -38,41 +38,9 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="36dp"
-            android:paddingTop="54dp">
+            android:paddingTop="16dp">
 
-            <!-- Topbar (Cabeçalho) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingBottom="12dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SENAC SIGEC"
-                    android:textColor="@color/primary"
-                    android:textSize="26sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="24dp"
-                    android:text="Painel do Instrutor"
-                    android:textColor="@color/secondary_container"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="2dp"
-                android:background="@color/outline_variant"
-                android:layout_marginBottom="18dp"/>
+            <!-- O topo falso foi removido. Agora utilizamos a Toolbar verdadeira do app_bar_main -->
 
             <!-- Card Hero (Bom dia + Imagem do Chef) -->
             <androidx.cardview.widget.CardView
