@@ -167,7 +167,7 @@ public class HomePageFragment extends Fragment {
                                 "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
                                 "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                                "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+                                "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
                         PreparedStatement stmt = con.prepareStatement(sql);
                         stmt.setInt(1, idUsuarioLogado);
