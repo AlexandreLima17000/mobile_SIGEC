@@ -5,7 +5,6 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
 
-import com.example.mobilesigec.receita.ListaReceitasFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -30,84 +29,155 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+        ActivityMainBinding binding =
+                ActivityMainBinding.inflate(getLayoutInflater());
+
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.appBarMain.toolbar);
+
         if (binding.appBarMain.fab != null) {
-            binding.appBarMain.fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).setAnchorView(R.id.fab).show());
+            binding.appBarMain.fab.setOnClickListener(view ->
+                    Snackbar.make(
+                                    view,
+                                    "Replace with your own action",
+                                    Snackbar.LENGTH_LONG
+                            )
+                            .setAction("Action", null)
+                            .setAnchorView(R.id.fab)
+                            .show()
+            );
         }
-        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_main);
+
+        // Recupera o NavHost
+        NavHostFragment navHostFragment =
+                (NavHostFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.nav_host_fragment_content_main);
+
         assert navHostFragment != null;
-        NavController navController = navHostFragment.getNavController();
 
+        NavController navController =
+                navHostFragment.getNavController();
+
+        // MENU LATERAL
         NavigationView navigationView = binding.navView;
+
         if (navigationView != null) {
-            mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home,R.id.nav_calendario,R.id.nav_receita,  R.id.nav_settings)
-                    .setOpenableLayout(binding.drawerLayout)
-                    .build();
-            NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-            NavigationUI.setupWithNavController(navigationView, navController);
+
+            mAppBarConfiguration =
+                    new AppBarConfiguration.Builder(
+                            R.id.nav_home,
+                            R.id.nav_calendario,
+                            R.id.nav_receita,
+                            R.id.nav_settings
+                    )
+                            .setOpenableLayout(binding.drawerLayout)
+                            .build();
+
+            NavigationUI.setupActionBarWithNavController(
+                    this,
+                    navController,
+                    mAppBarConfiguration
+            );
+
+            NavigationUI.setupWithNavController(
+                    navigationView,
+                    navController
+            );
         }
 
-        BottomNavigationView bottomNavigationView = binding.appBarMain.contentMain.bottomNavView;
+        // BARRA INFERIOR
+        BottomNavigationView bottomNavigationView =
+                binding.appBarMain.contentMain.bottomNavView;
+
         if (bottomNavigationView != null) {
-            mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home,R.id.nav_calendario,R.id.nav_receita)
-                    .build();
-            NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-            NavigationUI.setupWithNavController(bottomNavigationView, navController);
+
+            mAppBarConfiguration =
+                    new AppBarConfiguration.Builder(
+                            R.id.nav_home,
+                            R.id.nav_calendario,
+                            R.id.nav_receita
+                    )
+                            .build();
+
+            NavigationUI.setupActionBarWithNavController(
+                    this,
+                    navController,
+                    mAppBarConfiguration
+            );
+
+            NavigationUI.setupWithNavController(
+                    bottomNavigationView,
+                    navController
+            );
         }
 
-        // CARREGA A TELA DA LISTA DE RECEITAS AO INICIAR O APP
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.nav_host_fragment_content_main, new ListaReceitasFragment())
-                    .commit();
-        }
+        // NÃO COLOCAR NAVEGAÇÃO MANUAL PARA ListaReceitasFragment AQUI
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+
         boolean result = super.onCreateOptionsMenu(menu);
-        // Using findViewById because NavigationView exists in different layout files
-        // between w600dp and w1240dp
+
         NavigationView navView = findViewById(R.id.nav_view);
+
         if (navView == null) {
-            // The navigation drawer already has the items including the items in the overflow menu
-            // We only inflate the overflow menu if the navigation drawer isn't visible
+
             getMenuInflater().inflate(R.menu.overflow, menu);
 
             Connection conexao = ConexaoMySQL.conectar();
-            if (conexao != null) {
-                Log.d("Conexão", "Conexão estabelecida com sucesso!");
-                // Faça suas operações de banco de dados aqui
-                ConexaoMySQL.fecharConexao(conexao);
-            } else {
-                Log.d("Conexão", "Erro ao conectar ao banco de dados!");
-            }
 
+            if (conexao != null) {
+
+                Log.d(
+                        "Conexão",
+                        "Conexão estabelecida com sucesso!"
+                );
+
+                ConexaoMySQL.fecharConexao(conexao);
+
+            } else {
+
+                Log.d(
+                        "Conexão",
+                        "Erro ao conectar ao banco de dados!"
+                );
+            }
         }
+
         return result;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+
         if (item.getItemId() == R.id.nav_settings) {
-            NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+
+            NavController navController =
+                    Navigation.findNavController(
+                            this,
+                            R.id.nav_host_fragment_content_main
+                    );
+
             navController.navigate(R.id.nav_settings);
         }
+
         return super.onOptionsItemSelected(item);
     }
 
     @Override
     public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, mAppBarConfiguration)
-                || super.onSupportNavigateUp();
-    }
 
+        NavController navController =
+                Navigation.findNavController(
+                        this,
+                        R.id.nav_host_fragment_content_main
+                );
+
+        return NavigationUI.navigateUp(
+                navController,
+                mAppBarConfiguration
+        ) || super.onSupportNavigateUp();
+    }
 }

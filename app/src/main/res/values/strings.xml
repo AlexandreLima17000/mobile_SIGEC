@@ -10,7 +10,7 @@
 
     <string name="menu_home">Home Page</string>
     <string name="menu_calendario">Calendário</string>
-    <string name="menu_receita">Calendário</string>
+    <string name="menu_receita">Receita</string>
     <string name="menu_transform">Transform</string>
     <string name="menu_reflow">Reflow</string>
     <string name="menu_slideshow">Slideshow</string>

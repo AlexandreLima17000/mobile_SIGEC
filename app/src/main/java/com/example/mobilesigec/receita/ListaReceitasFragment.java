@@ -18,6 +18,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
 
 import com.example.mobilesigec.ConexaoMySQL;
 import com.example.mobilesigec.R;
@@ -37,7 +39,6 @@ public class ListaReceitasFragment extends Fragment {
     private final List<Receita> listaReceitas =
             new ArrayList<>();
 
-
     @Nullable
     @Override
     public View onCreateView(
@@ -50,7 +51,6 @@ public class ListaReceitasFragment extends Fragment {
                 container,
                 false
         );
-
 
         // ==========================================
         // TÍTULO
@@ -68,7 +68,6 @@ public class ListaReceitasFragment extends Fragment {
             }
         }
 
-
         // ==========================================
         // COMPONENTES
         // ==========================================
@@ -84,13 +83,11 @@ public class ListaReceitasFragment extends Fragment {
                         R.id.txtQuantidadeReceitas
                 );
 
-
         // ==========================================
         // CARREGAR RECEITAS
         // ==========================================
 
         carregarReceitas();
-
 
         // ==========================================
         // PESQUISA
@@ -126,10 +123,8 @@ public class ListaReceitasFragment extends Fragment {
                 }
         );
 
-
         return view;
     }
-
 
     // ==================================================
     // CONSULTAR BANCO
@@ -148,20 +143,16 @@ public class ListaReceitasFragment extends Fragment {
 
             try {
 
-                // USE A SUA CLASSE DE CONEXÃO
                 conexao = ConexaoMySQL.conectar();
-
 
                 String sql =
                         "SELECT id_ficha, nome_ficha, preparo " +
                                 "FROM ficha " +
                                 "ORDER BY nome_ficha ASC";
 
-
                 stmt = conexao.prepareStatement(sql);
 
                 rs = stmt.executeQuery();
-
 
                 while (rs.next()) {
 
@@ -174,7 +165,6 @@ public class ListaReceitasFragment extends Fragment {
                     String preparo =
                             rs.getString("preparo");
 
-
                     resultado.add(
                             new Receita(
                                     idFicha,
@@ -183,7 +173,6 @@ public class ListaReceitasFragment extends Fragment {
                             )
                     );
                 }
-
 
                 if (getActivity() != null) {
 
@@ -201,11 +190,9 @@ public class ListaReceitasFragment extends Fragment {
                     });
                 }
 
-
             } catch (Exception e) {
 
                 e.printStackTrace();
-
 
                 if (getActivity() != null) {
 
@@ -220,7 +207,6 @@ public class ListaReceitasFragment extends Fragment {
 
                     });
                 }
-
 
             } finally {
 
@@ -242,7 +228,6 @@ public class ListaReceitasFragment extends Fragment {
         }).start();
     }
 
-
     // ==================================================
     // MOSTRAR RECEITAS
     // ==================================================
@@ -252,20 +237,17 @@ public class ListaReceitasFragment extends Fragment {
 
         gridReceitas.removeAllViews();
 
-
         txtQuantidadeReceitas.setText(
                 "RESULTADO DOS FILTROS: "
                         + receitas.size()
                         + " receitas encontradas"
         );
 
-
         for (Receita receita : receitas) {
 
             criarCardReceita(receita);
         }
     }
-
 
     // ==================================================
     // CRIAR CARD
@@ -277,7 +259,6 @@ public class ListaReceitasFragment extends Fragment {
         CardView card =
                 new CardView(requireContext());
 
-
         int altura = (int) (
                 125 *
                         getResources()
@@ -285,10 +266,8 @@ public class ListaReceitasFragment extends Fragment {
                                 .density
         );
 
-
         GridLayout.LayoutParams params =
                 new GridLayout.LayoutParams();
-
 
         params.width = 0;
 
@@ -300,14 +279,12 @@ public class ListaReceitasFragment extends Fragment {
                         1f
                 );
 
-
         params.setMargins(
                 6,
                 0,
                 6,
                 12
         );
-
 
         card.setLayoutParams(params);
 
@@ -319,14 +296,12 @@ public class ListaReceitasFragment extends Fragment {
                 Color.parseColor("#1E3A8A")
         );
 
-
         // ==========================================
         // NOME DA RECEITA
         // ==========================================
 
         TextView nome =
                 new TextView(requireContext());
-
 
         nome.setText(
                 receita.getNome()
@@ -349,9 +324,7 @@ public class ListaReceitasFragment extends Fragment {
                 12
         );
 
-
         card.addView(nome);
-
 
         // ==========================================
         // CLIQUE
@@ -365,10 +338,8 @@ public class ListaReceitasFragment extends Fragment {
 
         });
 
-
         gridReceitas.addView(card);
     }
-
 
     // ==================================================
     // ABRIR DETALHES
@@ -377,35 +348,27 @@ public class ListaReceitasFragment extends Fragment {
     private void abrirDetalhes(
             int idFicha) {
 
+        // Cria os argumentos
         Bundle bundle =
                 new Bundle();
-
 
         bundle.putInt(
                 "id_ficha",
                 idFicha
         );
 
+        // Pega o NavController
+        NavController navController =
+                Navigation.findNavController(
+                        requireView()
+                );
 
-        DetalhesReceitaFragment detalhes =
-                new DetalhesReceitaFragment();
-
-
-        detalhes.setArguments(
+        // Navega para os detalhes
+        navController.navigate(
+                R.id.nav_detalhes_receita,
                 bundle
         );
-
-
-        getParentFragmentManager()
-                .beginTransaction()
-                .replace(
-                        R.id.nav_host_fragment_content_main,
-                        detalhes
-                )
-                .addToBackStack(null)
-                .commit();
     }
-
 
     // ==================================================
     // PESQUISA
@@ -417,10 +380,8 @@ public class ListaReceitasFragment extends Fragment {
         List<Receita> filtradas =
                 new ArrayList<>();
 
-
         String pesquisa =
                 texto.toLowerCase().trim();
-
 
         for (Receita receita :
                 listaReceitas) {
@@ -436,12 +397,10 @@ public class ListaReceitasFragment extends Fragment {
             }
         }
 
-
         mostrarReceitas(
                 filtradas
         );
     }
-
 
     // ==================================================
     // MODELO DA RECEITA
@@ -455,7 +414,6 @@ public class ListaReceitasFragment extends Fragment {
 
         private final String preparo;
 
-
         public Receita(
                 int id,
                 String nome,
@@ -468,18 +426,15 @@ public class ListaReceitasFragment extends Fragment {
             this.preparo = preparo;
         }
 
-
         public int getId() {
 
             return id;
         }
 
-
         public String getNome() {
 
             return nome;
         }
-
 
         public String getPreparo() {
 
