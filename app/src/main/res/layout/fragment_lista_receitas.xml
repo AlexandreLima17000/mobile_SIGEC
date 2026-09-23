@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="18dp"
+        android:paddingBottom="24dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <!-- MOLDURA -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="10dp"
+            app:cardBackgroundColor="#E2E8F0">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <!-- FAIXA LATERAL -->
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/secondary_container" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <!-- CABEÇALHO -->
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@color/primary">
+
+                        <ImageView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:layout_gravity="top|end"
+                            android:src="@drawable/bg_card_corner_accent"
+                            app:tint="#40000000" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pesquisar receita"
+                                android:textColor="#FFFFFF"
+                                android:textSize="22sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="14dp" />
+
+                            <!-- PESQUISA -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_search_bar"
+                                android:gravity="center_vertical"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="26dp"
+                                    android:layout_height="26dp"
+                                    android:src="@drawable/ic_search"
+                                    app:tint="#B0C4DE" />
+
+                                <EditText
+                                    android:id="@+id/edtPesquisaReceita"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:hint="Buscar receita..."
+                                    android:textColor="#FFFFFF"
+                                    android:textColorHint="#B0C4DE"
+                                    android:textSize="15sp"
+                                    android:singleLine="true"
+                                    android:background="@android:color/transparent" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+
+                    <!-- CORPO -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- QUANTIDADE -->
+                        <TextView
+                            android:id="@+id/txtQuantidadeReceitas"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RESULTADO DOS FILTROS: 0 receitas encontradas"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="16dp" />
+
+
+                        <!-- FILTROS VISUAIS -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="20dp"
+                            android:weightSum="3">
+
+                            <TextView
+                                android:id="@+id/filtroTodas"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Todas"
+                                android:textColor="#FFFFFF"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_filter_button_selected"
+                                android:paddingTop="8dp"
+                                android:paddingBottom="8dp"
+                                android:textAlignment="center"
+                                android:layout_marginEnd="6dp" />
+
+                            <TextView
+                                android:id="@+id/filtroDisponiveis"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Disponíveis"
+                                android:textColor="@color/primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_filter_button"
+                                android:paddingTop="8dp"
+                                android:paddingBottom="8dp"
+                                android:textAlignment="center"
+                                android:layout_marginEnd="6dp" />
+
+                            <TextView
+                                android:id="@+id/filtroDatadas"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Datadas"
+                                android:textColor="@color/primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:background="@drawable/bg_filter_button"
+                                android:paddingTop="8dp"
+                                android:paddingBottom="8dp"
+                                android:textAlignment="center" />
+
+                        </LinearLayout>
+
+
+                        <!--
+                            IMPORTANTE:
+                            O JAVA VAI CRIAR OS CARDS AQUI.
+                        -->
+
+                        <GridLayout
+                            android:id="@+id/gridReceitas"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:columnCount="2"
+                            android:alignmentMode="alignMargins" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+    </LinearLayout>
+
+</ScrollView>

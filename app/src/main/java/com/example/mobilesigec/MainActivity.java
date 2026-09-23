@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home,  R.id.nav_settings)
+                    R.id.nav_home, R.id.nav_calendario, R.id.nav_settings)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
@@ -54,10 +54,21 @@ public class MainActivity extends AppCompatActivity {
         BottomNavigationView bottomNavigationView = binding.appBarMain.contentMain.bottomNavView;
         if (bottomNavigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home)
+                    R.id.nav_home, R.id.nav_calendario)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
+
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                if (destination.getId() == R.id.nav_settings
+                        || destination.getId() == R.id.nav_checklist_insumos
+                        || destination.getId() == R.id.nav_checklist_utensilios
+                        || destination.getId() == R.id.nav_detalhes_receita) {
+                    bottomNavigationView.setVisibility(android.view.View.GONE);
+                } else {
+                    bottomNavigationView.setVisibility(android.view.View.VISIBLE);
+                }
+            });
         }
     }
 

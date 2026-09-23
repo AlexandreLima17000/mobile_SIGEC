@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_splash"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/senac_blue">
+
+    <!-- Container central para alinhar os textos do SIGEC -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/txtSigecSplash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SIGEC"
+            android:textColor="@color/white"
+            android:textSize="54sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.05" />
+
+        <TextView
+            android:id="@+id/txtSubtituloSplash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Sistema de Gerenciamento de Estoque da Cozinha"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/txtPortalSplash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="PORTAL DO INSTRUTOR"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:gravity="center" />
+
+    </LinearLayout>
+
+    <!-- Logo do SENAC posicionada de forma discreta na parte inferior (rodapé) -->
+    <ImageView
+        android:id="@+id/imgLogoSplash"
+        android:layout_width="120dp"
+        android:layout_height="60dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="32dp"
+        android:src="@drawable/senac_logo"
+        android:contentDescription="@string/app_name"
+        android:adjustViewBounds="true" />
+
+</RelativeLayout>
