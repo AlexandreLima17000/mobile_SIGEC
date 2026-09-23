@@ -154,48 +154,28 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        databaseExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                final List<TurmaModelo> listaTurmas = new ArrayList<>();
-                //  Conecta no banco e busca as turmas
-                try {
-                    Connection con = ConexaoMySQL.conectar();
-                    if (con != null) {
-                        // INNER JOIN para pegar Nome da Turma e Nome do Laboratório onde o professor dá aula
-                        String sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
-                                "FROM turma t " +
-                                "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                                "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
+        //  Conecta no banco e busca as turmas
+        try {
+            Connection con = ConexaoMySQL.conectar();
+            if (con != null) {
+                // INNER JOIN para pegar Nome da Turma e Nome do Laboratório onde o professor dá aula
+                String sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                        "FROM turma t " +
+                        "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                        "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                        "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
-                        PreparedStatement stmt = con.prepareStatement(sql);
-                        stmt.setInt(1, idUsuarioLogado);
-                        ResultSet rs = stmt.executeQuery();
+                PreparedStatement stmt = con.prepareStatement(sql);
+                stmt.setInt(1, idUsuarioLogado);
+                ResultSet rs = stmt.executeQuery();
 
-                        //  Monta a lista
-                        while (rs.next()) {
-                            int idTurma = rs.getInt("id_turma");
-                            String nomeTurma = rs.getString("nome_turma");
-                            String nomeLab = rs.getString("nome_laboratorio");
+                //  Monta a lista
+                while (rs.next()) {
+                    int idTurma = rs.getInt("id_turma");
+                    String nomeTurma = rs.getString("nome_turma");
+                    String nomeLab = rs.getString("nome_laboratorio");
 
-                            listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
-                        }
-
-                        rs.close();
-                        stmt.close();
-                        con.close();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    if (getActivity() != null) {
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(getContext(), "Erro ao carregar turmas", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
+                    listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
                 }
 
                 // Injeta a lista no Spinner na Main Thread
