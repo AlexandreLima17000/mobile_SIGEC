@@ -52,6 +52,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
     private MaterialButton btnLimparUtensilios;
     private MaterialButton btnConfirmarUtensilios;
+    private MaterialButton btnDevolverUtensilios;
 
     public ChecklistUtensiliosFragment() {
         // Required empty public constructor
@@ -81,6 +82,9 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         btnLimparUtensilios = view.findViewById(R.id.btn_limpar_utensilios);
         btnConfirmarUtensilios = view.findViewById(R.id.btn_confirmar_utensilios);
+
+        btnDevolverUtensilios = view.findViewById(R.id.btn_devolver_utensilios);
+        btnDevolverUtensilios.setOnClickListener(v -> abrirDialogDevolucao());
 
         btnLimparUtensilios.setOnClickListener(v -> limparChecklist());
         btnConfirmarUtensilios.setOnClickListener(v -> confirmarUtensilios());
@@ -239,18 +243,160 @@ public class ChecklistUtensiliosFragment extends Fragment {
     }
 
     private void confirmarUtensilios() {
-        if (listaUtensiliosAtual.isEmpty()) {
-            Toast.makeText(getContext(), "Nenhum utensílio disponível.", Toast.LENGTH_SHORT).show();
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
+            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        //  Isola em uma nova lista apenas os utensílios que o instrutor marcou
+        List<UtensilioModelo> utensiliosUtilizados = new ArrayList<>();
         for (UtensilioModelo utensilio : listaUtensiliosAtual) {
-            if (!utensilio.isMarcado()) {
-                Toast.makeText(getContext(), "Marque todos os utensílios antes de confirmar!", Toast.LENGTH_SHORT).show();
-                return;
+            if (utensilio.isMarcado()) {
+                utensiliosUtilizados.add(utensilio);
             }
         }
 
-        Toast.makeText(getContext(), "Checklist de utensílios confirmado com sucesso!", Toast.LENGTH_SHORT).show();
+        //  Valida se pelo menos um item foi marcado
+        if (utensiliosUtilizados.isEmpty()) {
+            Toast.makeText(getContext(), "Marque pelo menos um utensílio utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        progressLoading.setVisibility(View.VISIBLE);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            boolean sucesso = false;
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    // Inicia a transação segura (impede que salve dados pela metade se a internet cair)
+                    con.setAutoCommit(false);
+
+                    // Passo B: Registra a hora de saída de cada utensílio selecionado
+                    String sqlUtensilio = "UPDATE checklist_utensilho SET data_hora_saida = NOW(), observacao = 'Retirado para aula' " +
+                            "WHERE id_ficha = ? AND id_utensilio = ?";
+
+                    PreparedStatement stmtUtensilio = con.prepareStatement(sqlUtensilio);
+
+                    for (UtensilioModelo utensilio : utensiliosUtilizados) {
+                        stmtUtensilio.setInt(1, receitaSelecionada.getIdReceita());
+                        stmtUtensilio.setInt(2, utensilio.getIdUtensilio());
+                        stmtUtensilio.executeUpdate();
+                    }
+                    stmtUtensilio.close();
+
+                    // Passo C: Salva as alterações definitivamente no MySQL
+                    con.commit();
+                    sucesso = true;
+                    con.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final boolean finalSucesso = sucesso;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE);
+                    if (finalSucesso) {
+                        Toast.makeText(getContext(), "Retirada de utensílios registrada com sucesso!", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(getContext(), "Erro ao processar a retirada dos utensílios.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void abrirDialogDevolucao() {
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
+            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<UtensilioModelo> utensiliosDevolvidos = new ArrayList<>();
+        for (UtensilioModelo utensilio : listaUtensiliosAtual) {
+            if (utensilio.isMarcado()) {
+                utensiliosDevolvidos.add(utensilio);
+            }
+        }
+
+        if (utensiliosDevolvidos.isEmpty()) {
+            Toast.makeText(getContext(), "Marque os itens que deseja devolver.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.dialog_devolver_utensilio, null);
+        builder.setView(view);
+        android.app.AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        Spinner spinnerEstado = view.findViewById(R.id.spinner_estado_utensilio);
+        String[] estados = {"PRONTO", "DANIFICADO", "EM_MANUTENCAO"};
+        ArrayAdapter<String> adapterEstado = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, estados);
+        adapterEstado.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerEstado.setAdapter(adapterEstado);
+
+        android.widget.EditText etObservacao = view.findViewById(R.id.et_observacao_devolucao);
+
+        view.findViewById(R.id.btn_cancelar_devolucao).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btn_confirmar_devolucao).setOnClickListener(v -> {
+            String estadoAtual = spinnerEstado.getSelectedItem().toString();
+            String observacao = etObservacao.getText().toString().trim();
+            processarDevolucao(utensiliosDevolvidos, estadoAtual, observacao, receitaSelecionada.getIdReceita(), dialog);
+        });
+
+        dialog.show();
+    }
+
+    private void processarDevolucao(List<UtensilioModelo> utensilios, String estadoAtual, String observacao, int idFicha, android.app.AlertDialog dialog) {
+        progressLoading.setVisibility(View.VISIBLE);
+        dialog.dismiss();
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            boolean sucesso = false;
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    con.setAutoCommit(false);
+
+                    String sqlDevolucao = "UPDATE checklist_utensilho SET data_hora_entrada = NOW(), estado_atual = ?, observacao = ? " +
+                            "WHERE id_ficha = ? AND id_utensilio = ?";
+                    PreparedStatement stmtDevolucao = con.prepareStatement(sqlDevolucao);
+
+                    for (UtensilioModelo utensilio : utensilios) {
+                        stmtDevolucao.setString(1, estadoAtual);
+                        stmtDevolucao.setString(2, observacao);
+                        stmtDevolucao.setInt(3, idFicha);
+                        stmtDevolucao.setInt(4, utensilio.getIdUtensilio());
+                        stmtDevolucao.executeUpdate();
+                    }
+                    stmtDevolucao.close();
+
+                    con.commit();
+                    sucesso = true;
+                    con.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final boolean finalSucesso = sucesso;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE);
+                    if (finalSucesso) {
+                        Toast.makeText(getContext(), "Devolução registrada com sucesso!", Toast.LENGTH_LONG).show();
+                        limparChecklist();
+                    } else {
+                        Toast.makeText(getContext(), "Erro ao processar devolução no banco.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
     }
 }

@@ -261,34 +261,39 @@ public class ChecklistInsumosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    // Desliga o commit automático para garantir que a baixa de estoque
-                    // e o agendamento sejam salvos juntos (Transação Segura)
+                    // Desliga o commit automático para garantir a transação segura
                     con.setAutoCommit(false);
 
-                    // Passo A: Atualizar o agendamento da aula para concluído
-                    String sqlAgendamento = "UPDATE agendamento SET concluido = 'S' WHERE id_ficha = ?";
-                    PreparedStatement stmtAgendamento = con.prepareStatement(sqlAgendamento);
-                    stmtAgendamento.setInt(1, receitaSelecionada.getIdReceita());
-                    stmtAgendamento.executeUpdate();
-                    stmtAgendamento.close();
 
-                    // Passo B: Registrar a SAÍDA no estoque apenas para os insumos marcados na tela
-                    // O sub-select '(SELECT id_produto...)' acha a qual produto aquele insumo pertence.
+                    // Passo B: Prepara os comandos de Histórico (Movimentação) e Baixa de Saldo (Produto)
                     String sqlEstoque = "INSERT INTO movimentacao_estoque (tipo_movimentacao, quantidade, id_produto, id_insumo, observacao) " +
                             "VALUES ('SAIDA', ?, (SELECT id_produto FROM insumo WHERE id_insumo = ?), ?, 'Baixa confirmada pelo instrutor')";
-
                     PreparedStatement stmtEstoque = con.prepareStatement(sqlEstoque);
 
-                    // Roda o INSERT para cada item que estava com a caixa marcada (isMarcado = true)
-                    for (InsumoModelo insumo : insumosUtilizados) {
-                        stmtEstoque.setDouble(1, Double.parseDouble(insumo.getQuantidade())); // Quantidade gasta
-                        stmtEstoque.setInt(2, insumo.getIdInsumo()); // Usado no sub-select para achar o produto
-                        stmtEstoque.setInt(3, insumo.getIdInsumo()); // Preenche a coluna id_insumo
-                        stmtEstoque.executeUpdate();
-                    }
-                    stmtEstoque.close();
+                    String sqlBaixaProduto = "UPDATE produto SET quantidade = quantidade - ? WHERE id_produto = (SELECT id_produto FROM insumo WHERE id_insumo = ?)";
+                    PreparedStatement stmtBaixaProduto = con.prepareStatement(sqlBaixaProduto);
 
-                    // Passo C: Salva tudo de forma definitiva no banco
+                    // Passo C: Roda os comandos para cada item que estava com a caixa marcada na tela
+                    for (InsumoModelo insumo : insumosUtilizados) {
+                        double qtdUtilizada = Double.parseDouble(insumo.getQuantidade());
+                        int idInsumo = insumo.getIdInsumo();
+
+                        // Grava na tabela movimentacao_estoque
+                        stmtEstoque.setDouble(1, qtdUtilizada);
+                        stmtEstoque.setInt(2, idInsumo);
+                        stmtEstoque.setInt(3, idInsumo);
+                        stmtEstoque.executeUpdate();
+
+                        // Subtrai o saldo na tabela produto
+                        stmtBaixaProduto.setDouble(1, qtdUtilizada);
+                        stmtBaixaProduto.setInt(2, idInsumo);
+                        stmtBaixaProduto.executeUpdate();
+                    }
+
+                    stmtEstoque.close();
+                    stmtBaixaProduto.close();
+
+                    // Passo D: Salva tudo de forma definitiva no banco
                     con.commit();
                     sucesso = true;
                     con.close();

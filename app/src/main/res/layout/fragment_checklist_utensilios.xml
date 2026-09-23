@@ -145,7 +145,16 @@
                     android:nestedScrollingEnabled="false"
                     android:layout_marginBottom="20dp"/>
 
-                <!-- Botão Adicionar Extra -->
+                <!-- Botão Devolver (Novo) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_devolver_utensilios"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Registrar Devolução"
+                    android:textColor="@color/white"
+                    app:backgroundTint="@color/senac_orange"
+                    app:cornerRadius="8dp" />
 
                 <!-- Botões de Ação Final (Altura padronizada e quebra de linha) -->
                 <LinearLayout
