@@ -1,14 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
 
+val envProperties = Properties().apply {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()){
+        load(envFile.inputStream())
+    }
+}
+
+
 android {
     namespace = "com.example.mobilesigec"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.mobilesigec"
@@ -18,13 +24,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "DB_URL", "\"${envProperties.getProperty("DB_URL") ?: ""}\"")
+        buildConfigField("String", "DB_USER", "\"${envProperties.getProperty("DB_USER") ?: ""}\"")
+        buildConfigField("String", "DB_PASSWORD", "\"${envProperties.getProperty("DB_PASSWORD") ?: ""}\"")
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -33,6 +41,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -49,5 +58,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
-    implementation ("mysql:mysql-connector-java:5.1.49")
+    implementation("mysql:mysql-connector-java:5.1.49")
 }
+
