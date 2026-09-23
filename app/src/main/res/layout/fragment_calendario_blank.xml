@@ -149,11 +149,15 @@
                                     android:layout_weight="1" />
 
                                 <ImageView
+                                    android:id="@+id/btn_prev_month"
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
+                                    android:clickable="true"
+                                    android:focusable="true"
                                     android:src="@drawable/ic_chevron_left_white" />
 
                                 <TextView
+                                    android:id="@+id/text_month_year"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginHorizontal="12dp"
@@ -163,8 +167,11 @@
                                     android:textStyle="bold" />
 
                                 <ImageView
+                                    android:id="@+id/btn_next_month"
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
+                                    android:clickable="true"
+                                    android:focusable="true"
                                     android:src="@drawable/ic_chevron_right_white" />
 
                                 <View
@@ -228,22 +235,6 @@
                                     android:layout_width="12dp"
                                     android:layout_height="12dp"
                                     android:layout_marginStart="8dp"
-                                    android:background="@drawable/ic_dot"
-                                    android:backgroundTint="#C0392B" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="4dp"
-                                    android:text="Com aula agendada"
-                                    android:textColor="#C0392B"
-                                    android:textSize="10sp"
-                                    android:textStyle="bold" />
-
-                                <View
-                                    android:layout_width="12dp"
-                                    android:layout_height="12dp"
-                                    android:layout_marginStart="8dp"
                                     android:background="@drawable/ic_dot_black" />
 
                                 <TextView
@@ -280,13 +271,21 @@
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
 
-                                <TextView
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:id="@+id/layout_fichas_lista"
+                                    android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="Nenhuma aula ou ficha programada para este dia."
-                                    android:textColor="@color/sigec_text_gray"
-                                    android:textSize="12sp" />
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/text_no_fichas"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Nenhuma aula ou ficha programada para este dia."
+                                        android:textColor="@color/sigec_text_gray"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
 
