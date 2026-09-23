@@ -50,4 +50,6 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
     implementation ("mysql:mysql-connector-java:5.1.49")
+    implementation("at.favre.lib:bcrypt:0.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }
