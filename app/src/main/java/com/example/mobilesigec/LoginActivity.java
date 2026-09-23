@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
@@ -45,6 +46,9 @@ public class LoginActivity extends AppCompatActivity {
         emailLogin = findViewById(R.id.emailLogin);
         senhaLogin = findViewById(R.id.senhaLogin);
         btnEntrar = findViewById(R.id.btnEntrar);
+        TextView tvEsqueciSenha = findViewById(R.id.tv_esqueci_senha);
+
+        tvEsqueciSenha.setOnClickListener(v -> startActivity(new Intent(LoginActivity.this, RecuperarSenhaEmailActivity.class)));
 
         btnEntrar.setOnClickListener(new View.OnClickListener() {
             @Override
