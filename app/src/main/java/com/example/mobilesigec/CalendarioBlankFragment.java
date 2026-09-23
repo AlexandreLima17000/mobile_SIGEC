@@ -1,38 +1,29 @@
 package com.example.mobilesigec;
 
+import android.graphics.Color;
 import android.os.Bundle;
-
- import androidx.fragment.app.Fragment;
-
- import android.view.LayoutInflater;
- import android.view.View;
- import android.view.ViewGroup;
-
- /**
- * A simple {@link Fragment} subclass.
- * Use the {@link CalendarioBlankFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.graphics.Color;
-import androidx.annotation.Nullable;
+
+import androidx.fragment.app.Fragment;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+/**
+ * A simple {@link Fragment} subclass.
+ * Use the {@link CalendarioBlankFragment#newInstance} factory method to
+ * create an instance of this fragment.
+ */
 public class CalendarioBlankFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
 
     public CalendarioBlankFragment() {
         // Required empty public constructor
@@ -46,7 +37,6 @@ public class CalendarioBlankFragment extends Fragment {
      * @param param2 Parameter 2.
      * @return A new instance of fragment CalendarioBlankFragment.
      */
-    // TODO: Rename and change types and number of parameters
     public static CalendarioBlankFragment newInstance(String param1, String param2) {
         CalendarioBlankFragment fragment = new CalendarioBlankFragment();
         Bundle args = new Bundle();
@@ -59,10 +49,6 @@ public class CalendarioBlankFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
     }
 
     @Override
@@ -144,7 +130,6 @@ public class CalendarioBlankFragment extends Fragment {
 
             grid.addView(dayView);
         }
-
 
         int totalCells = startOffset + daysInMonth;
         int remaining = (7 - (totalCells % 7)) % 7;
