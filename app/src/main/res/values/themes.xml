@@ -14,7 +14,8 @@
         <item name="colorOnSecondaryContainer">@color/white</item>
 
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:statusBarColor">@color/senac_blue</item>
+        <item name="android:windowLightStatusBar">false</item>
         <!-- Customize your theme here. -->
     </style>
 
@@ -23,7 +24,9 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Theme.MobileSIGEC.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
+    <style name="Theme.MobileSIGEC.AppBarOverlay" parent="ThemeOverlay.Material3.ActionBar">
+        <item name="colorControlNormal">#000000</item>
+    </style>
 
     <style name="Theme.MobileSIGEC.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
 

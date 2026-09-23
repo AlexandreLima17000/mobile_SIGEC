@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_person"
+        android:title="@string/menu_profile"/>
+    <item
         android:id="@+id/nav_settings"
         android:icon="@drawable/ic_settings_black_24dp"
         android:title="@string/menu_settings" />
+    <item
+        android:id="@+id/nav_sair"
+        android:icon="@drawable/ic_settings_black_24dp"
+        android:title="@string/menu_sair"/>
 </menu>
