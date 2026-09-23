@@ -28,6 +28,13 @@
     <string name="login_forgot_password">Esqueci minha senha</string>
     <string name="login_button_enter">Entrar</string>
     <string name="login_logo_description">Logo SIGEC</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="forgot_password_title">Esqueci minha Senha</string>
+    <string name="forgot_password_subtitle">Digite seu e-mail para receber as instruções de redefinição de senha.</string>
+    <string name="forgot_password_button_send">Enviar Código</string>
+    <string name="forgot_password_checking">Verificando…</string>
+    <string name="forgot_password_back_to_login">Voltar ao Login</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
