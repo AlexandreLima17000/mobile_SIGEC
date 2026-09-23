@@ -58,6 +58,17 @@ public class MainActivity extends AppCompatActivity {
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
+
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                if (destination.getId() == R.id.nav_settings
+                        || destination.getId() == R.id.nav_checklist_insumos
+                        || destination.getId() == R.id.nav_checklist_utensilios
+                        || destination.getId() == R.id.nav_detalhes_receita) {
+                    bottomNavigationView.setVisibility(android.view.View.GONE);
+                } else {
+                    bottomNavigationView.setVisibility(android.view.View.VISIBLE);
+                }
+            });
         }
     }
 
@@ -91,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.nav_settings) {
             NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
             navController.navigate(R.id.nav_settings);
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
