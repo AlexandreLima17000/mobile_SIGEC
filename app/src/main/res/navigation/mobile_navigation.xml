@@ -6,7 +6,6 @@
     app:startDestination="@+id/nav_home"
     tools:ignore="InvalidNavigation">
 
-
     <fragment
         android:id="@+id/nav_checklist_insumos"
         android:name="com.example.mobilesigec.checkout.ChecklistInsumosFragment"
@@ -42,8 +41,6 @@
             app:destination="@id/nav_checklist_utensilios" />
     </fragment>
 
-
-
     <fragment
         android:id="@+id/nav_receita"
         android:name="com.example.mobilesigec.receita.ListaReceitasFragment"
@@ -56,12 +53,11 @@
         android:label="@string/menu_calendario"
         tools:layout="@layout/fragment_calendario" />
 
-
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.example.mobilesigec.ui.settings.SettingsFragment"
+        android:name="com.example.mobilesigec.SettingsFragment"
         android:label="@string/menu_settings"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_configuracoes" />
 
     <fragment
         android:id="@+id/nav_receitas"
