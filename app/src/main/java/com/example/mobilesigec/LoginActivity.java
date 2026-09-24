@@ -22,6 +22,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 public class LoginActivity extends AppCompatActivity {
 
     EditText emailLogin, senhaLogin;
@@ -73,33 +75,46 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
-                            
+                            sql = "SELECT id_usuario, senha FROM usuario WHERE email = ?";
+
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
                                 stmt.setString(1, email);
-                                stmt.setString(2, senha);
+
+                                // Executa a consulta
                                 rs = stmt.executeQuery();
 
-                                if (rs.next()) {
-                                    // Login efetuado com sucesso -> Direciona para a MainActivity
-                                    runOnUiThread(() -> {
-                                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                                        finish();
-                                    });
+                                // Validação de segurança: verifica se 'rs' não é nulo antes de chamar .next()
+                                if (rs != null && rs.next()) {
+                                    String hashSenhaBanco = rs.getString("senha");
+
+                                    // Validação com BCrypt
+                                    if (BCrypt.checkpw(senha, hashSenhaBanco)) {
+                                        runOnUiThread(() -> {
+                                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                                            finish();
+                                        });
+                                    } else {
+                                        runOnUiThread(() -> {
+                                            Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
+                                            restaurarBotaoLogin();
+                                        });
+                                    }
                                 } else {
-                                    // Credenciais incorretas -> Restaura o botão e mostra erro
+                                    // E-mail não encontrado ou rs retornou nulo
                                     runOnUiThread(() -> {
                                         Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                                         restaurarBotaoLogin();
                                     });
                                 }
 
-                                rs.close();
-                                stmt.close();
+                                // Fechamento seguro dos recursos
+                                if (rs != null) rs.close();
+                                if (stmt != null) stmt.close();
                                 con.close();
+
                             } else {
-                                // Erro ao conectar ao servidor de banco de dados
+                                // Falha na conexão com o banco
                                 runOnUiThread(() -> {
                                     Toast.makeText(LoginActivity.this, "Erro de conexão com o banco de dados", Toast.LENGTH_SHORT).show();
                                     restaurarBotaoLogin();
@@ -108,7 +123,13 @@ public class LoginActivity extends AppCompatActivity {
 
                         } catch (SQLException e) {
                             runOnUiThread(() -> {
-                                Toast.makeText(LoginActivity.this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                Toast.makeText(LoginActivity.this, "Erro no banco: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                                restaurarBotaoLogin();
+                            });
+                        } catch (Exception e) {
+                            // Captura qualquer outra exceção inesperada para evitar crash do app
+                            runOnUiThread(() -> {
+                                Toast.makeText(LoginActivity.this, "Erro inesperado: " + e.getMessage(), Toast.LENGTH_LONG).show();
                                 restaurarBotaoLogin();
                             });
                         }

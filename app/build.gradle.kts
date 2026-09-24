@@ -72,5 +72,6 @@ dependencies {
     implementation(libs.android.mail)
     implementation(libs.android.activation)
     implementation("mysql:mysql-connector-java:5.1.49")
+    implementation("org.mindrot:jbcrypt:0.4")
 }
 
