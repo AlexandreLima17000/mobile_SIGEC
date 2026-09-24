@@ -1,17 +1,14 @@
 package com.example.mobilesigec;
 
 import android.os.StrictMode;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class ConexaoMySQL {
-    private static final String URL = "jdbc:mysql://mysql-1d28e263-sigec-5373.j.aivencloud.com:28873/db_sigec";
-    private static final String USUARIO = "avnadmin"; //super usuario do banco de dados
-    private static final String SENHA = "AVNS_IE8GbetcX33ik0HL6db";
-
-
+    private static final String URL = BuildConfig.DB_URL;
+    private static final String USUARIO = BuildConfig.DB_USER;
+    private static final String SENHA = BuildConfig.DB_PASSWORD;
 
     public static Connection conectar() {
         try {
