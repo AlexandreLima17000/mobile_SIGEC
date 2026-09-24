@@ -1,14 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
 
+val envProperties = Properties().apply {
+    val envFile = rootProject.file(".env")
+    if (envFile.exists()){
+        load(envFile.inputStream())
+    }
+}
+
+
 android {
     namespace = "com.example.mobilesigec"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.mobilesigec"
@@ -18,13 +24,15 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "DB_URL", "\"${envProperties.getProperty("DB_URL") ?: ""}\"")
+        buildConfigField("String", "DB_USER", "\"${envProperties.getProperty("DB_USER") ?: ""}\"")
+        buildConfigField("String", "DB_PASSWORD", "\"${envProperties.getProperty("DB_PASSWORD") ?: ""}\"")
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
         }
     }
     compileOptions {
@@ -33,6 +41,18 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/NOTICE.md"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/LICENSE"
+        }
     }
 }
 
@@ -49,7 +69,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
-    implementation ("mysql:mysql-connector-java:5.1.49")
-    implementation("at.favre.lib:bcrypt:0.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
+    implementation("mysql:mysql-connector-java:5.1.49")
 }
+

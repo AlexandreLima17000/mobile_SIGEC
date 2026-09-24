@@ -1,0 +1,6 @@
+- [ ] Criar a pasta `res/raw/` no projeto
+- [ ] Mover/copiar o vídeo `splash_sigec.mp4` para `res/raw/`
+- [ ] Criar o layout `activity_splash.xml` com um `VideoView` em tela cheia
+- [ ] Criar a classe `SplashActivity.java` para reproduzir o vídeo e navegar para o Login
+- [ ] Configurar o `AndroidManifest.xml` colocando a `SplashActivity` como a tela inicial (LAUNCHER)
+- [ ] Validar o fluxo completo

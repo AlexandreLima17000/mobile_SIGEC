@@ -6,7 +6,6 @@
     app:startDestination="@+id/nav_home"
     tools:ignore="InvalidNavigation">
 
-
     <fragment
         android:id="@+id/nav_checklist_insumos"
         android:name="com.example.mobilesigec.checkout.ChecklistInsumosFragment"
@@ -18,6 +17,12 @@
         android:name="com.example.mobilesigec.checkout.ChecklistUtensiliosFragment"
         android:label="Checklist de Utensílios"
         tools:layout="@layout/fragment_checklist_utensilios" />
+
+    <fragment
+        android:id="@+id/nav_detalhes_receita"
+        android:name="com.example.mobilesigec.receita.DetalhesReceitaFragment"
+        android:label="Detalhes da Receita"
+        tools:layout="@layout/fragment_detalhes_receita" />
 
     <fragment
         android:id="@+id/nav_home"
@@ -36,6 +41,11 @@
             app:destination="@id/nav_checklist_utensilios" />
     </fragment>
 
+    <fragment
+        android:id="@+id/nav_receita"
+        android:name="com.example.mobilesigec.receita.ListaReceitasFragment"
+        android:label="@string/menu_receitas"
+        tools:layout="@layout/fragment_lista_receitas" />
 
     <fragment
         android:id="@+id/nav_calendario"
@@ -43,10 +53,15 @@
         android:label="@string/menu_calendario"
         tools:layout="@layout/fragment_calendario" />
 
-
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.example.mobilesigec.ui.settings.SettingsFragment"
+        android:name="com.example.mobilesigec.settings.SettingsFragment"
         android:label="@string/menu_settings"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_configuracoes" />
+
+    <fragment
+        android:id="@+id/nav_receitas"
+        android:name="com.example.mobilesigec.ReceitasFragment"
+        android:label="Receitas"
+        tools:layout="@layout/fragment_recaitas" />
 </navigation>

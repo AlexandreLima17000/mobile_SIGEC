@@ -27,7 +27,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="senac_blue">#002747</color>
     <color name="senac_orange">#F7941D</color>
+    <color name="orange_sigec">#F7941D</color>
     <color name="gray_text">#757575</color>
     <color name="gray_border">#E0E0E0</color>
     <color name="light_gray_bg">#F5F5F5</color>
+
+    <!-- Cores para Tela de Receitas -->
+    <color name="background_gray">#F2F4F7</color>
+    <color name="primary_blue">#002747</color>
+    <color name="accent_orange">#F7941D</color>
+    <color name="badge_disponivel_text">#15803D</color>
+    <color name="badge_disponivel_bg">#DCFCE7</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="card_white">#FFFFFF</color>
+    <color name="text_primary">#1E293B</color>
 </resources>

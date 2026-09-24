@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="8dp"
+    android:layout_margin="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="@color/white">
+
+        <!-- Cabeçalho -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Solicitar Insumo Extra"
+                android:textColor="@color/primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/btn_fechar_dialog"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_alignParentEnd="true"
+                android:src="@drawable/ic_close"
+                app:tint="@color/on_surface_variant" />
+        </RelativeLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="O item será registrado no checklist e enviado para validação."
+            android:textColor="#8C9EFF"
+            android:textSize="14sp" />
+
+        <!-- Campo Nome do Insumo -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="NOME DO INSUMO"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/on_surface_variant"/>
+        <EditText
+            android:id="@+id/et_nome_insumo"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:hint="Ex: Azeite Extra Virgem"
+            android:paddingHorizontal="12dp"
+            android:textSize="14sp" />
+
+        <!-- Linha Quantidade e Unidade -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="QUANTIDADE"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/on_surface_variant"/>
+                <EditText
+                    android:id="@+id/et_quantidade_insumo"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/edit_text_bg"
+                    android:inputType="numberDecimal"
+                    android:hint="Ex: 500"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="UNIDADE"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/on_surface_variant"/>
+                <EditText
+                    android:id="@+id/et_unidade_insumo"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/edit_text_bg"
+                    android:hint="Ex: ml, g, un"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Campo Observação -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="OBSERVAÇÃO / MOTIVO"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/on_surface_variant"/>
+        <EditText
+            android:id="@+id/et_observacao_insumo"
+            android:layout_width="match_parent"
+            android:layout_height="80dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="top|start"
+            android:hint="Ex: Faltou para finalizar o prato..."
+            android:padding="12dp"
+            android:textSize="14sp" />
+
+        <!-- Botões -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cancelar_dialog"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Cancelar"
+                android:textColor="@color/primary"
+                app:strokeColor="@color/primary"
+                app:cornerRadius="8dp"/>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_adicionar_dialog"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Adicionar"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

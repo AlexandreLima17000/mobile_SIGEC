@@ -5,18 +5,46 @@
     <string name="nav_header_title">Android Studio</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Configurações</string>
 
     <string name="title_topbar">SIGEC</string>
     <string name="menu_home">Home</string>
     <string name="menu_calendario">Calendário</string>
     <string name="menu_receitas">Receitas</string>
-    <string name="menu_profile">Perfil</string>
-    <string name="menu_settings">Settings</string>
+    <string name="menu_settings">Configurações</string>
     <string name="menu_sair">Sair</string>
 
 
     <string name="fab_content_description">Represents a view to invoke an action</string>
+
+    <string name="senac_sigec">SENAC SIGEC</string>
+    <string name="painel_instrutor_perfil">PAINEL DO INSTRUTOR\nCONFIGURAÇÕES</string>
+    <string name="docente">DOCENTE</string>
+    <string name="instrutor_name">Fulano da Silva</string>
+    <string name="area_atuacao">Gastronomia &amp; Panificação</string>
+    <string name="matricula">Matrícula: 2024.1-INSTR</string>
+    <string name="unidade">SENAC - Unidade Centro</string>
+    <string name="configurar">Configurar</string>
+    <string name="trocar_foto">Trocar Foto</string>
+    <string name="configuracoes">Configurações</string>
+    <string name="sistema_avisos">Sistema &amp; Avisos</string>
+    <string name="trocar_conta">Trocar Conta</string>
+    <string name="coord_aluno">Coord. / Aluno</string>
+    <string name="lotacao_laboratorio">LOTAÇÃO &amp; LABORATÓRIO PADRÃO</string>
+    <string name="sigec_ano">SIGEC 2024.1</string>
+    <string name="turma_laboratorio">Turma 2024.1.A - Padaria Lab 01</string>
+    <string name="carga_horaria">Carga Horária</string>
+    <string name="carga_horaria_val">40h / sem</string>
+    <string name="turmas_ativas">Turmas Ativas</string>
+    <string name="turmas_ativas_val">03 Turmas</string>
+    <string name="alunos_totais">Alunos Totais</string>
+    <string name="alunos_totais_val">48 Alunos</string>
+    <string name="dados_institucionais">DADOS INSTITUCIONAIS</string>
+    <string name="email_institucional_label">E-mail Institucional:</string>
+    <string name="email_val">fulano.silva@senac.br</string>
+    <string name="telefone_ramal_label">Telefone / Ramal Lab:</string>
+    <string name="telefone_val">(11) 3245-8900 #204</string>
+    <string name="encerrar_sessao">Encerrar Sessão no Dispositivo</string>
 
     <!-- Login Screen -->
     <string name="login_system_name">Sistema de Gerenciamento de Estoque da Cozinha</string>
@@ -28,6 +56,13 @@
     <string name="login_forgot_password">Esqueci minha senha</string>
     <string name="login_button_enter">Entrar</string>
     <string name="login_logo_description">Logo SIGEC</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="forgot_password_title">Esqueci minha Senha</string>
+    <string name="forgot_password_subtitle">Digite seu e-mail para receber as instruções de redefinição de senha.</string>
+    <string name="forgot_password_button_send">Enviar Código</string>
+    <string name="forgot_password_checking">Verificando…</string>
+    <string name="forgot_password_back_to_login">Voltar ao Login</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
