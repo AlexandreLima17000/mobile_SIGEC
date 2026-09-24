@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F4F6F9"
-    tools:context="com.example.mobilesigec.SettingsFragment">
+    tools:context="com.example.mobilesigec.settings.SettingsFragment">
 
     <ScrollView
         android:layout_width="0dp"

@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -14,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+
+import com.example.mobilesigec.R;
 
 public class SettingsFragment extends Fragment {
 
