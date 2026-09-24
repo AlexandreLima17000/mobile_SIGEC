@@ -33,6 +33,12 @@
             tools:targetApi="24" />
 
         <activity
+            android:name=".ConfirmacaoCodigoActivity"
+            android:exported="false"
+            android:label="@string/confirm_code_title"
+            android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_login_wave"
+    tools:context=".ConfirmacaoCodigoActivity">
+
+    <!-- Header Container (Fundo Azul Superior) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/header_container"
+        android:layout_width="match_parent"
+        android:layout_height="210dp"
+        android:background="@drawable/header_background"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/iv_logo_sigec"
+            android:layout_width="wrap_content"
+            android:layout_height="70dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/login_logo_description"
+            android:src="@drawable/sicg_logo"
+            app:layout_constraintBottom_toTopOf="@id/tv_sistema"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="packed" />
+
+        <TextView
+            android:id="@+id/tv_sistema"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="@string/login_system_name"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:letterSpacing="0.02"
+            app:layout_constraintBottom_toTopOf="@id/tv_portal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/iv_logo_sigec" />
+
+        <TextView
+            android:id="@+id/tv_portal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:text="@string/login_portal_instructor"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:letterSpacing="0.12"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_sistema" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Título -->
+    <TextView
+        android:id="@+id/tv_titulo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="32dp"
+        android:text="@string/confirm_code_title"
+        android:textColor="@color/black"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header_container" />
+
+    <TextView
+        android:id="@+id/tv_sub_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="6dp"
+        android:text="@string/confirm_code_subtitle"
+        android:textColor="@color/gray_text"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_titulo" />
+
+    <!-- Caixas de Entrada de Código (6 Dígitos) -->
+    <LinearLayout
+        android:id="@+id/layout_code_inputs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="28dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_sub_label">
+
+        <EditText
+            android:id="@+id/et_code_1"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+        <EditText
+            android:id="@+id/et_code_2"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+        <EditText
+            android:id="@+id/et_code_3"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+        <EditText
+            android:id="@+id/et_code_4"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+        <EditText
+            android:id="@+id/et_code_5"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+        <EditText
+            android:id="@+id/et_code_6"
+            android:layout_width="46dp"
+            android:layout_height="52dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="@drawable/edit_text_bg"
+            android:gravity="center"
+            android:inputType="number"
+            android:maxLength="1"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:ignore="LabelFor,SpeakableTextPresentCheck" />
+
+    </LinearLayout>
+
+    <!-- Botão Confirmar Código -->
+    <FrameLayout
+        android:id="@+id/layout_btn_confirmar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginTop="32dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_code_inputs">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_confirmar_codigo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="@string/confirm_code_button"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/senac_blue"
+            app:cornerRadius="12dp" />
+
+        <ProgressBar
+            android:id="@+id/progress_confirmar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="20dp"
+            android:indeterminateTint="@color/white"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- Voltar ao Login (Sobre a onda azul inferior) -->
+    <TextView
+        android:id="@+id/tv_voltar_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:padding="12dp"
+        android:text="@string/back_to_login"
+        android:textColor="@color/senac_orange"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

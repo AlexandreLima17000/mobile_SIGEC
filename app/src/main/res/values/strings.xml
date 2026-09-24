@@ -37,6 +37,13 @@
     <string name="login_forgot_password">Esqueci minha senha</string>
     <string name="login_button_enter">Entrar</string>
     <string name="login_logo_description">Logo SIGEC</string>
+
+    <!-- Confirmacao Codigo Screen -->
+    <string name="sigec_app_title">SIGEC</string>
+    <string name="confirm_code_title">Confirmação de Código</string>
+    <string name="confirm_code_subtitle">Digite o código de 6 dígitos enviado para o seu e-mail.</string>
+    <string name="confirm_code_button">Confirmar Código</string>
+    <string name="back_to_login">Voltar ao Login</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
