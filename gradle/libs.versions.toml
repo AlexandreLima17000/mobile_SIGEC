@@ -12,8 +12,11 @@ lifecycleViewmodelKtx = "2.11.0"
 navigationFragment = "2.10.0"
 navigationUi = "2.10.0"
 activityKtx = "1.13.0"
+androidMail = "1.6.8"
 
 [libraries]
+android-mail = { group = "com.sun.mail", name = "android-mail", version.ref = "androidMail" }
+android-activation = { group = "com.sun.mail", name = "android-activation", version.ref = "androidMail" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
