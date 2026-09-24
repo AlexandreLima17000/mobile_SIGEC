@@ -3,12 +3,11 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-
-    <!-- Cores do SIGEC -->
+    <!-- Cores Oficiais do SIGEC -->
     <color name="primary">#002747</color>
     <color name="primary_container">#003d6b</color>
     <color name="primary_fixed_dim">#9fcaff</color>
-    <color name="secondary_container">#ff8928</color>
+    <color name="secondary_container">#F7941D</color>
     <color name="background">#fbf8ff</color>
     <color name="surface_lowest">#ffffff</color>
     <color name="surface_low">#f4f2fd</color>
@@ -18,9 +17,9 @@
 
     <!-- Cores de Status -->
     <color name="status_done_text">#15803d</color>
-    <color name="status_running_text">#ff8928</color> <!-- Ajustado para laranja -->
+    <color name="status_running_text">#F7941D</color>
 
-    <!-- Cores do tema padrão restauradas -->
+    <!-- Cores do tema padrão / Senac -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -41,4 +40,15 @@
     <color name="text_secondary">#64748B</color>
     <color name="card_white">#FFFFFF</color>
     <color name="text_primary">#1E293B</color>
+
+    <!-- Cores do Calendário (tom azul-petróleo/slate exato da imagem de protótipo) -->
+    <color name="sigec_dark_blue">#002F6C</color>
+    <color name="sigec_orange">#F57C00</color>
+    <color name="sigec_red">#C0392B</color>
+    <color name="sigec_calendar_header">#2C3E50</color>
+    <color name="sigec_calendar_container_bg">#2C3E50</color>
+    <color name="sigec_search_bg">#3D5162</color>
+    <color name="sigec_legend_bg">#BDC8D1</color>
+    <color name="sigec_weekday_bg">#BDC8D1</color>
+    <color name="sigec_weekend_bg">#3D5162</color>
 </resources>
