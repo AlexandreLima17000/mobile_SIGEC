@@ -43,6 +43,17 @@ android {
         viewBinding = true
         buildConfig = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/NOTICE.md"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/LICENSE"
+        }
+    }
 }
 
 dependencies {
@@ -58,6 +69,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
     implementation("mysql:mysql-connector-java:5.1.49")
 }
 
