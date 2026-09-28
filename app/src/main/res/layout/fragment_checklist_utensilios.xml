@@ -145,17 +145,16 @@
                     android:nestedScrollingEnabled="false"
                     android:layout_marginBottom="20dp"/>
 
-                <!-- Botão Adicionar Extra -->
-                <androidx.appcompat.widget.AppCompatButton
-                    android:id="@+id/btn_solicitar_utensilio"
+                <!-- Botão Devolver (Novo) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_devolver_utensilios"
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_dashed_orange"
-                    android:text="+ Adicionar utensílio extra"
-                    android:textColor="@color/senac_orange"
-                    android:textAllCaps="false"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="20dp"/>
+                    android:layout_height="56dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Registrar Devolução"
+                    android:textColor="@color/white"
+                    app:backgroundTint="@color/senac_orange"
+                    app:cornerRadius="8dp" />
 
                 <!-- Botões de Ação Final (Altura padronizada e quebra de linha) -->
                 <LinearLayout

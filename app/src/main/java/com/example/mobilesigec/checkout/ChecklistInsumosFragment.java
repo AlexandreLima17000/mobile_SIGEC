@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatButton;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -53,8 +52,6 @@ public class ChecklistInsumosFragment extends Fragment {
 
     private MaterialButton btnLimparInsumos;
     private MaterialButton btnConfirmarInsumos;
-    private MaterialButton btnNovaReceita;
-    private AppCompatButton btnSolicitarInsumo;
 
     public ChecklistInsumosFragment() {}
 
@@ -78,17 +75,13 @@ public class ChecklistInsumosFragment extends Fragment {
         progressBarInsumos = view.findViewById(R.id.progress_bar_insumos);
         tvProgressoTexto = view.findViewById(R.id.tv_progresso_texto_insumos);
         tvProgressoPorcentagem = view.findViewById(R.id.tv_progresso_porcentagem_insumos);
-        progressLoading = view.findViewById(R.id.progress_loading); // Vinculando
+        progressLoading = view.findViewById(R.id.progress_loading);
 
         btnLimparInsumos = view.findViewById(R.id.btn_limpar_insumos);
         btnConfirmarInsumos = view.findViewById(R.id.btn_confirmar_insumos);
-        btnNovaReceita = view.findViewById(R.id.btn_nova_receita);
-        btnSolicitarInsumo = view.findViewById(R.id.btn_solicitar_insumo);
 
         btnLimparInsumos.setOnClickListener(v -> limparChecklist());
         btnConfirmarInsumos.setOnClickListener(v -> confirmarSeparacao());
-        btnNovaReceita.setOnClickListener(v -> Toast.makeText(getContext(), "Redirecionar para criação", Toast.LENGTH_SHORT).show());
-        btnSolicitarInsumo.setOnClickListener(v -> Toast.makeText(getContext(), "Abrir formulário", Toast.LENGTH_SHORT).show());
 
         carregarReceitasNoSpinner();
     }
@@ -99,8 +92,8 @@ public class ChecklistInsumosFragment extends Fragment {
 
         if (idUsuarioLogado == -1) return;
 
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando"
-        spinnerReceitas.setEnabled(false); // Desativa o spinner para evitar toques apressados
+        progressLoading.setVisibility(View.VISIBLE);
+        spinnerReceitas.setEnabled(false);
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -113,7 +106,7 @@ public class ChecklistInsumosFragment extends Fragment {
                             "INNER JOIN turma t ON f.id_turma = t.id_turma " +
                             "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                             "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+                            "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idUsuarioLogado);
@@ -133,10 +126,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // VOLTA PARA A THREAD PRINCIPAL PARA ATUALIZAR A TELA
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
@@ -164,11 +156,11 @@ public class ChecklistInsumosFragment extends Fragment {
     }
 
     private void carregarInsumosDaReceita(int idFicha) {
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando" para a lista também!
+        progressLoading.setVisibility(View.VISIBLE);
         listaInsumosAtual.clear();
 
         if (adapter != null) {
-            adapter.notifyDataSetChanged(); // Limpa a tela rapidamente antes de buscar o novo
+            adapter.notifyDataSetChanged();
         }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -199,10 +191,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // VOLTA PARA A TELA PARA INJETAR A LISTA
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
 
                     adapter = new InsumoAdapter(listaInsumosAtual, () -> atualizarProgresso());
                     rvInsumos.setAdapter(adapter);
@@ -249,14 +240,20 @@ public class ChecklistInsumosFragment extends Fragment {
             return;
         }
 
+        // 1. Filtrar apenas os itens que foram realmente marcados pelo instrutor
+        List<InsumoModelo> insumosUtilizados = new ArrayList<>();
         for (InsumoModelo insumo : listaInsumosAtual) {
-            if (!insumo.isMarcado()) {
-                Toast.makeText(getContext(), "Marque todos os insumos!", Toast.LENGTH_SHORT).show();
-                return;
+            if (insumo.isMarcado()) {
+                insumosUtilizados.add(insumo);
             }
         }
 
-        // Executando em Background também para não travar
+        // 2. Valida se ele marcou pelo menos alguma coisa
+        if (insumosUtilizados.isEmpty()) {
+            Toast.makeText(getContext(), "Marque pelo menos um insumo utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         progressLoading.setVisibility(View.VISIBLE);
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -264,11 +261,42 @@ public class ChecklistInsumosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "UPDATE agendamento SET concluido = 'S' WHERE id_ficha = ?";
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, receitaSelecionada.getIdReceita());
-                    if(stmt.executeUpdate() > 0) sucesso = true;
-                    stmt.close(); con.close();
+                    // Desliga o commit automático para garantir a transação segura
+                    con.setAutoCommit(false);
+
+
+                    // Passo B: Prepara os comandos de Histórico (Movimentação) e Baixa de Saldo (Produto)
+                    String sqlEstoque = "INSERT INTO movimentacao_estoque (tipo_movimentacao, quantidade, id_produto, id_insumo, observacao) " +
+                            "VALUES ('SAIDA', ?, (SELECT id_produto FROM insumo WHERE id_insumo = ?), ?, 'Baixa confirmada pelo instrutor')";
+                    PreparedStatement stmtEstoque = con.prepareStatement(sqlEstoque);
+
+                    String sqlBaixaProduto = "UPDATE produto SET quantidade = quantidade - ? WHERE id_produto = (SELECT id_produto FROM insumo WHERE id_insumo = ?)";
+                    PreparedStatement stmtBaixaProduto = con.prepareStatement(sqlBaixaProduto);
+
+                    // Passo C: Roda os comandos para cada item que estava com a caixa marcada na tela
+                    for (InsumoModelo insumo : insumosUtilizados) {
+                        double qtdUtilizada = Double.parseDouble(insumo.getQuantidade());
+                        int idInsumo = insumo.getIdInsumo();
+
+                        // Grava na tabela movimentacao_estoque
+                        stmtEstoque.setDouble(1, qtdUtilizada);
+                        stmtEstoque.setInt(2, idInsumo);
+                        stmtEstoque.setInt(3, idInsumo);
+                        stmtEstoque.executeUpdate();
+
+                        // Subtrai o saldo na tabela produto
+                        stmtBaixaProduto.setDouble(1, qtdUtilizada);
+                        stmtBaixaProduto.setInt(2, idInsumo);
+                        stmtBaixaProduto.executeUpdate();
+                    }
+
+                    stmtEstoque.close();
+                    stmtBaixaProduto.close();
+
+                    // Passo D: Salva tudo de forma definitiva no banco
+                    con.commit();
+                    sucesso = true;
+                    con.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -279,9 +307,9 @@ public class ChecklistInsumosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     if (finalSucesso) {
-                        Toast.makeText(getContext(), "Separação confirmada!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Separação e baixa de estoque concluídas com sucesso!", Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(getContext(), "Erro ao confirmar no banco.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Erro ao processar a baixa no estoque.", Toast.LENGTH_SHORT).show();
                     }
                 });
             }

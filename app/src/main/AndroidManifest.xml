@@ -33,9 +33,8 @@
             tools:targetApi="24" />
 
         <activity
-            android:name=".ConfirmacaoCodigoActivity"
+            android:name=".RecuperarSenhaEmailActivity"
             android:exported="false"
-            android:label="@string/confirm_code_title"
             android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
 
         <activity

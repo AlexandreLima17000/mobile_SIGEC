@@ -3,13 +3,11 @@ package com.example.mobilesigec.home;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,118 +29,53 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link HomePageFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class HomePageFragment extends Fragment {
 
     TextView textSaudacao, textDataHome;
-     Spinner spinnerTurmasHome;
-
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    Spinner spinnerTurmasHome;
 
     public HomePageFragment() {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment HomePageFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static HomePageFragment newInstance(String param1, String param2) {
-        HomePageFragment fragment = new HomePageFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-       View  view = inflater.inflate(R.layout.fragment_home_page, container, false);
-       return view;
+        return inflater.inflate(R.layout.fragment_home_page, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        TextView textSaudacao = view.findViewById(R.id.textSaudacao);
-        TextView textDataHome = view.findViewById(R.id.textDataHome);
+
+        textSaudacao = view.findViewById(R.id.textSaudacao);
+        textDataHome = view.findViewById(R.id.textDataHome);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
 
-        //  Acessa o SharedPreferences para pegar o nome
+        // Acessa o SharedPreferences para pegar o nome
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        // O segundo parâmetro é o valor padrão caso não encontre (ex: se for direto para a Home sem logar)
         String nome = prefs.getString("NOME_USUARIO", "Instrutor");
 
-        // 3. Atualiza o texto na tela
+        // Atualiza o texto na tela
         textSaudacao.setText("Bom dia, " + nome + "!");
 
-
-
-        //-----------------------Injetar a data atua na Home Page----------------------------------
-
-
-        //  Cria o formatador com o padrão desejado e o idioma (Português do Brasil)
-        // EEEE = Dia da semana por extenso, dd = dia do mês, MMMM = Mês por extenso
+        // Injetar a data atual na Home Page
         SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd 'DE' MMMM", new Locale("pt", "BR"));
-
-        //  Pega a data de hoje, formata e transforma tudo em maiúsculo
         String dataFormatada = sdf.format(new Date()).toUpperCase();
-
-        //  Injeta o texto na tela
         textDataHome.setText(dataFormatada);
 
         carregarTurmasNoSpinner(view);
 
-        cardInsumos.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Navigation.findNavController(v).navigate(R.id.action_home_to_insumos);
-            }
-        });
-
-        cardUtensilios.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios);
-            }
-        });
+        cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
+        cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
     }
 
-
-
     private void carregarTurmasNoSpinner(View view) {
-         spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
+        spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
         List<TurmaModelo> listaTurmas = new ArrayList<>();
 
-        //  Resgata o ID do professor que logou
+        // Resgata o ID do professor que logou
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
 
@@ -151,7 +84,7 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        //  Conecta no banco e busca as turmas
+        // Conecta no banco e busca as turmas
         try {
             Connection con = ConexaoMySQL.conectar();
             if (con != null) {
@@ -160,13 +93,13 @@ public class HomePageFragment extends Fragment {
                         "FROM turma t " +
                         "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
                         "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                        "WHERE ut.id_usuario = ? AND t.situação = 'A'";
+                        "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
 
                 PreparedStatement stmt = con.prepareStatement(sql);
                 stmt.setInt(1, idUsuarioLogado);
                 ResultSet rs = stmt.executeQuery();
 
-                //  Monta a lista
+                // Monta a lista
                 while (rs.next()) {
                     int idTurma = rs.getInt("id_turma");
                     String nomeTurma = rs.getString("nome_turma");
@@ -174,7 +107,6 @@ public class HomePageFragment extends Fragment {
 
                     listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
                 }
-
                 rs.close();
                 stmt.close();
                 con.close();
@@ -184,7 +116,7 @@ public class HomePageFragment extends Fragment {
             Toast.makeText(getContext(), "Erro ao carregar turmas", Toast.LENGTH_SHORT).show();
         }
 
-        //  Injeta a lista no Spinner usando o ArrayAdapter
+        // Injeta a lista no Spinner usando o ArrayAdapter
         if (getContext() != null) {
             ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
                     getContext(),
@@ -193,6 +125,7 @@ public class HomePageFragment extends Fragment {
             );
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             spinnerTurmasHome.setAdapter(adapter);
+
             spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
@@ -205,13 +138,14 @@ public class HomePageFragment extends Fragment {
                 public void onNothingSelected(android.widget.AdapterView<?> parent) {}
             });
         }
-}
-    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
-        //  Encontra o container vazio na tela
-        android.widget.LinearLayout containerReceitas = requireView().findViewById(R.id.container_receitas);
+    } // <--- ESTA ERA A CHAVE FALTANDO QUE CAUSAVA O ERRO!
 
-        //  Limpa o container (para apagar as receitas da turma anterior, se houver)
+    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
+        // Encontra o container vazio na tela
+        android.widget.LinearLayout containerReceitas = requireView().findViewById(R.id.container_receitas);
+        // Limpa o container (para apagar as receitas da turma anterior, se houver)
         containerReceitas.removeAllViews();
+
         android.view.LayoutInflater inflater = android.view.LayoutInflater.from(getContext());
 
         try {
@@ -261,7 +195,6 @@ public class HomePageFragment extends Fragment {
                     // Finalmente, injeta o item pronto dentro da tela!
                     containerReceitas.addView(itemReceita);
                 }
-
                 rs.close();
                 stmt.close();
                 con.close();
@@ -270,6 +203,4 @@ public class HomePageFragment extends Fragment {
             e.printStackTrace();
         }
     }
-
-
 }
