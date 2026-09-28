@@ -1,16 +1,20 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -56,6 +60,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
         }
 
         MaterialButton btnConfirmarCodigo = findViewById(R.id.btn_confirmar_codigo);
+        ProgressBar progressConfirmar = findViewById(R.id.progress_confirmar);
         TextView tvVoltarLogin = findViewById(R.id.tv_voltar_login);
 
         // Configurar transição automática de foco entre os campos de código
@@ -66,12 +71,28 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             String code = getEnteredCode();
             if (code.length() < 6) {
                 Toast.makeText(ConfirmacaoCodigoActivity.this, "Por favor, digite o código completo de 6 dígitos.", Toast.LENGTH_SHORT).show();
-            } else if (codigoEsperado != null && !code.equals(codigoEsperado)) {
+                return;
+            }
+
+            btnConfirmarCodigo.setEnabled(false);
+            btnConfirmarCodigo.setText("Confirmando...");
+            if (progressConfirmar != null) {
+                progressConfirmar.setVisibility(View.VISIBLE);
+            }
+            btnConfirmarCodigo.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(ConfirmacaoCodigoActivity.this, R.color.senac_orange)));
+
+            if (codigoEsperado != null && !code.equals(codigoEsperado)) {
                 Toast.makeText(ConfirmacaoCodigoActivity.this, "Código incorreto. Verifique o e-mail enviado.", Toast.LENGTH_LONG).show();
+                btnConfirmarCodigo.setEnabled(true);
+                btnConfirmarCodigo.setText(R.string.confirm_code_button);
+                if (progressConfirmar != null) {
+                    progressConfirmar.setVisibility(View.GONE);
+                }
+                btnConfirmarCodigo.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(ConfirmacaoCodigoActivity.this, R.color.senac_blue)));
             } else {
-                Toast.makeText(ConfirmacaoCodigoActivity.this, "Código confirmado com sucesso!", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(ConfirmacaoCodigoActivity.this, LoginActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                Toast.makeText(ConfirmacaoCodigoActivity.this, "Código confirmado com sucesso!", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(ConfirmacaoCodigoActivity.this, RedefinirSenhaActivity.class);
+                intent.putExtra("email", emailUsuario);
                 startActivity(intent);
                 finish();
             }

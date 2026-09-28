@@ -51,6 +51,13 @@
     <string name="confirm_code_button">Confirmar Código</string>
     <string name="back_to_login">Voltar ao Login</string>
 
+    <!-- Reset Password Screen -->
+    <string name="reset_password_title">Criar Nova Senha</string>
+    <string name="reset_password_subtitle">Crie sua nova senha pessoal para acessar o sistema.</string>
+    <string name="reset_password_hint_new">NOVA SENHA</string>
+    <string name="reset_password_hint_confirm">CONFIRMAR NOVA SENHA</string>
+    <string name="reset_password_button">Redefinir Senha</string>
+
     <!-- Settings / Profile Strings -->
     <string name="instrutor_name">Chef Carlos Silva</string>
     <string name="docente">DOCENTE</string>

@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,6 +27,7 @@ public class LoginActivity extends AppCompatActivity {
 
     EditText emailLogin, senhaLogin;
     MaterialButton btnEntrar;
+    ProgressBar progressEntrar;
 
     Connection con = null;
     PreparedStatement stmt = null;
@@ -46,6 +48,7 @@ public class LoginActivity extends AppCompatActivity {
         emailLogin = findViewById(R.id.emailLogin);
         senhaLogin = findViewById(R.id.senhaLogin);
         btnEntrar = findViewById(R.id.btnEntrar);
+        progressEntrar = findViewById(R.id.progress_entrar);
         TextView tvEsqueciSenha = findViewById(R.id.tv_esqueci_senha);
 
         if (tvEsqueciSenha != null) {
@@ -71,6 +74,9 @@ public class LoginActivity extends AppCompatActivity {
                 btnEntrar.setEnabled(false);
                 btnEntrar.setText("Carregando...");
                 btnEntrar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(LoginActivity.this, R.color.senac_orange)));
+                if (progressEntrar != null) {
+                    progressEntrar.setVisibility(View.VISIBLE);
+                }
 
                 // Executa a operação do banco de dados em segundo plano (Thread) para não travar o carregamento visual da UI
                 new Thread(new Runnable() {
@@ -128,6 +134,9 @@ public class LoginActivity extends AppCompatActivity {
         btnEntrar.setEnabled(true);
         btnEntrar.setText(R.string.login_button_enter);
         btnEntrar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(LoginActivity.this, R.color.senac_blue)));
+        if (progressEntrar != null) {
+            progressEntrar.setVisibility(View.GONE);
+        }
     }
 }
 
