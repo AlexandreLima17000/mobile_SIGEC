@@ -1,7 +1,9 @@
 package com.example.mobilesigec;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -27,7 +29,6 @@ import java.util.Random;
 
 import javax.mail.Authenticator;
 import javax.mail.Message;
-import javax.mail.MessagingException;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
@@ -39,6 +40,7 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
     private TextInputEditText etEmail;
     private MaterialButton btnEnviar;
     private ProgressBar progressEnviar;
+    private String ultimoErroEmail = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,18 +84,23 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                         try (ResultSet rs = stmt.executeQuery()) {
                             if (rs.next()) {
                                 // E-mail existe -> Gera código e envia e-mail
-                                String codigo = String.format(Locale.getDefault(), "%06d", new Random().nextInt(999999));
+                                String codigo = String.format(Locale.getDefault(), "%06d", new Random().nextInt(1000000));
                                 
                                 boolean enviado = enviarEmailRecuperacao(email, codigo);
 
                                 if (enviado) {
                                     runOnUiThread(() -> {
                                         Toast.makeText(RecuperarSenhaEmailActivity.this, "Código enviado com sucesso para " + email, Toast.LENGTH_LONG).show();
+                                        Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
+                                        intent.putExtra("email", email);
+                                        intent.putExtra("codigo", codigo);
+                                        startActivity(intent);
                                         finish();
                                     });
                                 } else {
                                     runOnUiThread(() -> {
-                                        Toast.makeText(RecuperarSenhaEmailActivity.this, "Erro ao enviar e-mail. Tente novamente.", Toast.LENGTH_SHORT).show();
+                                        String msg = "Erro ao enviar e-mail. " + (ultimoErroEmail.isEmpty() ? "Tente novamente." : ultimoErroEmail);
+                                        Toast.makeText(RecuperarSenhaEmailActivity.this, msg, Toast.LENGTH_LONG).show();
                                         restaurarBotao();
                                     });
                                 }
@@ -123,13 +130,14 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
 
     private boolean enviarEmailRecuperacao(String destinatario, String codigo) {
         String remetente = "sigec.teste@gmail.com";
-        String senhaApp = "heplqzyxmmklopbh";
+        String senhaApp = "pfqrwulpoclkxgzj";
+        ultimoErroEmail = "";
 
         Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.host", "smtp.gmail.com");
         props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
         props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
         Session session = Session.getInstance(props, new Authenticator() {
@@ -148,8 +156,9 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
             
             Transport.send(message);
             return true;
-        } catch (MessagingException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e("RecuperarSenha", "Erro ao enviar e-mail de recuperação", e);
+            ultimoErroEmail = e.getMessage() != null ? e.getMessage() : e.toString();
             return false;
         }
     }

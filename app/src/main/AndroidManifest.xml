@@ -38,6 +38,11 @@
             android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
 
         <activity
+            android:name=".ConfirmacaoCodigoActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

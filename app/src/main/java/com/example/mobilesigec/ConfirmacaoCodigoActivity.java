@@ -20,6 +20,8 @@ import com.google.android.material.button.MaterialButton;
 public class ConfirmacaoCodigoActivity extends AppCompatActivity {
 
     private EditText etCode1, etCode2, etCode3, etCode4, etCode5, etCode6;
+    private String emailUsuario;
+    private String codigoEsperado;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +35,13 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             return insets;
         });
 
+        // Receber dados da Intent
+        Intent intentOriginal = getIntent();
+        if (intentOriginal != null) {
+            emailUsuario = intentOriginal.getStringExtra("email");
+            codigoEsperado = intentOriginal.getStringExtra("codigo");
+        }
+
         // Inicializar Views
         etCode1 = findViewById(R.id.et_code_1);
         etCode2 = findViewById(R.id.et_code_2);
@@ -40,6 +49,11 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
         etCode4 = findViewById(R.id.et_code_4);
         etCode5 = findViewById(R.id.et_code_5);
         etCode6 = findViewById(R.id.et_code_6);
+
+        TextView tvSubLabel = findViewById(R.id.tv_sub_label);
+        if (emailUsuario != null && !emailUsuario.isEmpty() && tvSubLabel != null) {
+            tvSubLabel.setText("Digite o código de 6 dígitos enviado para\n" + emailUsuario);
+        }
 
         MaterialButton btnConfirmarCodigo = findViewById(R.id.btn_confirmar_codigo);
         TextView tvVoltarLogin = findViewById(R.id.tv_voltar_login);
@@ -52,9 +66,13 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             String code = getEnteredCode();
             if (code.length() < 6) {
                 Toast.makeText(ConfirmacaoCodigoActivity.this, "Por favor, digite o código completo de 6 dígitos.", Toast.LENGTH_SHORT).show();
+            } else if (codigoEsperado != null && !code.equals(codigoEsperado)) {
+                Toast.makeText(ConfirmacaoCodigoActivity.this, "Código incorreto. Verifique o e-mail enviado.", Toast.LENGTH_LONG).show();
             } else {
-                Toast.makeText(ConfirmacaoCodigoActivity.this, "Código confirmado com sucesso!", Toast.LENGTH_SHORT).show();
-                // Retornar ao login ou próxima tela
+                Toast.makeText(ConfirmacaoCodigoActivity.this, "Código confirmado com sucesso!", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(ConfirmacaoCodigoActivity.this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
                 finish();
             }
         });

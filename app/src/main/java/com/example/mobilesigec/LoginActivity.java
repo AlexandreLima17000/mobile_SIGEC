@@ -46,6 +46,14 @@ public class LoginActivity extends AppCompatActivity {
         emailLogin = findViewById(R.id.emailLogin);
         senhaLogin = findViewById(R.id.senhaLogin);
         btnEntrar = findViewById(R.id.btnEntrar);
+        TextView tvEsqueciSenha = findViewById(R.id.tv_esqueci_senha);
+
+        if (tvEsqueciSenha != null) {
+            tvEsqueciSenha.setOnClickListener(v -> {
+                Intent intent = new Intent(LoginActivity.this, RecuperarSenhaEmailActivity.class);
+                startActivity(intent);
+            });
+        }
 
         btnEntrar.setOnClickListener(new View.OnClickListener() {
             @Override
