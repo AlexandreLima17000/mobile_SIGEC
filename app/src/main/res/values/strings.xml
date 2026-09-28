@@ -43,6 +43,7 @@
     <string name="confirm_code_title">Confirmação de Código</string>
     <string name="confirm_code_subtitle">Digite o código de 6 dígitos enviado para o seu e-mail.</string>
     <string name="confirm_code_button">Confirmar Código</string>
+    <string name="resend_code_button">Reenviar Código</string>
     <string name="back_to_login">Voltar ao Login</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
