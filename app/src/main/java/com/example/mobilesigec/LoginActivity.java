@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -78,7 +79,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
+                            sql = "SELECT id_usuario, nome_usuario, email FROM usuario WHERE email = ? AND senha = ?";
                             
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
@@ -87,6 +88,17 @@ public class LoginActivity extends AppCompatActivity {
                                 rs = stmt.executeQuery();
 
                                 if (rs.next()) {
+                                    int idUsuario = rs.getInt("id_usuario");
+                                    String nomeUsuario = rs.getString("nome_usuario");
+                                    String emailUsuario = rs.getString("email");
+
+                                    SharedPreferences prefs = getSharedPreferences("SessaoApp", MODE_PRIVATE);
+                                    prefs.edit()
+                                            .putInt("ID_USUARIO", idUsuario)
+                                            .putString("NOME_USUARIO", nomeUsuario)
+                                            .putString("EMAIL_USUARIO", emailUsuario)
+                                            .apply();
+
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
