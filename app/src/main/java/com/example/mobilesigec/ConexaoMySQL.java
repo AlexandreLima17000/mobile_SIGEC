@@ -4,7 +4,9 @@ import android.os.StrictMode;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class ConexaoMySQL {
     private static final String URL = BuildConfig.DB_URL;
@@ -37,5 +39,25 @@ public class ConexaoMySQL {
         } catch (SQLException e) {
             System.out.println("Erro ao fechar conexão: " + e.getMessage());
         }
+    }
+
+    public static String horaBanco(Connection conexao) {
+        if (conexao == null) return null;
+
+        String hora = null;
+        try {
+            Statement stmt = conexao.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT NOW()");
+
+            if (rs.next()) {
+                hora = rs.getString(1); // Retorna a data/hora completa (ex: 2026-09-29 11:55:00)
+            }
+
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            System.out.println("Erro ao buscar hora: " + e.getMessage());
+        }
+        return hora;
     }
 }

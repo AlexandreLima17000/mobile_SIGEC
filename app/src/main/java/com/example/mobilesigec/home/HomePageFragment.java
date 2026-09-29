@@ -17,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.HoraService;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.model.TurmaModelo;
 
@@ -57,8 +58,19 @@ public class HomePageFragment extends Fragment {
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         String nome = prefs.getString("NOME_USUARIO", "Instrutor");
 
-        // Atualiza o texto na tela
-        textSaudacao.setText("Bom dia, " + nome + "!");
+        new Thread(() -> {
+
+            // 1. Puxa a saudação do MySQL em segundo plano
+            String saudacao = HoraService.saudacaoHora();
+
+            // 2. Garante que o Fragment ainda está anexado antes de atualizar a UI
+            if (isAdded() && getActivity() != null) {
+                requireActivity().runOnUiThread(() -> {
+                    textSaudacao.setText(saudacao + " " + nome + "!");
+                });
+            }
+
+        }).start();
 
         // Injetar a data atual na Home Page
         SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd 'DE' MMMM", new Locale("pt", "BR"));
