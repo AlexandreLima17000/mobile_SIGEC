@@ -1,64 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:layout_marginBottom="14dp"
-    android:padding="10dp"
-    android:background="@drawable/bg_receita_item">
+    android:layout_height="120dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="#1A2D4C">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="match_parent">
 
+        <TextView
+            android:id="@+id/tv_detalhes_receita"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="10dp"
+            android:text="BRASILEIRA 🇧🇷"
+            android:textColor="#F59E0B"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-
-        <LinearLayout
+        <TextView
+            android:id="@+id/tv_nome_receita"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/tv_nome_receita"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Nome da Receita"
-                android:textStyle="bold"
-                android:textColor="@color/primary"
-                android:textSize="15sp"
-                android:singleLine="true"/>
-
-            <TextView
-                android:id="@+id/tv_detalhes_receita"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Detalhes"
-                android:textSize="12sp"
-                android:textColor="@color/on_surface_variant"
-                android:layout_marginTop="2dp"/>
-        </LinearLayout>
+            android:layout_margin="8dp"
+            android:gravity="center"
+            android:text="Nome da Receita"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintBottom_toTopOf="@id/tv_status_text"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_detalhes_receita" />
+        <TextView
+            android:id="@+id/tv_status_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="#14532D"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp"
+            android:text="DISPONÍVEL"
+            android:textColor="#4ADE80"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
         <ImageView
             android:id="@+id/iv_status_icon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_notifications"
-            app:tint="@color/on_surface_variant" />
-    </LinearLayout>
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/tv_status_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:text="PENDENTE"
-        android:textColor="@color/on_surface_variant"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:layout_marginTop="2dp"/>
-</LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.cardview.widget.CardView>
