@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Estado focado: fundo branco e borda azul Senac em destaque -->
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="#FFFFFF" />
+            <stroke
+                android:width="2dp"
+                android:color="@color/senac_blue" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+    <!-- Estado padrão: fundo cinza escurecido e borda bem definida -->
+    <item>
+        <shape>
+            <solid android:color="#E2E8F0" />
+            <stroke
+                android:width="1.5dp"
+                android:color="#94A3B8" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</selector>

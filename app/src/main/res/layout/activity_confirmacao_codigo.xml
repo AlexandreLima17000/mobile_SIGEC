@@ -106,7 +106,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -120,7 +120,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -134,7 +134,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -148,7 +148,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -162,7 +162,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -176,7 +176,7 @@
             android:layout_width="46dp"
             android:layout_height="52dp"
             android:layout_marginHorizontal="4dp"
-            android:background="@drawable/edit_text_bg"
+            android:background="@drawable/edit_text_code_bg"
             android:gravity="center"
             android:inputType="number"
             android:maxLength="1"
@@ -218,6 +218,23 @@
             android:visibility="gone" />
 
     </FrameLayout>
+
+    <!-- Botão Reenviar Código (Apenas Texto Azul) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_reenviar_codigo"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:paddingHorizontal="16dp"
+        android:text="@string/resend_code_button"
+        android:textAllCaps="false"
+        android:textColor="@color/senac_blue"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_btn_confirmar" />
 
     <!-- Voltar ao Login (Sobre a onda azul inferior) -->
     <TextView

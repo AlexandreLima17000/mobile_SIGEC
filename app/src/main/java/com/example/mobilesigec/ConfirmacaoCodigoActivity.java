@@ -42,6 +42,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
         etCode6 = findViewById(R.id.et_code_6);
 
         MaterialButton btnConfirmarCodigo = findViewById(R.id.btn_confirmar_codigo);
+        MaterialButton btnReenviarCodigo = findViewById(R.id.btn_reenviar_codigo);
         TextView tvVoltarLogin = findViewById(R.id.tv_voltar_login);
 
         // Configurar transição automática de foco entre os campos de código
@@ -57,6 +58,11 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
                 // Retornar ao login ou próxima tela
                 finish();
             }
+        });
+
+        // Botão "Reenviar código"
+        btnReenviarCodigo.setOnClickListener(v -> {
+            Toast.makeText(ConfirmacaoCodigoActivity.this, "Código reenviado para o seu e-mail!", Toast.LENGTH_SHORT).show();
         });
 
         // Botão "Voltar ao Login"
