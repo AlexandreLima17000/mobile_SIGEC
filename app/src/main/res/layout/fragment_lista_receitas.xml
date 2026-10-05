@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -16,7 +15,6 @@
         android:paddingStart="14dp"
         android:paddingEnd="14dp">
 
-        <!-- MOLDURA -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -29,7 +27,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- FAIXA LATERAL -->
                 <View
                     android:layout_width="6dp"
                     android:layout_height="match_parent"
@@ -41,7 +38,6 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
-                    <!-- CABEÇALHO -->
                     <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -69,7 +65,7 @@
                                 android:textStyle="bold"
                                 android:layout_marginBottom="14dp" />
 
-                            <!-- PESQUISA -->
+                            <!-- PESQUISA ATUALIZADA COM O ÍCONE -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -89,12 +85,19 @@
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:layout_marginStart="12dp"
-                                    android:hint="Buscar receita..."
+                                    android:hint="Buscar ou filtrar receita..."
                                     android:textColor="#FFFFFF"
                                     android:textColorHint="#B0C4DE"
                                     android:textSize="15sp"
                                     android:singleLine="true"
                                     android:background="@android:color/transparent" />
+
+                                <!-- ÍCONE NOVO DO CANVA -->
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_menu"
+                                    app:tint="#B0C4DE" />
 
                             </LinearLayout>
 
@@ -102,15 +105,12 @@
 
                     </FrameLayout>
 
-
-                    <!-- CORPO -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:padding="16dp">
 
-                        <!-- QUANTIDADE -->
                         <TextView
                             android:id="@+id/txtQuantidadeReceitas"
                             android:layout_width="wrap_content"
@@ -121,8 +121,6 @@
                             android:textStyle="bold"
                             android:layout_marginBottom="16dp" />
 
-
-                        <!-- FILTROS VISUAIS -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -175,12 +173,6 @@
                                 android:textAlignment="center" />
 
                         </LinearLayout>
-
-
-                        <!--
-                            IMPORTANTE:
-                            O JAVA VAI CRIAR OS CARDS AQUI.
-                        -->
 
                         <GridLayout
                             android:id="@+id/gridReceitas"
