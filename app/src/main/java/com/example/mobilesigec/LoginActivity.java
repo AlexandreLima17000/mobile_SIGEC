@@ -112,7 +112,9 @@ public class LoginActivity extends AppCompatActivity {
                             } else {
                                 // Erro ao conectar ao servidor de banco de dados
                                 runOnUiThread(() -> {
-                                    Toast.makeText(LoginActivity.this, "Erro de conexão com o banco de dados", Toast.LENGTH_SHORT).show();
+                                    String erro = ConexaoMySQL.getUltimoErro();
+                                    String msg = "Erro de conexão com o banco de dados" + (erro.isEmpty() ? "" : ": " + erro);
+                                    Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_LONG).show();
                                     restaurarBotaoLogin();
                                 });
                             }

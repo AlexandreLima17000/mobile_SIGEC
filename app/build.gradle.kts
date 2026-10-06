@@ -25,9 +25,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "DB_URL", "\"${envProperties.getProperty("DB_URL") ?: ""}\"")
-        buildConfigField("String", "DB_USER", "\"${envProperties.getProperty("DB_USER") ?: ""}\"")
-        buildConfigField("String", "DB_PASSWORD", "\"${envProperties.getProperty("DB_PASSWORD") ?: ""}\"")
+        val dbUrl = envProperties.getProperty("DB_URL") ?: "jdbc:mysql://10.0.2.2:3306/sigec?useSSL=false&allowPublicKeyRetrieval=true"
+        val dbUser = envProperties.getProperty("DB_USER") ?: "root"
+        val dbPassword = envProperties.getProperty("DB_PASSWORD") ?: envProperties.getProperty("DB_PASS") ?: ""
+
+        buildConfigField("String", "DB_URL", "\"$dbUrl\"")
+        buildConfigField("String", "DB_USER", "\"$dbUser\"")
+        buildConfigField("String", "DB_PASSWORD", "\"$dbPassword\"")
     }
 
     buildTypes {

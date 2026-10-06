@@ -49,6 +49,7 @@
     <string name="confirm_code_title">Código de Confirmação</string>
     <string name="confirm_code_subtitle">Digite o código de 6 dígitos enviado para seu e-mail</string>
     <string name="confirm_code_button">Confirmar Código</string>
+    <string name="resend_code_button">Reenviar Código</string>
     <string name="back_to_login">Voltar ao Login</string>
 
     <!-- Reset Password Screen -->

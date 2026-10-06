@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
@@ -21,11 +22,25 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 
+import java.util.Locale;
+import java.util.Properties;
+import java.util.Random;
+
+import javax.mail.Authenticator;
+import javax.mail.Message;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
 public class ConfirmacaoCodigoActivity extends AppCompatActivity {
 
     private EditText etCode1, etCode2, etCode3, etCode4, etCode5, etCode6;
+    private MaterialButton btnReenviarCodigo;
     private String emailUsuario;
     private String codigoEsperado;
+    private String ultimoErroEmail = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +75,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
         }
 
         MaterialButton btnConfirmarCodigo = findViewById(R.id.btn_confirmar_codigo);
+        btnReenviarCodigo = findViewById(R.id.btn_reenviar_codigo);
         ProgressBar progressConfirmar = findViewById(R.id.progress_confirmar);
         TextView tvVoltarLogin = findViewById(R.id.tv_voltar_login);
 
@@ -98,6 +114,38 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             }
         });
 
+        // Botão "Reenviar Código"
+        if (btnReenviarCodigo != null) {
+            btnReenviarCodigo.setOnClickListener(v -> {
+                if (emailUsuario == null || emailUsuario.isEmpty()) {
+                    Toast.makeText(ConfirmacaoCodigoActivity.this, "E-mail não identificado.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                btnReenviarCodigo.setEnabled(false);
+                btnReenviarCodigo.setText("Reenviando...");
+
+                new Thread(() -> {
+                    String novoCodigo = String.format(Locale.getDefault(), "%06d", new Random().nextInt(1000000));
+                    boolean enviado = enviarEmailRecuperacao(emailUsuario, novoCodigo);
+
+                    runOnUiThread(() -> {
+                        btnReenviarCodigo.setEnabled(true);
+                        btnReenviarCodigo.setText(R.string.resend_code_button);
+
+                        if (enviado) {
+                            codigoEsperado = novoCodigo;
+                            limparCamposCodigo();
+                            Toast.makeText(ConfirmacaoCodigoActivity.this, "Novo código enviado com sucesso para " + emailUsuario, Toast.LENGTH_LONG).show();
+                        } else {
+                            String msg = "Erro ao reenviar código. " + (ultimoErroEmail.isEmpty() ? "Tente novamente." : ultimoErroEmail);
+                            Toast.makeText(ConfirmacaoCodigoActivity.this, msg, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }).start();
+            });
+        }
+
         // Botão "Voltar ao Login"
         tvVoltarLogin.setOnClickListener(v -> {
             Intent intent = new Intent(ConfirmacaoCodigoActivity.this, LoginActivity.class);
@@ -105,6 +153,51 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    private void limparCamposCodigo() {
+        etCode1.setText("");
+        etCode2.setText("");
+        etCode3.setText("");
+        etCode4.setText("");
+        etCode5.setText("");
+        etCode6.setText("");
+        etCode1.requestFocus();
+    }
+
+    private boolean enviarEmailRecuperacao(String destinatario, String codigo) {
+        String remetente = "sigec.teste@gmail.com";
+        String senhaApp = "pfqrwulpoclkxgzj";
+        ultimoErroEmail = "";
+
+        Properties props = new Properties();
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+
+        Session session = Session.getInstance(props, new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(remetente, senhaApp);
+            }
+        });
+
+        try {
+            Message message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(remetente));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinatario));
+            message.setSubject("Novo Código de Recuperação - SIGEC");
+            message.setText("Olá,\n\nSeu NOVO código de recuperação de senha do Sistema de Gerenciamento de Estoque da Cozinha (SIGEC) é: " + codigo + "\n\nUtilize este código para redefinir sua senha.\n\nAtenciosamente,\nEquipe SIGEC");
+
+            Transport.send(message);
+            return true;
+        } catch (Exception e) {
+            Log.e("ConfirmacaoCodigo", "Erro ao reenviar e-mail de recuperação", e);
+            ultimoErroEmail = e.getMessage() != null ? e.getMessage() : e.toString();
+            return false;
+        }
     }
 
     private void setupCodeInputs() {
