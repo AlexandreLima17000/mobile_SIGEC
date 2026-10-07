@@ -52,6 +52,7 @@ public class HomePageFragment extends Fragment {
         textDataHome = view.findViewById(R.id.textDataHome);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
+        CardView cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
 
         // Acessa o SharedPreferences para pegar o nome
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -69,6 +70,9 @@ public class HomePageFragment extends Fragment {
 
         cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
         cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
+        if (cardReceitasHoje != null) {
+            cardReceitasHoje.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_calendario));
+        }
     }
 
     private void carregarTurmasNoSpinner(View view) {
