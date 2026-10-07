@@ -1,9 +1,12 @@
 package com.example.mobilesigec;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
+import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
@@ -33,9 +36,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.appBarMain.toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
-        }
         if (binding.appBarMain.fab != null) {
             binding.appBarMain.fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).setAnchorView(R.id.fab).show());
@@ -47,21 +47,45 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         if (navigationView != null) {
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home, R.id.nav_calendario, R.id.nav_book, R.id.nav_settings)
+                    R.id.nav_home, R.id.nav_calendario, R.id.nav_settings, R.id.nav_profile)
                     .setOpenableLayout(binding.drawerLayout)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(navigationView, navController);
+
+            // Trata o clique direto no item de Sair no Drawer
+            navigationView.setNavigationItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_sair) {
+                    efetuarLogout();
+                    return true;
+                }
+                boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                if (handled && binding.drawerLayout != null) {
+                    binding.drawerLayout.closeDrawers();
+                }
+                return handled;
+            });
         }
 
         BottomNavigationView bottomNavigationView = binding.appBarMain.contentMain.bottomNavView;
         if (bottomNavigationView != null) {
-            bottomNavigationView.setItemIconTintList(null);
             mAppBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.nav_home, R.id.nav_calendario, R.id.nav_book)
+                    R.id.nav_transform, R.id.nav_reflow, R.id.nav_slideshow)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
             NavigationUI.setupWithNavController(bottomNavigationView, navController);
+
+            navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+                if (destination.getId() == R.id.nav_checklist_insumos
+                        || destination.getId() == R.id.nav_checklist_utensilios
+                        || destination.getId() == R.id.nav_detalhes_receita
+                        || destination.getId() == R.id.nav_settings) {
+                    bottomNavigationView.setVisibility(android.view.View.GONE);
+                } else {
+                    bottomNavigationView.setVisibility(android.view.View.VISIBLE);
+                }
+            });
         }
     }
 
@@ -92,10 +116,17 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.nav_settings) {
-            NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        int id = item.getItemId();
+        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+
+        if (id == R.id.nav_profile || id == R.id.nav_settings) {
             navController.navigate(R.id.nav_settings);
+            return true;
+        } else if (id == R.id.nav_sair) {
+            efetuarLogout();
+            return true;
         }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -104,5 +135,17 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    private void efetuarLogout() {
+        SharedPreferences prefs = getSharedPreferences("SessaoApp", MODE_PRIVATE);
+        prefs.edit().clear().apply();
+
+        Toast.makeText(this, "Sessão encerrada", Toast.LENGTH_SHORT).show();
+
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }

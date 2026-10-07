@@ -16,13 +16,9 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@android:color/white"
-            app:contentInsetStart="0dp"
-            app:popupTheme="@style/Theme.MobileSIGEC.PopupOverlay">
-
-            <include layout="@layout/layout_custom_toolbar" />
-
-        </androidx.appcompat.widget.Toolbar>
+            android:background="@color/white"
+            app:titleTextColor="@color/primary"
+            app:popupTheme="@style/Theme.MobileSIGEC.PopupOverlay" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -30,4 +26,10 @@
         android:id="@+id/content_main"
         layout="@layout/content_main" />
 
+    <!-- This CoordinatorLayout is to dodge the BottomNavigationView when the Snackbar is shown -->
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="56dp"
+        android:background="@android:color/transparent"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,16 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view"
+    >
 
-    <item
-        android:id="@+id/nav_home"
-        android:icon="@drawable/ic_home_nav"
-        android:title="Home" />
-    <item
-        android:id="@+id/nav_calendario"
-        android:icon="@drawable/ic_calendar_nav"
-        android:title="Calendário" />
-    <item
-        android:id="@+id/nav_book"
-        android:icon="@drawable/ic_book_nav"
-        android:title="Fichas" />
+    <group android:checkableBehavior="single">
+
+
+        <item
+            android:id="@+id/nav_home"
+            android:icon="@drawable/ic_home"
+            android:title="@string/menu_home" />
+
+        <item
+            android:id="@+id/nav_calendario"
+            android:icon="@drawable/ic_calendar"
+            android:title="@string/menu_calendario" />
+        <item
+            android:id="@+id/nav_receita"
+            android:icon="@drawable/ic_book"
+            android:title="@string/menu_receitas" />
+
+
+
+
+    </group>
 </menu>

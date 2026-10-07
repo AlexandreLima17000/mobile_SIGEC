@@ -22,9 +22,9 @@
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
-                android:id="@+id/iv_logo_senac"
+                android:id="@+id/iv_logo_sigec"
                 android:layout_width="wrap_content"
-                android:layout_height="80dp"
+                android:layout_height="70dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/login_logo_description"
                 android:src="@drawable/sicg_logo"
@@ -38,16 +38,16 @@
                 android:id="@+id/tv_sistema"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center"
                 android:text="@string/login_system_name"
                 android:textColor="@color/white"
-                android:textSize="12sp"
-                android:letterSpacing="0.03"
+                android:textSize="13sp"
+                android:letterSpacing="0.02"
                 app:layout_constraintBottom_toTopOf="@id/tv_portal"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/iv_logo_senac" />
+                app:layout_constraintTop_toBottomOf="@id/iv_logo_sigec" />
 
             <TextView
                 android:id="@+id/tv_portal"
@@ -58,7 +58,7 @@
                 android:text="@string/login_portal_instructor"
                 android:textColor="@color/white"
                 android:textSize="12sp"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.12"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

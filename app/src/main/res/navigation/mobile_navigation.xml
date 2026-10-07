@@ -3,23 +3,65 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_calendario">
+    app:startDestination="@+id/nav_home"
+    tools:ignore="InvalidNavigation">
 
     <fragment
-        android:id="@+id/nav_calendario"
-        android:name="com.example.mobilesigec.CalendarioBlankFragment"
-        android:label="Calendário"
-        tools:layout="@layout/fragment_calendario_blank" />
+        android:id="@+id/nav_checklist_insumos"
+        android:name="com.example.mobilesigec.checkout.ChecklistInsumosFragment"
+        android:label="Checklist de Insumos"
+        tools:layout="@layout/fragment_checklist_insumos" />
+
+    <fragment
+        android:id="@+id/nav_checklist_utensilios"
+        android:name="com.example.mobilesigec.checkout.ChecklistUtensiliosFragment"
+        android:label="Checklist de Utensílios"
+        tools:layout="@layout/fragment_checklist_utensilios" />
+
+    <fragment
+        android:id="@+id/nav_detalhes_receita"
+        android:name="com.example.mobilesigec.receita.DetalhesReceitaFragment"
+        android:label="Detalhes da Receita"
+        tools:layout="@layout/fragment_detalhes_receita" />
 
     <fragment
         android:id="@+id/nav_home"
-        android:name="com.example.mobilesigec.ui.transform.TransformFragment"
-        android:label="Home"
-        tools:layout="@layout/fragment_transform" />
+        android:name="com.example.mobilesigec.home.HomePageFragment"
+        android:label="@string/menu_home"
+        tools:layout="@layout/fragment_home_page">
+
+        <!-- Rota para Insumos -->
+        <action
+            android:id="@+id/action_home_to_insumos"
+            app:destination="@id/nav_checklist_insumos" />
+
+        <!-- Rota para Utensílios -->
+        <action
+            android:id="@+id/action_home_to_utensilios"
+            app:destination="@id/nav_checklist_utensilios" />
+    </fragment>
 
     <fragment
-        android:id="@+id/nav_book"
-        android:name="com.example.mobilesigec.ui.reflow.ReflowFragment"
-        android:label="Fichas"
-        tools:layout="@layout/fragment_reflow" />
+        android:id="@+id/nav_receita"
+        android:name="com.example.mobilesigec.receita.ListaReceitasFragment"
+        android:label="@string/menu_receitas"
+        tools:layout="@layout/fragment_lista_receitas" />
+
+    <fragment
+        android:id="@+id/nav_calendario"
+        android:name="com.example.mobilesigec.calendario.CalendarioFragment"
+        android:label="@string/menu_calendario"
+        tools:layout="@layout/fragment_calendario" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.example.mobilesigec.settings.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@layout/fragment_configuracoes" />
+
+    <fragment
+        android:id="@+id/nav_receitas"
+        android:name="com.example.mobilesigec.ReceitasFragment"
+        android:label="Receitas"
+        tools:layout="@layout/fragment_recaitas" />
 </navigation>

@@ -13,8 +13,7 @@
         android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginLeft="@dimen/fragment_horizontal_margin"
-        android:layout_marginRight="@dimen/fragment_horizontal_margin"
+
         android:layout_weight="1"
         app:defaultNavHost="true"
         app:navGraph="@navigation/mobile_navigation" />
@@ -22,12 +21,14 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_nav_view"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="80dp"
         android:layout_gravity="bottom"
-        android:background="@color/sigec_dark_blue"
+        android:background="@color/primary"
         app:itemIconSize="32dp"
-        app:itemIconTint="@null"
-        app:itemTextColor="@color/sigec_white"
-        app:labelVisibilityMode="unlabeled"
+        app:itemIconTint="@color/nav_item_color_selector"
+        app:itemTextColor="@color/nav_item_color_selector"
+        app:itemBackground="@drawable/bg_nav_item_selected"
+        app:itemActiveIndicatorStyle="@null"
+        app:labelVisibilityMode="labeled"
         app:menu="@menu/bottom_navigation" />
 </LinearLayout>

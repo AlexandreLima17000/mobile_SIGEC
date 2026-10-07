@@ -1,30 +1,87 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:pathData="M31,63.928c0,0 6.4,-11 12.1,-13.1c7.2,-2.6 26,-1.4 26,-1.4l38.1,38.1L107,108.928l-32,-1L31,63.928z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:endX="85.84757"
-                android:endY="92.4963"
-                android:startX="42.9492"
-                android:startY="49.59793"
-                android:type="linear">
-                <item
-                    android:color="#44000000"
-                    android:offset="0.0" />
-                <item
-                    android:color="#00000000"
-                    android:offset="1.0" />
-            </gradient>
-        </aapt:attr>
-    </path>
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="nonZero"
-        android:pathData="M65.3,45.828l3.8,-6.6c0.2,-0.4 0.1,-0.9 -0.3,-1.1c-0.4,-0.2 -0.9,-0.1 -1.1,0.3l-3.9,6.7c-6.3,-2.8 -13.4,-2.8 -19.7,0l-3.9,-6.7c-0.2,-0.4 -0.7,-0.5 -1.1,-0.3C38.8,38.328 38.7,38.828 38.9,39.228l3.8,6.6C36.2,49.428 31.7,56.028 31,63.928h46C76.3,56.028 71.8,49.428 65.3,45.828zM43.4,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2c-0.3,-0.7 -0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C45.3,56.528 44.5,57.328 43.4,57.328L43.4,57.328zM64.6,57.328c-0.8,0 -1.5,-0.5 -1.8,-1.2s-0.1,-1.5 0.4,-2.1c0.5,-0.5 1.4,-0.7 2.1,-0.4c0.7,0.3 1.2,1 1.2,1.8C66.5,56.528 65.6,57.328 64.6,57.328L64.6,57.328z"
-        android:strokeWidth="1"
-        android:strokeColor="#00000000" />
+    <!-- Grupo com escala e translação para centralizar perfeitamente na Safe Zone (66dp centrais) -->
+    <group
+        android:scaleX="0.55"
+        android:scaleY="0.55"
+        android:translateX="24.3"
+        android:translateY="20">
+
+        <!-- Chapéu de Chef (Base/Silhueta Branca) -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 54,12 C 43,12 34,18 31,27 C 27,24 21,24 16,28 C 11,32 8,39 10,46 C 11,53 16,58 22,59 H 86 C 92,58 97,53 98,46 C 100,39 97,32 92,28 C 87,24 81,24 77,27 C 74,18 65,12 54,12 Z" />
+
+        <!-- Recorte Interno Azul -->
+        <path
+            android:fillColor="#00223E"
+            android:pathData="M 54,16 C 63,16 70,22 72,30 C 74,31 77,31 80,33 C 83,28 89,28 92,32 C 94,36 93,42 90,46 C 88,48 85,50 81,50 H 27 C 23,50 20,48 18,46 C 15,42 14,36 16,32 C 19,28 25,28 28,33 C 31,31 34,31 36,30 C 38,22 45,16 54,16 Z" />
+
+        <!-- Barra do Gráfico 1 -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 33,38 H 41 V 65 H 33 Z" />
+
+        <!-- Faca Central -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 45,18 C 45,18 48,18 50,21 C 51,23 51,28 51,33 H 45 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 45,35 H 52 V 65 H 45 Z" />
+        <path
+            android:fillColor="#00223E"
+            android:pathData="M 47.5,22.5 A 1,1 0 1,1 47.5,24.5 A 1,1 0 1,1 47.5,22.5 Z" />
+
+        <!-- Barra do Gráfico 2 -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 56,47 H 63 V 65 H 56 Z" />
+
+        <!-- Suporte/Base -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 30,67 H 65 V 70 H 30 Z" />
+
+        <!-- Garfo -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 63,30 H 65 V 39 H 63 Z M 67,30 H 69 V 39 H 67 Z M 71,30 H 73 V 39 H 71 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 62,39 C 62,44 65,46 67,47 V 71 H 69 V 47 C 71,46 74,44 74,39 H 62 Z" />
+
+        <!-- Colher Diagonal -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 72,38 C 68,38 65,42 67,48 C 68,51 72,53 76,50 C 80,47 80,41 77,39 C 75,38 73.5,38 72,38 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 53,70 L 71,50 L 74,53 L 56,73 Z" />
+
+        <!-- Texto "SIGEC" -->
+        <!-- S -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 33,83 C 30,83 28.5,84.5 28.5,86.5 C 28.5,89.5 33,89 33,91.5 C 33,92.5 31.5,93 30,93 C 28,93 27,92 26,91 L 24,93 C 25.5,95 27.5,95.5 30,95.5 C 33.5,95.5 35.5,94 35.5,91 C 35.5,87.5 31,88 31,86 C 31,85 32,84.5 33,84.5 C 34.5,84.5 35.5,85.5 36.5,86.5 L 38.5,84.5 C 37,83.5 35.5,83 33,83 Z" />
+        <!-- I -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 41,83.5 H 43.5 V 95 H 41 Z" />
+        <!-- G -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 52,83 C 48,83 45.5,85.5 45.5,89.2 C 45.5,93 48,95.5 52,95.5 C 55,95.5 57,94 58,92 V 89 H 51.5 V 90.5 H 56 V 91.5 C 55,92.8 53.5,93.5 52,93.5 C 49.5,93.5 48,91.8 48,89.2 C 48,86.6 49.5,84.9 52,84.9 C 53.8,84.9 55.2,85.8 56,87 L 58,85.5 C 56.8,83.8 54.8,83 52,83 Z" />
+        <!-- E -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 61,83.5 H 68.5 V 85.5 H 63.5 V 88 H 67.5 V 90 H 63.5 V 93 H 68.5 V 95 H 61 Z" />
+        <!-- C -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M 76,83 C 72,83 69.5,85.5 69.5,89.2 C 69.5,93 72,95.5 76,95.5 C 78.5,95.5 80.5,94.5 82,93 L 80.5,91.2 C 79.2,92.5 77.8,93.5 76,93.5 C 73.5,93.5 72,91.8 72,89.2 C 72,86.6 73.5,84.9 76,84.9 C 77.8,84.9 79.2,85.8 80.5,87.2 L 82,85.5 C 80.5,83.8 78.5,83 76,83 Z" />
+    </group>
 </vector>
