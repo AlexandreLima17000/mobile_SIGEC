@@ -54,6 +54,7 @@ public class CalendarioBlankFragment extends Fragment {
 
     private View lastSelectedDayView = null;
 
+
     public CalendarioBlankFragment() {
         // Required empty public constructor
     }
@@ -376,6 +377,27 @@ public class CalendarioBlankFragment extends Fragment {
             }
             layoutFichasLista.addView(textNoFichas);
         }
+    }
+
+    private boolean ehFeriadoOuFimSemana(Calendar cal) {
+        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+        if (dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) {
+            return true;
+        }
+        int dia = cal.get(Calendar.DAY_OF_MONTH);
+        int mes = cal.get(Calendar.MONTH);
+        // Feriados Nacionais Fixos (Dia, Mês)
+        if (mes == Calendar.JANUARY && dia == 1) return true;   // Confraternização Universal
+        if (mes == Calendar.APRIL && dia == 21) return true;   // Tiradentes
+        if (mes == Calendar.MAY && dia == 1) return true;      // Dia do Trabalho
+        if (mes == Calendar.SEPTEMBER && dia == 7) return true;// Independência
+        if (mes == Calendar.OCTOBER && dia == 12) return true; // Nossa Sra. Aparecida
+        if (mes == Calendar.NOVEMBER && dia == 2) return true; // Finados
+        if (mes == Calendar.NOVEMBER && dia == 15) return true;// Proclamação da República
+        if (mes == Calendar.NOVEMBER && dia == 20) return true;// Consciência Negra
+        if (mes == Calendar.DECEMBER && dia == 25) return true;// Natal
+
+        return false;
     }
 
     @Override

@@ -51,11 +51,6 @@
             android:name=".MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
-
-        <activity
-            android:name=".HomePageActivity"
-            android:exported="false"
-            android:label="Painel do Instrutor" />
     </application>
 
 </manifest>

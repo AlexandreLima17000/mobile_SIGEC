@@ -140,6 +140,23 @@ public class CalendarioFragment extends Fragment {
         }
     }
 
+    private String getFeriadoNacional(Calendar cal) {
+        int dia = cal.get(Calendar.DAY_OF_MONTH);
+        int mes = cal.get(Calendar.MONTH); // 0-based: JANUARY = 0 ... DECEMBER = 11
+
+        if (mes == Calendar.JANUARY && dia == 1) return "Confraternização Universal";
+        if (mes == Calendar.APRIL && dia == 21) return "Tiradentes";
+        if (mes == Calendar.MAY && dia == 1) return "Dia do Trabalho";
+        if (mes == Calendar.SEPTEMBER && dia == 7) return "Independência do Brasil";
+        if (mes == Calendar.OCTOBER && dia == 12) return "Nossa Senhora Aparecida";
+        if (mes == Calendar.NOVEMBER && dia == 2) return "Finados";
+        if (mes == Calendar.NOVEMBER && dia == 15) return "Proclamação da República";
+        if (mes == Calendar.NOVEMBER && dia == 20) return "Dia da Consciência Negra";
+        if (mes == Calendar.DECEMBER && dia == 25) return "Natal";
+
+        return null;
+    }
+
     private void buscarEventosEAtualizarGrid(LayoutInflater inflater) {
         eventosDoMes.clear();
         int mes = currentCalendar.get(Calendar.MONTH) + 1; // 1-based
@@ -243,7 +260,12 @@ public class CalendarioFragment extends Fragment {
             int dayOfWeek = (day + startOffset - 1) % 7;
             boolean isWeekend = (dayOfWeek == 0 || dayOfWeek == 6);
 
-            if (isWeekend) {
+            Calendar tempDayCal = (Calendar) currentCalendar.clone();
+            tempDayCal.set(Calendar.DAY_OF_MONTH, day);
+            String nomeFeriado = getFeriadoNacional(tempDayCal);
+            boolean isBloqueado = isWeekend || (nomeFeriado != null);
+
+            if (isBloqueado) {
                 dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_weekend);
                 dayText.setTextColor(Color.parseColor("#64748B"));
             } else {
@@ -281,6 +303,10 @@ public class CalendarioFragment extends Fragment {
             }
 
             dayContainer.setOnClickListener(v -> {
+                if (nomeFeriado != null) {
+                    Toast.makeText(getContext(), "Feriado bloqueado: " + nomeFeriado, Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 if (isWeekend) {
                     Toast.makeText(getContext(), "Final de semana bloqueado para agendamentos.", Toast.LENGTH_SHORT).show();
                     return;
@@ -288,8 +314,15 @@ public class CalendarioFragment extends Fragment {
 
                 selectedDay = currentDay;
                 if (lastSelectedDayView != null && lastSelectedTextView != null && lastSelectedDayView != dayContainer) {
-                    int prevDayOfWeek = ((int) lastSelectedDayView.getTag() + startOffset - 1) % 7;
-                    if (prevDayOfWeek == 0 || prevDayOfWeek == 6) {
+                    int prevDay = (int) lastSelectedDayView.getTag();
+                    Calendar prevCal = (Calendar) currentCalendar.clone();
+                    prevCal.set(Calendar.DAY_OF_MONTH, prevDay);
+
+                    int prevDayOfWeek = (prevDay + startOffset - 1) % 7;
+                    boolean prevIsWeekend = (prevDayOfWeek == 0 || prevDayOfWeek == 6);
+                    boolean prevIsFeriado = (getFeriadoNacional(prevCal) != null);
+
+                    if (prevIsWeekend || prevIsFeriado) {
                         lastSelectedDayView.setBackgroundResource(R.drawable.bg_calendar_day_weekend);
                         lastSelectedTextView.setTextColor(Color.parseColor("#64748B"));
                     } else {
@@ -334,7 +367,18 @@ public class CalendarioFragment extends Fragment {
         int dayOfWeek = temp.get(Calendar.DAY_OF_WEEK);
         boolean isWeekend = (dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY);
 
-        if (isWeekend) {
+        String nomeFeriado = getFeriadoNacional(temp);
+
+        if (nomeFeriado != null) {
+            TextView tvBlocked = new TextView(getContext());
+            tvBlocked.setText("Feriado Nacional: " + nomeFeriado + " (Bloqueado para agendamentos)");
+            tvBlocked.setTextColor(Color.parseColor("#DC2626"));
+            tvBlocked.setTextSize(14);
+            tvBlocked.setTypeface(null, android.graphics.Typeface.BOLD);
+            tvBlocked.setPadding(0, 12, 0, 12);
+            layoutFichasLista.addView(tvBlocked);
+            return;
+        } else if (isWeekend) {
             TextView tvBlocked = new TextView(getContext());
             tvBlocked.setText("Final de semana bloqueado.");
             tvBlocked.setTextColor(Color.parseColor("#DC2626"));

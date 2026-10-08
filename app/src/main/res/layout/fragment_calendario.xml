@@ -224,7 +224,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:text="Fim de semana"
+                        android:text="Feriado / Fim de semana"
                         android:textColor="#64748B"
                         android:textSize="12sp"
                         android:textStyle="bold" />
