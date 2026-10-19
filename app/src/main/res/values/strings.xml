@@ -5,7 +5,7 @@
     <string name="nav_header_title">Android Studio</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">PERFIL</string>
 
 
     <string name="menu_home">Home Page</string>
@@ -16,7 +16,7 @@
     <string name="menu_transform">Transform</string>
     <string name="menu_reflow">Reflow</string>
     <string name="menu_slideshow">Slideshow</string>
-    <string name="menu_settings">Settings</string>
+    <string name="menu_settings">PERFIL</string>
 
     <string name="lorem_ipsum_title">Lorem Ipsum"</string>
     <string name="lorem_ipsum">Lorem Ipsum is simply placeholder text of the printing and
@@ -60,24 +60,34 @@
     <string name="reset_password_button">Redefinir Senha</string>
 
     <!-- Settings / Profile Strings -->
-    <string name="instrutor_name">Chef Carlos Silva</string>
+    <string name="instrutor_name">Chef Carlos silva</string>
+
     <string name="docente">DOCENTE</string>
     <string name="area_atuacao">Gastronomia &amp; Confeitaria</string>
     <string name="matricula">Matrícula: 2026-98421</string>
-    <string name="unidade">Unidade: Senac Aclimação</string>
+    <string name="unidade">Unidade: Senac Taguatinga</string>
     <string name="trocar_foto">Trocar Foto de Perfil</string>
     <string name="lotacao_laboratorio">LOTAÇÃO &amp; LABORATÓRIO</string>
     <string name="sigec_ano">SIGEC 2026</string>
     <string name="turma_laboratorio">Laboratório Cozinha Central - Turma 2026-A</string>
+    <string name="turma_2026_a">Laboratório Cozinha Central- Turma 2026-A</string>
+    <string name="turma_2026_b">Laboratório Cozinha Central- Turma 2026-B</string>
+    <string name="turma_2026_c">Laboratório Cozinha Central- Turma 2026-C</string>
     <string name="carga_horaria">Carga Horária</string>
     <string name="carga_horaria_val">120h</string>
     <string name="turmas_ativas">Turmas Ativas</string>
     <string name="turmas_ativas_val">3</string>
     <string name="alunos_totais">Alunos Totais</string>
+    <string name="alunos_totais_label">Alunos totais</string>
     <string name="alunos_totais_val">78</string>
+    <string name="alunos_totais_a_val">30</string>
+    <string name="alunos_totais_b_val">45</string>
+    <string name="alunos_totais_c_val">12</string>
     <string name="dados_institucionais">DADOS INSTITUCIONAIS</string>
     <string name="email_institucional_label">E-mail Institucional:</string>
     <string name="email_val">carlos.silva@sp.senac.br</string>
+    <string name="email_label_val">E-mail: carlos.silva@sp.senac.br</string>
+    <string name="email_formatted">E-mail: %1$s</string>
     <string name="telefone_ramal_label">Telefone / Ramal:</string>
     <string name="telefone_val">(11) 2187-3000 / Ramal 402</string>
     <!-- TODO: Remove or change this placeholder text -->
