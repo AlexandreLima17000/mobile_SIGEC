@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -86,7 +87,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario, senha FROM usuario WHERE email = ?";
+                            sql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
 
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
@@ -97,12 +98,21 @@ public class LoginActivity extends AppCompatActivity {
 
                                 if (rs.next()) {
                                     String hashBanco = rs.getString("senha");
+                                    int idUsuario = rs.getInt("id_usuario");
+                                    String nomeUsuario = rs.getString("nome_usuario");
                                     if (hashBanco != null && BCrypt.checkpw(senha, hashBanco)) {
                                         loginEfeituado = true;
+
+                                        // Salva Sessão do usuário
+                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                            .edit()
+                                            .putBoolean("logado", true)
+                                            .putInt("id_usuario", idUsuario)
+                                            .putString("nome_usuario", nomeUsuario)
+                                            .apply();
                                     }
                                 }
                                 if (loginEfeituado) {
-
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
