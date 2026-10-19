@@ -84,7 +84,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
+                            sql = "SELECT * FROM usuario WHERE email = ? AND senha = ?";
                             
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
@@ -93,6 +93,38 @@ public class LoginActivity extends AppCompatActivity {
                                 rs = stmt.executeQuery();
 
                                 if (rs.next()) {
+                                    int idUsuario = rs.getInt("id_usuario");
+                                    String emailUsuario = email;
+                                    String nomeUsuario = null;
+
+                                    try {
+                                        java.sql.ResultSetMetaData metaData = rs.getMetaData();
+                                        int columnCount = metaData.getColumnCount();
+                                        for (int i = 1; i <= columnCount; i++) {
+                                            String colName = metaData.getColumnName(i).toLowerCase();
+                                            if (colName.contains("nome") || colName.contains("usuario") || colName.contains("instrutor")) {
+                                                if (!colName.equals("id_usuario")) {
+                                                    String val = rs.getString(i);
+                                                    if (val != null && !val.trim().isEmpty()) {
+                                                        nomeUsuario = val;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception ignored) {}
+
+                                    if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
+                                        nomeUsuario = formatarNomeDoEmail(emailUsuario);
+                                    }
+
+                                    android.content.SharedPreferences prefs = getSharedPreferences("SessaoApp", MODE_PRIVATE);
+                                    prefs.edit()
+                                            .putInt("ID_USUARIO", idUsuario)
+                                            .putString("NOME_USUARIO", nomeUsuario)
+                                            .putString("EMAIL_USUARIO", emailUsuario)
+                                            .apply();
+
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
@@ -139,6 +171,25 @@ public class LoginActivity extends AppCompatActivity {
         if (progressEntrar != null) {
             progressEntrar.setVisibility(View.GONE);
         }
+    }
+
+    private String formatarNomeDoEmail(String email) {
+        if (email == null || !email.contains("@")) return "Instrutor";
+        String localPart = email.split("@")[0];
+        localPart = localPart.replaceAll("[0-9]", " ").replaceAll("[._-]", " ").trim();
+        if (localPart.isEmpty()) return "Instrutor";
+        String[] words = localPart.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (!w.isEmpty()) {
+                sb.append(Character.toUpperCase(w.charAt(0)));
+                if (w.length() > 1) {
+                    sb.append(w.substring(1).toLowerCase());
+                }
+                sb.append(" ");
+            }
+        }
+        return sb.toString().trim();
     }
 }
 

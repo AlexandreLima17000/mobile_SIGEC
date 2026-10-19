@@ -3,7 +3,6 @@ package com.example.mobilesigec;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.Menu;
 import android.widget.Toast;
@@ -74,16 +73,42 @@ public class MainActivity extends AppCompatActivity {
                     R.id.nav_home, R.id.nav_calendario, R.id.nav_receita)
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
-            NavigationUI.setupWithNavController(bottomNavigationView, navController);
+
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int itemId = item.getItemId();
+                if (navController.getCurrentDestination() != null && itemId == navController.getCurrentDestination().getId()) {
+                    return true;
+                }
+                if (itemId == R.id.nav_home) {
+                    boolean popped = navController.popBackStack(R.id.nav_home, false);
+                    if (!popped) {
+                        navController.navigate(R.id.nav_home);
+                    }
+                    return true;
+                } else if (itemId == R.id.nav_calendario) {
+                    navController.navigate(R.id.nav_calendario);
+                    return true;
+                } else if (itemId == R.id.nav_receita) {
+                    navController.navigate(R.id.nav_receita);
+                    return true;
+                }
+                return NavigationUI.onNavDestinationSelected(item, navController);
+            });
 
             navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
-                if (destination.getId() == R.id.nav_checklist_insumos
-                        || destination.getId() == R.id.nav_checklist_utensilios
-                        || destination.getId() == R.id.nav_detalhes_receita
-                        || destination.getId() == R.id.nav_settings) {
+                int destId = destination.getId();
+                if (destId == R.id.nav_checklist_insumos
+                        || destId == R.id.nav_checklist_utensilios
+                        || destId == R.id.nav_detalhes_receita
+                        || destId == R.id.nav_settings) {
                     bottomNavigationView.setVisibility(android.view.View.GONE);
                 } else {
                     bottomNavigationView.setVisibility(android.view.View.VISIBLE);
+                    Menu menu = bottomNavigationView.getMenu();
+                    MenuItem menuItem = menu.findItem(destId);
+                    if (menuItem != null) {
+                        menuItem.setChecked(true);
+                    }
                 }
             });
         }
@@ -93,23 +118,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         boolean result = super.onCreateOptionsMenu(menu);
-        // Using findViewById because NavigationView exists in different layout files
-        // between w600dp and w1240dp
         NavigationView navView = findViewById(R.id.nav_view);
         if (navView == null) {
-            // The navigation drawer already has the items including the items in the overflow menu
-            // We only inflate the overflow menu if the navigation drawer isn't visible
             getMenuInflater().inflate(R.menu.overflow, menu);
-
-            Connection conexao = ConexaoMySQL.conectar();
-            if (conexao != null) {
-                Log.d("Conexão", "Conexão estabelecida com sucesso!");
-// Faça suas operações de banco de dados aqui
-                ConexaoMySQL.fecharConexao(conexao);
-            } else {
-                Log.d("Conexão", "Erro ao conectar ao banco de dados!");
-            }
-
         }
         return result;
     }
