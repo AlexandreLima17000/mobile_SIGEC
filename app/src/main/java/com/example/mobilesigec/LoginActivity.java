@@ -18,6 +18,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -84,26 +86,37 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
-                            
+                            sql = "SELECT id_usuario, senha FROM usuario WHERE email = ?";
+
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
                                 stmt.setString(1, email);
-                                stmt.setString(2, senha);
                                 rs = stmt.executeQuery();
 
+                                boolean loginEfeituado = false;
+
                                 if (rs.next()) {
+                                    String hashBanco = rs.getString("senha");
+                                    if (hashBanco != null && BCrypt.checkpw(senha, hashBanco)) {
+                                        loginEfeituado = true;
+                                    }
+                                }
+                                if (loginEfeituado) {
+
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                                         finish();
+
                                     });
+
                                 } else {
                                     // Credenciais incorretas -> Restaura o botão e mostra erro
                                     runOnUiThread(() -> {
                                         Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                                         restaurarBotaoLogin();
                                     });
+
                                 }
 
                                 rs.close();
