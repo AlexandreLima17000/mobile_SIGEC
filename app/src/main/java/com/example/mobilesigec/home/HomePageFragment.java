@@ -56,7 +56,7 @@ public class HomePageFragment extends Fragment {
 
         // Acessa o SharedPreferences para pegar o nome
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        String nome = prefs.getString("NOME_USUARIO", "Instrutor");
+        String nome = prefs.getString("nome_usuario", "Instrutor");
 
         // Atualiza o texto na tela
         textSaudacao.setText("Bom dia, " + nome + "!");
@@ -81,7 +81,7 @@ public class HomePageFragment extends Fragment {
 
         // Resgata o ID do professor que logou
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
 
         if (idUsuarioLogado == -1) {
             Toast.makeText(getContext(), "Erro de sessão do usuário.", Toast.LENGTH_SHORT).show();

@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -84,26 +87,46 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
-                            
+                            sql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
+
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
                                 stmt.setString(1, email);
-                                stmt.setString(2, senha);
                                 rs = stmt.executeQuery();
 
+                                boolean loginEfeituado = false;
+
                                 if (rs.next()) {
+                                    String hashBanco = rs.getString("senha");
+                                    int idUsuario = rs.getInt("id_usuario");
+                                    String nomeUsuario = rs.getString("nome_usuario");
+                                    if (hashBanco != null && BCrypt.checkpw(senha, hashBanco)) {
+                                        loginEfeituado = true;
+
+                                        // Salva Sessão do usuário
+                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                            .edit()
+                                            .putBoolean("logado", true)
+                                            .putInt("id_usuario", idUsuario)
+                                            .putString("nome_usuario", nomeUsuario)
+                                            .apply();
+                                    }
+                                }
+                                if (loginEfeituado) {
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                                         finish();
+
                                     });
+
                                 } else {
                                     // Credenciais incorretas -> Restaura o botão e mostra erro
                                     runOnUiThread(() -> {
                                         Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                                         restaurarBotaoLogin();
                                     });
+
                                 }
 
                                 rs.close();
