@@ -73,6 +73,12 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
+                if (!email.toLowerCase().endsWith("df.senac.br")) {
+                    Toast.makeText(LoginActivity.this, "O e-mail deve pertencer ao domínio df.senac.br", Toast.LENGTH_SHORT).show();
+                    emailLogin.setError("Domínio inválido. Use um e-mail @df.senac.br");
+                    return;
+                }
+
                 // Ativa o estado de Carregamento (Cor Laranja e Texto correspondente)
                 btnEntrar.setEnabled(false);
                 btnEntrar.setText("Carregando...");
