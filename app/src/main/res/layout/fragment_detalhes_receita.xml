@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_gradient"
+    android:background="#F6F8FB"
     android:fillViewport="true">
 
     <LinearLayout
@@ -16,83 +15,73 @@
         android:paddingStart="14dp"
         android:paddingEnd="14dp">
 
-        <!-- MOLDURA -->
+        <!-- MOLDURA PRINCIPAL RETANGULAR -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="8dp"
+            app:cardCornerRadius="0dp"
+            app:cardElevation="6dp"
             app:cardBackgroundColor="#FFFFFF">
 
+            <!-- ESTRUTURA COM FAIXA LARANJA CONTÍNUA NA ESQUERDA -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <!-- FAIXA LATERAL -->
+                <!-- FAIXA LATERAL LARANJA -->
                 <View
                     android:layout_width="6dp"
                     android:layout_height="match_parent"
-                    android:background="@color/secondary_container" />
+                    android:background="#E4891b" />
 
+                <!-- CONTEÚDO PRINCIPAL (DIREITA DA FAIXA) -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
-
-                    <!-- ============================ -->
-                    <!-- CABEÇALHO -->
-                    <!-- ============================ -->
-
-                    <FrameLayout
+                    <!-- CABEÇALHO AZUL ESCURO -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@color/primary">
+                        android:background="#0B2647"
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                        <ImageView
-                            android:layout_width="45dp"
-                            android:layout_height="45dp"
-                            android:layout_gravity="top|end"
-                            android:src="@drawable/bg_card_corner_accent"
-                            app:tint="#40000000" />
+                        <TextView
+                            android:id="@+id/txtCategoriaReceita"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="CATEGORIA"
+                            android:textColor="#E4891b"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
 
-                        <LinearLayout
+                        <TextView
+                            android:id="@+id/txtNomeReceita"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
+                            android:layout_marginTop="2dp"
+                            android:text="Nome da Receita"
+                            android:textColor="#FFFFFF"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="RECEITA"
-                                android:textColor="@color/secondary_container"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-
-                            <!-- NOME VINDO DO BANCO -->
-
-                            <TextView
-                                android:id="@+id/txtNomeReceita"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Nome da Receita"
-                                android:textColor="@color/secondary_container"
-                                android:textSize="26sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="4dp" />
-
-                        </LinearLayout>
-
-                    </FrameLayout>
-
-
-                    <!-- ============================ -->
-                    <!-- CORPO -->
-                    <!-- ============================ -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:layout_marginTop="6dp"
+                            android:background="#10B981"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:text="DISPONÍVEL"
+                            android:textColor="#FFFFFF"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -100,40 +89,67 @@
                         android:orientation="vertical"
                         android:padding="16dp">
 
-
-                        <!-- TÍTULO -->
-
+                        <!-- ============================== -->
+                        <!-- SEÇÃO: INGREDIENTES            -->
+                        <!-- ============================== -->
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Modo de Preparo"
-                            android:textColor="@color/secondary_container"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:layout_marginBottom="12dp" />
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="Ingredientes Necessários"
+                            android:textColor="#E4891b"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
 
-
-                        <!-- PREPARO VINDO DO BANCO -->
-
-                        <TextView
-                            android:id="@+id/txtPreparoReceita"
+                        <LinearLayout
+                            android:id="@+id/containerIngredientes"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Modo de preparo da receita..."
-                            android:textColor="#333333"
-                            android:textSize="16sp"
-                            android:background="#E2E8F0"
-                            android:padding="14dp"
-                            android:lineSpacingExtra="4dp" />
+                            android:orientation="vertical" />
+
+                        <!-- ============================== -->
+                        <!-- SEÇÃO: UTENSÍLIOS              -->
+                        <!-- ============================== -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="Utensílios Utilizados"
+                            android:textColor="#E4891b"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:id="@+id/containerUtensilios"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <!-- ============================== -->
+                        <!-- SEÇÃO: PASSO A PASSO           -->
+                        <!-- ============================== -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="Modo de Preparo Passo a Passo"
+                            android:textColor="#E4891b"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:id="@+id/containerPassos"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginBottom="8dp"/>
 
                     </LinearLayout>
-
                 </LinearLayout>
-
             </LinearLayout>
-
         </androidx.cardview.widget.CardView>
-
     </LinearLayout>
-
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

@@ -3,18 +3,23 @@ package com.example.mobilesigec.home;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.mobilesigec.ConexaoMySQL;
 import com.example.mobilesigec.R;
@@ -28,11 +33,18 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HomePageFragment extends Fragment {
 
-    TextView textSaudacao, textDataHome;
-    Spinner spinnerTurmasHome;
+    private static final String TAG = "HomePageFragment";
+
+    private TextView textSaudacao, textDataHome;
+    private Spinner spinnerTurmasHome;
+
+    private ExecutorService executorService;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public HomePageFragment() {
         // Required empty public constructor
@@ -48,28 +60,37 @@ public class HomePageFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        executorService = Executors.newSingleThreadExecutor();
+
         textSaudacao = view.findViewById(R.id.textSaudacao);
         textDataHome = view.findViewById(R.id.textDataHome);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
         CardView cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
 
-        // Acessa o SharedPreferences para pegar o nome
-        SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        String nome = prefs.getString("NOME_USUARIO", "Instrutor");
+        Context context = getContext();
+        if (context != null) {
+            SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+            String nome = prefs.getString("nome_usuario", "Instrutor");
+            if (textSaudacao != null) {
+                textSaudacao.setText("Bom dia, " + nome + "!");
+            }
+        }
 
-        // Atualiza o texto na tela
-        textSaudacao.setText("Bom dia, " + nome + "!");
-
-        // Injetar a data atual na Home Page
-        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd 'DE' MMMM", new Locale("pt", "BR"));
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd 'DE' MMMM", Locale.forLanguageTag("pt-BR"));
         String dataFormatada = sdf.format(new Date()).toUpperCase();
-        textDataHome.setText(dataFormatada);
+        if (textDataHome != null) {
+            textDataHome.setText(dataFormatada);
+        }
 
         carregarTurmasNoSpinner(view);
 
-        cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
-        cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
+        if (cardInsumos != null) {
+            cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
+        }
+        if (cardUtensilios != null) {
+            cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
+        }
         if (cardReceitasHoje != null) {
             cardReceitasHoje.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_calendario));
         }
@@ -77,134 +98,179 @@ public class HomePageFragment extends Fragment {
 
     private void carregarTurmasNoSpinner(View view) {
         spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
-        List<TurmaModelo> listaTurmas = new ArrayList<>();
+        if (spinnerTurmasHome == null) return;
 
-        // Resgata o ID do professor que logou
-        SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        Context context = getContext();
+        if (context == null) return;
 
-        if (idUsuarioLogado == -1) {
-            Toast.makeText(getContext(), "Erro de sessão do usuário.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
 
-        // Conecta no banco e busca as turmas
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-                // INNER JOIN para pegar Nome da Turma e Nome do Laboratório onde o professor dá aula
-                String sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
-                        "FROM turma t " +
-                        "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                        "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                        "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
-
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idUsuarioLogado);
-                ResultSet rs = stmt.executeQuery();
-
-                // Monta a lista
-                while (rs.next()) {
-                    int idTurma = rs.getInt("id_turma");
-                    String nomeTurma = rs.getString("nome_turma");
-                    String nomeLab = rs.getString("nome_laboratorio");
-
-                    listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
-                }
-                rs.close();
-                stmt.close();
-                con.close();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Toast.makeText(getContext(), "Erro ao carregar turmas", Toast.LENGTH_SHORT).show();
-        }
-
-        // Injeta a lista no Spinner usando o ArrayAdapter
-        if (getContext() != null) {
-            ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
-                    getContext(),
-                    android.R.layout.simple_spinner_item,
-                    listaTurmas
-            );
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            spinnerTurmasHome.setAdapter(adapter);
-
-            spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                    TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
-                    // Chama a função que busca as receitas passando o ID da turma
-                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
-                }
-
-                @Override
-                public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-            });
-        }
-    } // <--- ESTA ERA A CHAVE FALTANDO QUE CAUSAVA O ERRO!
-
-    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
-        // Encontra o container vazio na tela
-        android.widget.LinearLayout containerReceitas = requireView().findViewById(R.id.container_receitas);
-        // Limpa o container (para apagar as receitas da turma anterior, se houver)
-        containerReceitas.removeAllViews();
-
-        android.view.LayoutInflater inflater = android.view.LayoutInflater.from(getContext());
-
-        try {
-            Connection con = ConexaoMySQL.conectar();
-            if (con != null) {
-                // Busca a ficha técnica e o status no agendamento
-                String sql = "SELECT f.nome_ficha, a.concluido " +
-                        "FROM ficha f " +
-                        "INNER JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                        "WHERE f.id_turma = ?";
-
-                PreparedStatement stmt = con.prepareStatement(sql);
-                stmt.setInt(1, idTurma);
-                ResultSet rs = stmt.executeQuery();
-
-                // Para cada receita encontrada no banco, criamos um item na tela
-                while (rs.next()) {
-                    String nomeFicha = rs.getString("nome_ficha");
-                    String concluido = rs.getString("concluido"); // 'S' ou 'N'
-
-                    // Pega o nosso "molde" XML
-                    View itemReceita = inflater.inflate(R.layout.item_receita, containerReceitas, false);
-
-                    // Encontra os campos dentro do molde
-                    android.widget.TextView tvNome = itemReceita.findViewById(R.id.tv_nome_receita);
-                    android.widget.TextView tvDetalhes = itemReceita.findViewById(R.id.tv_detalhes_receita);
-                    android.widget.TextView tvStatusText = itemReceita.findViewById(R.id.tv_status_text);
-                    android.widget.ImageView ivStatusIcon = itemReceita.findViewById(R.id.iv_status_icon);
-
-                    // Preenche os dados
-                    tvNome.setText(nomeFicha);
-                    tvDetalhes.setText(nomeLaboratorio);
-
-                    // Configura as cores e ícones baseados no status do banco (S ou N)
-                    if ("S".equals(concluido)) {
-                        tvStatusText.setText("CONCLUÍDO");
-                        tvStatusText.setTextColor(android.graphics.Color.parseColor("#15803d")); // Verde
-                        ivStatusIcon.setImageResource(R.drawable.ic_check_circle);
-                        ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#15803d"));
+        executorService.execute(() -> {
+            List<TurmaModelo> listaTurmas = new ArrayList<>();
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql;
+                    PreparedStatement stmt;
+                    if (idUsuarioLogado != -1) {
+                        sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                "FROM turma t " +
+                                "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                                "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
+                        stmt = con.prepareStatement(sql);
+                        stmt.setInt(1, idUsuarioLogado);
                     } else {
-                        tvStatusText.setText("PENDENTE");
-                        tvStatusText.setTextColor(android.graphics.Color.parseColor("#42474f")); // Cinza
-                        ivStatusIcon.setImageResource(R.drawable.ic_notifications);
-                        ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#42474f"));
+                        sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                "FROM turma t " +
+                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                                "WHERE t.situacao = 'A'";
+                        stmt = con.prepareStatement(sql);
                     }
 
-                    // Finalmente, injeta o item pronto dentro da tela!
-                    containerReceitas.addView(itemReceita);
+                    ResultSet rs = stmt.executeQuery();
+
+                    while (rs.next()) {
+                        int idTurma = rs.getInt("id_turma");
+                        String nomeTurma = rs.getString("nome_turma");
+                        String nomeLab = rs.getString("nome_laboratorio");
+                        listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
+                    }
+                    rs.close();
+                    stmt.close();
+                    con.close();
                 }
-                rs.close();
-                stmt.close();
-                con.close();
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao carregar turmas", e);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+
+            mainHandler.post(() -> {
+                if (!isAdded() || getContext() == null) return;
+
+                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
+                        getContext(),
+                        android.R.layout.simple_spinner_item,
+                        listaTurmas
+                );
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinnerTurmasHome.setAdapter(adapter);
+
+                spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
+                        TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
+                        if (turmaSelecionada != null) {
+                            carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+                });
+            });
+        });
+    }
+
+    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
+        View view = getView();
+        if (view == null) return;
+
+        LinearLayout containerReceitas = view.findViewById(R.id.container_receitas);
+        if (containerReceitas == null) return;
+
+        containerReceitas.removeAllViews();
+
+        executorService.execute(() -> {
+            List<ItemReceitaData> receitasList = new ArrayList<>();
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
+                            "FROM ficha f " +
+                            "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
+                            "WHERE f.id_turma = ?";
+
+                    PreparedStatement stmt = con.prepareStatement(sql);
+                    stmt.setInt(1, idTurma);
+                    ResultSet rs = stmt.executeQuery();
+
+                    while (rs.next()) {
+                        String nomeFicha = rs.getString("nome_ficha");
+                        String concluido = rs.getString("concluido");
+                        receitasList.add(new ItemReceitaData(nomeFicha, concluido));
+                    }
+                    rs.close();
+                    stmt.close();
+                    con.close();
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao carregar receitas da turma", e);
+            }
+
+            mainHandler.post(() -> {
+                if (!isAdded() || getContext() == null) return;
+                View currentView = getView();
+                if (currentView == null) return;
+
+                LinearLayout currentContainer = currentView.findViewById(R.id.container_receitas);
+                if (currentContainer == null) return;
+
+                currentContainer.removeAllViews();
+                LayoutInflater inflater = LayoutInflater.from(getContext());
+
+                for (ItemReceitaData itemData : receitasList) {
+                    View itemReceita = inflater.inflate(R.layout.item_receita, currentContainer, false);
+
+                    TextView tvNome = itemReceita.findViewById(R.id.tv_nome_receita);
+                    TextView tvDetalhes = itemReceita.findViewById(R.id.tv_detalhes_receita);
+                    TextView tvStatusText = itemReceita.findViewById(R.id.tv_status_text);
+                    ImageView ivStatusIcon = itemReceita.findViewById(R.id.iv_status_icon);
+
+                    if (tvNome != null) tvNome.setText(itemData.nomeFicha);
+                    if (tvDetalhes != null) tvDetalhes.setText(nomeLaboratorio);
+
+                    if ("S".equals(itemData.concluido)) {
+                        if (tvStatusText != null) {
+                            tvStatusText.setText("CONCLUÍDO");
+                            tvStatusText.setTextColor(android.graphics.Color.parseColor("#15803d"));
+                        }
+                        if (ivStatusIcon != null) {
+                            ivStatusIcon.setImageResource(R.drawable.ic_check_circle);
+                            ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#15803d"));
+                        }
+                    } else {
+                        if (tvStatusText != null) {
+                            tvStatusText.setText("PENDENTE");
+                            tvStatusText.setTextColor(android.graphics.Color.parseColor("#42474f"));
+                        }
+                        if (ivStatusIcon != null) {
+                            ivStatusIcon.setImageResource(R.drawable.ic_notifications);
+                            ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#42474f"));
+                        }
+                    }
+
+                    currentContainer.addView(itemReceita);
+                }
+            });
+        });
+    }
+
+    private static class ItemReceitaData {
+        final String nomeFicha;
+        final String concluido;
+
+        ItemReceitaData(String nomeFicha, String concluido) {
+            this.nomeFicha = nomeFicha;
+            this.concluido = concluido;
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
         }
     }
 }

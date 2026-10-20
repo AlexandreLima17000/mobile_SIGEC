@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -84,58 +87,64 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT * FROM usuario WHERE email = ? AND senha = ?";
-                            
+                            sql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
+
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
                                 stmt.setString(1, email);
-                                stmt.setString(2, senha);
                                 rs = stmt.executeQuery();
 
+                                boolean loginEfetuado = false;
+
                                 if (rs.next()) {
+                                    String hashBanco = rs.getString("senha");
                                     int idUsuario = rs.getInt("id_usuario");
-                                    String emailUsuario = email;
-                                    try {
-                                        emailUsuario = rs.getString("email");
-                                    } catch (Exception ignored) {}
+                                    String nomeUsuario = rs.getString("nome_usuario");
 
-                                    String nomeUsuario = "";
-                                    try {
-                                        java.sql.ResultSetMetaData metaData = rs.getMetaData();
-                                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                                            String colName = metaData.getColumnName(i).toLowerCase();
-                                            if ((colName.contains("nome") || colName.contains("usuario") || i == 2) && !colName.equals("id_usuario") && !colName.contains("email") && !colName.contains("senha")) {
-                                                String val = rs.getString(i);
-                                                if (val != null && !val.trim().isEmpty() && !val.contains("@")) {
-                                                    nomeUsuario = val.trim();
-                                                    break;
-                                                }
+                                    // 1. Validação defensiva do formato do hash
+                                    if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
+                                        try {
+                                            String hashTratado = hashBanco.trim();
+
+                                            // Compatibilidade: converte prefixo $2y$ (PHP) para $2a$ (jBCrypt)
+                                            if (hashTratado.startsWith("$2y$")) {
+                                                hashTratado = "$2a$" + hashTratado.substring(4);
                                             }
+
+                                            // 2. Compara a senha digitada com o hash
+                                            if (BCrypt.checkpw(senha, hashTratado)) {
+                                                loginEfetuado = true;
+
+                                                getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                                        .edit()
+                                                        .putBoolean("logado", true)
+                                                        .putInt("id_usuario", idUsuario)
+                                                        .putString("nome_usuario", nomeUsuario)
+                                                        .apply();
+                                            }
+                                        } catch (IllegalArgumentException ex) {
+                                            android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                            loginEfetuado = false;
                                         }
-                                    } catch (Exception ignored) {}
-
-                                    if (nomeUsuario.isEmpty()) {
-                                        nomeUsuario = emailUsuario.contains("@") ? emailUsuario.split("@")[0] : emailUsuario;
+                                    } else {
+                                        android.util.Log.w("AuthError", "Senha não está em formato BCrypt: " + hashBanco);
                                     }
-
-                                    getSharedPreferences("SessaoApp", MODE_PRIVATE)
-                                            .edit()
-                                            .putInt("ID_USUARIO", idUsuario)
-                                            .putString("NOME_USUARIO", nomeUsuario)
-                                            .putString("EMAIL_USUARIO", emailUsuario)
-                                            .apply();
-
+                                }
+                                if (loginEfetuado) {
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                                         finish();
+
                                     });
+
                                 } else {
                                     // Credenciais incorretas -> Restaura o botão e mostra erro
                                     runOnUiThread(() -> {
                                         Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                                         restaurarBotaoLogin();
                                     });
+
                                 }
 
                                 rs.close();
