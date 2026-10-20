@@ -294,60 +294,30 @@ public class SettingsFragment extends Fragment {
             tvTurmaNome.setTypeface(null, android.graphics.Typeface.BOLD);
             mainLayout.addView(tvTurmaNome);
 
-            // Carga Horária e Indicador de Alunos
+            // Laboratório Centralizado
             LinearLayout statsLayout = new LinearLayout(getContext());
-            statsLayout.setOrientation(LinearLayout.HORIZONTAL);
+            statsLayout.setOrientation(LinearLayout.VERTICAL);
+            statsLayout.setGravity(android.view.Gravity.CENTER);
             LinearLayout.LayoutParams statsParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             statsParams.setMargins(0, (int) (14 * density), 0, 0);
             statsLayout.setLayoutParams(statsParams);
-            statsLayout.setBaselineAligned(false);
-
-            // Coluna Carga Horária
-            LinearLayout col1 = new LinearLayout(getContext());
-            col1.setOrientation(LinearLayout.VERTICAL);
-            col1.setGravity(android.view.Gravity.CENTER);
-            LinearLayout.LayoutParams col1Params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            col1.setLayoutParams(col1Params);
-
-            TextView tvChLabel = new TextView(getContext());
-            tvChLabel.setText("Carga Horária");
-            tvChLabel.setTextColor(Color.parseColor("#0B1A30"));
-            tvChLabel.setTextSize(15);
-            tvChLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-            col1.addView(tvChLabel);
-
-            TextView tvChVal = new TextView(getContext());
-            tvChVal.setText("120h");
-            tvChVal.setTextColor(Color.parseColor("#0B1A30"));
-            tvChVal.setTextSize(18);
-            tvChVal.setTypeface(null, android.graphics.Typeface.BOLD);
-            col1.addView(tvChVal);
-
-            statsLayout.addView(col1);
-
-            // Coluna Laboratório
-            LinearLayout col2 = new LinearLayout(getContext());
-            col2.setOrientation(LinearLayout.VERTICAL);
-            col2.setGravity(android.view.Gravity.CENTER);
-            LinearLayout.LayoutParams col2Params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            col2.setLayoutParams(col2Params);
 
             TextView tvLabLabel = new TextView(getContext());
             tvLabLabel.setText("Laboratório");
+            tvLabLabel.setGravity(android.view.Gravity.CENTER);
             tvLabLabel.setTextColor(Color.parseColor("#0B1A30"));
             tvLabLabel.setTextSize(15);
             tvLabLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-            col2.addView(tvLabLabel);
+            statsLayout.addView(tvLabLabel);
 
             TextView tvLabVal = new TextView(getContext());
             tvLabVal.setText(turma.nomeLaboratorio);
+            tvLabVal.setGravity(android.view.Gravity.CENTER);
             tvLabVal.setTextColor(Color.parseColor("#D97706"));
             tvLabVal.setTextSize(16);
             tvLabVal.setTypeface(null, android.graphics.Typeface.BOLD);
-            col2.addView(tvLabVal);
-
-            statsLayout.addView(col2);
+            statsLayout.addView(tvLabVal);
 
             mainLayout.addView(statsLayout);
             card.addView(mainLayout);

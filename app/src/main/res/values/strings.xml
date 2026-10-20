@@ -5,7 +5,7 @@
     <string name="nav_header_title">Android Studio</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">PERFIL</string>
+    <string name="action_settings">Perfil</string>
 
 
     <string name="menu_home">Home Page</string>
@@ -16,7 +16,7 @@
     <string name="menu_transform">Transform</string>
     <string name="menu_reflow">Reflow</string>
     <string name="menu_slideshow">Slideshow</string>
-    <string name="menu_settings">PERFIL</string>
+    <string name="menu_settings">Perfil</string>
 
     <string name="lorem_ipsum_title">Lorem Ipsum"</string>
     <string name="lorem_ipsum">Lorem Ipsum is simply placeholder text of the printing and
