@@ -84,7 +84,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario FROM usuario WHERE email = ? AND senha = ?";
+                            sql = "SELECT * FROM usuario WHERE email = ? AND senha = ?";
                             
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
@@ -93,6 +93,38 @@ public class LoginActivity extends AppCompatActivity {
                                 rs = stmt.executeQuery();
 
                                 if (rs.next()) {
+                                    int idUsuario = rs.getInt("id_usuario");
+                                    String emailUsuario = email;
+                                    try {
+                                        emailUsuario = rs.getString("email");
+                                    } catch (Exception ignored) {}
+
+                                    String nomeUsuario = "";
+                                    try {
+                                        java.sql.ResultSetMetaData metaData = rs.getMetaData();
+                                        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                                            String colName = metaData.getColumnName(i).toLowerCase();
+                                            if ((colName.contains("nome") || colName.contains("usuario") || i == 2) && !colName.equals("id_usuario") && !colName.contains("email") && !colName.contains("senha")) {
+                                                String val = rs.getString(i);
+                                                if (val != null && !val.trim().isEmpty() && !val.contains("@")) {
+                                                    nomeUsuario = val.trim();
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    } catch (Exception ignored) {}
+
+                                    if (nomeUsuario.isEmpty()) {
+                                        nomeUsuario = emailUsuario.contains("@") ? emailUsuario.split("@")[0] : emailUsuario;
+                                    }
+
+                                    getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                            .edit()
+                                            .putInt("ID_USUARIO", idUsuario)
+                                            .putString("NOME_USUARIO", nomeUsuario)
+                                            .putString("EMAIL_USUARIO", emailUsuario)
+                                            .apply();
+
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
