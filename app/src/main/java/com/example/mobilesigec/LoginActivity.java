@@ -94,25 +94,43 @@ public class LoginActivity extends AppCompatActivity {
                                 stmt.setString(1, email);
                                 rs = stmt.executeQuery();
 
-                                boolean loginEfeituado = false;
+                                boolean loginEfetuado = false;
 
                                 if (rs.next()) {
                                     String hashBanco = rs.getString("senha");
                                     int idUsuario = rs.getInt("id_usuario");
                                     String nomeUsuario = rs.getString("nome_usuario");
-                                    if (hashBanco != null && BCrypt.checkpw(senha, hashBanco)) {
-                                        loginEfeituado = true;
 
-                                        // Salva Sessão do usuário
-                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
-                                            .edit()
-                                            .putBoolean("logado", true)
-                                            .putInt("id_usuario", idUsuario)
-                                            .putString("nome_usuario", nomeUsuario)
-                                            .apply();
+                                    // 1. Validação defensiva do formato do hash
+                                    if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
+                                        try {
+                                            String hashTratado = hashBanco.trim();
+
+                                            // Compatibilidade: converte prefixo $2y$ (PHP) para $2a$ (jBCrypt)
+                                            if (hashTratado.startsWith("$2y$")) {
+                                                hashTratado = "$2a$" + hashTratado.substring(4);
+                                            }
+
+                                            // 2. Compara a senha digitada com o hash
+                                            if (BCrypt.checkpw(senha, hashTratado)) {
+                                                loginEfetuado = true;
+
+                                                getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                                        .edit()
+                                                        .putBoolean("logado", true)
+                                                        .putInt("id_usuario", idUsuario)
+                                                        .putString("nome_usuario", nomeUsuario)
+                                                        .apply();
+                                            }
+                                        } catch (IllegalArgumentException ex) {
+                                            android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                            loginEfetuado = false;
+                                        }
+                                    } else {
+                                        android.util.Log.w("AuthError", "Senha não está em formato BCrypt: " + hashBanco);
                                     }
                                 }
-                                if (loginEfeituado) {
+                                if (loginEfetuado) {
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
