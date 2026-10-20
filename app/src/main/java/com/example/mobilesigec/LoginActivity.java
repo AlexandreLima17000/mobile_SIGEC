@@ -1,6 +1,7 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -17,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -84,58 +87,46 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         try {
                             con = ConexaoMySQL.conectar();
-                            sql = "SELECT * FROM usuario WHERE email = ? AND senha = ?";
-                            
+                            sql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
+
                             if (con != null) {
                                 stmt = con.prepareStatement(sql);
                                 stmt.setString(1, email);
-                                stmt.setString(2, senha);
                                 rs = stmt.executeQuery();
 
+                                boolean loginEfeituado = false;
+
                                 if (rs.next()) {
+                                    String hashBanco = rs.getString("senha");
                                     int idUsuario = rs.getInt("id_usuario");
-                                    String emailUsuario = email;
-                                    String nomeUsuario = null;
+                                    String nomeUsuario = rs.getString("nome_usuario");
+                                    if (hashBanco != null && BCrypt.checkpw(senha, hashBanco)) {
+                                        loginEfeituado = true;
 
-                                    try {
-                                        java.sql.ResultSetMetaData metaData = rs.getMetaData();
-                                        int columnCount = metaData.getColumnCount();
-                                        for (int i = 1; i <= columnCount; i++) {
-                                            String colName = metaData.getColumnName(i).toLowerCase();
-                                            if (colName.contains("nome") || colName.contains("usuario") || colName.contains("instrutor")) {
-                                                if (!colName.equals("id_usuario")) {
-                                                    String val = rs.getString(i);
-                                                    if (val != null && !val.trim().isEmpty()) {
-                                                        nomeUsuario = val;
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } catch (Exception ignored) {}
-
-                                    if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
-                                        nomeUsuario = formatarNomeDoEmail(emailUsuario);
-                                    }
-
-                                    android.content.SharedPreferences prefs = getSharedPreferences("SessaoApp", MODE_PRIVATE);
-                                    prefs.edit()
-                                            .putInt("ID_USUARIO", idUsuario)
-                                            .putString("NOME_USUARIO", nomeUsuario)
-                                            .putString("EMAIL_USUARIO", emailUsuario)
+                                        // Salva Sessão do usuário
+                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                            .edit()
+                                            .putBoolean("logado", true)
+                                            .putInt("id_usuario", idUsuario)
+                                            .putString("nome_usuario", nomeUsuario)
                                             .apply();
-
+                                    }
+                                }
+                                if (loginEfeituado) {
                                     // Login efetuado com sucesso -> Direciona para a MainActivity
                                     runOnUiThread(() -> {
                                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                                         finish();
+
                                     });
+
                                 } else {
                                     // Credenciais incorretas -> Restaura o botão e mostra erro
                                     runOnUiThread(() -> {
                                         Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
                                         restaurarBotaoLogin();
                                     });
+
                                 }
 
                                 rs.close();
@@ -171,25 +162,6 @@ public class LoginActivity extends AppCompatActivity {
         if (progressEntrar != null) {
             progressEntrar.setVisibility(View.GONE);
         }
-    }
-
-    private String formatarNomeDoEmail(String email) {
-        if (email == null || !email.contains("@")) return "Instrutor";
-        String localPart = email.split("@")[0];
-        localPart = localPart.replaceAll("[0-9]", " ").replaceAll("[._-]", " ").trim();
-        if (localPart.isEmpty()) return "Instrutor";
-        String[] words = localPart.split("\\s+");
-        StringBuilder sb = new StringBuilder();
-        for (String w : words) {
-            if (!w.isEmpty()) {
-                sb.append(Character.toUpperCase(w.charAt(0)));
-                if (w.length() > 1) {
-                    sb.append(w.substring(1).toLowerCase());
-                }
-                sb.append(" ");
-            }
-        }
-        return sb.toString().trim();
     }
 }
 
