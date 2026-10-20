@@ -21,6 +21,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+import org.mindrot.jbcrypt.BCrypt;
+
 public class RedefinirSenhaActivity extends AppCompatActivity {
 
     private TextInputEditText etNovaSenha, etConfirmarSenha;
@@ -85,7 +87,8 @@ public class RedefinirSenhaActivity extends AppCompatActivity {
                      PreparedStatement stmt = con != null ? con.prepareStatement("UPDATE usuario SET senha = ? WHERE email = ?") : null) {
 
                     if (con != null && stmt != null) {
-                        stmt.setString(1, novaSenha);
+                        String senhaHash = BCrypt.hashpw(novaSenha, BCrypt.gensalt());
+                        stmt.setString(1, senhaHash);
                         stmt.setString(2, emailUsuario);
                         int rowsUpdated = stmt.executeUpdate();
 

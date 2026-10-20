@@ -71,7 +71,7 @@ public class HomePageFragment extends Fragment {
         Context context = getContext();
         if (context != null) {
             SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-            String nome = prefs.getString("NOME_USUARIO", "Instrutor");
+            String nome = prefs.getString("nome_usuario", "Instrutor");
             if (textSaudacao != null) {
                 textSaudacao.setText("Bom dia, " + nome + "!");
             }
@@ -104,7 +104,7 @@ public class HomePageFragment extends Fragment {
         if (context == null) return;
 
         SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
 
         executorService.execute(() -> {
             List<TurmaModelo> listaTurmas = new ArrayList<>();
