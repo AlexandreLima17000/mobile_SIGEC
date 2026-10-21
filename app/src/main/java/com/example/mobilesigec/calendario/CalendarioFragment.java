@@ -39,6 +39,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+
+import com.example.mobilesigec.model.TurmaModelo;
 
 public class CalendarioFragment extends Fragment {
 
@@ -55,7 +60,7 @@ public class CalendarioFragment extends Fragment {
     private TextView textNoFichas;
     private ImageView btnPrevMonth;
     private ImageView btnNextMonth;
-
+    private Spinner spinnerTurmasCalendario;
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
     private ExecutorService executorService =
             Executors.newSingleThreadExecutor();
@@ -90,6 +95,7 @@ public class CalendarioFragment extends Fragment {
         textNoFichas = view.findViewById(R.id.text_no_fichas);
         btnPrevMonth = view.findViewById(R.id.btn_prev_month);
         btnNextMonth = view.findViewById(R.id.btn_next_month);
+        spinnerTurmasCalendario = view.findViewById(R.id.spinnerTurmasCalendario);
 
         if (getActivity() != null) {
             SharedPreferences prefs = getActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -115,9 +121,254 @@ public class CalendarioFragment extends Fragment {
             });
         }
 
+        carregarTurmasNoSpinner();
         carregarCalendarioEEventos(inflater);
 
         return view;
+    }
+
+    private void carregarTurmasNoSpinner() {
+
+        if (spinnerTurmasCalendario == null || getContext() == null) {
+            return;
+        }
+
+        Context context = getContext();
+
+        if (context == null) {
+            return;
+        }
+
+        SharedPreferences prefs = context.getSharedPreferences(
+                "SessaoApp",
+                Context.MODE_PRIVATE
+        );
+
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+
+        garantirExecutorAtivo();
+
+        executorService.execute(() -> {
+
+            List<TurmaModelo> listaTurmas = new ArrayList<>();
+
+            String sql;
+
+            try (Connection con = ConexaoMySQL.conectar()) {
+
+                if (con == null) {
+                    Log.e(TAG, "Não foi possível conectar ao MySQL.");
+                    return;
+                }
+
+                if (idUsuarioLogado != -1) {
+
+                    sql =
+                            "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                    "FROM turma t " +
+                                    "INNER JOIN usuario_turma ut " +
+                                    "ON t.id_turma = ut.id_turma " +
+                                    "INNER JOIN laboratorio l " +
+                                    "ON t.id_laboratorio = l.id_laboratorio " +
+                                    "WHERE ut.id_usuario = ? " +
+                                    "AND t.situacao = 'A' " +
+                                    "ORDER BY t.nome_turma";
+
+                } else {
+
+                    sql =
+                            "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                    "FROM turma t " +
+                                    "INNER JOIN laboratorio l " +
+                                    "ON t.id_laboratorio = l.id_laboratorio " +
+                                    "WHERE t.situacao = 'A' " +
+                                    "ORDER BY t.nome_turma";
+                }
+
+                try (PreparedStatement stmt = con.prepareStatement(sql)) {
+
+                    if (idUsuarioLogado != -1) {
+                        stmt.setInt(1, idUsuarioLogado);
+                    }
+
+                    try (ResultSet rs = stmt.executeQuery()) {
+
+                        while (rs.next()) {
+
+                            listaTurmas.add(
+                                    new TurmaModelo(
+                                            rs.getInt("id_turma"),
+                                            rs.getString("nome_turma"),
+                                            rs.getString("nome_laboratorio")
+                                    )
+                            );
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+
+                Log.e(TAG, "Erro ao carregar turmas do calendário", e);
+                return;
+            }
+
+            mainHandler.post(() -> {
+
+                if (!isAdded()
+                        || getContext() == null
+                        || getView() == null
+                        || spinnerTurmasCalendario == null) {
+                    return;
+                }
+
+                Context contextoAtual = getContext();
+
+                if (contextoAtual == null) {
+                    return;
+                }
+
+                SharedPreferences preferencias =
+                        contextoAtual.getSharedPreferences(
+                                "SessaoApp",
+                                Context.MODE_PRIVATE
+                        );
+
+                ArrayAdapter<TurmaModelo> adapter =
+                        new ArrayAdapter<>(
+                                contextoAtual,
+                                android.R.layout.simple_spinner_item,
+                                listaTurmas
+                        );
+
+                adapter.setDropDownViewResource(
+                        android.R.layout.simple_spinner_dropdown_item
+                );
+
+                spinnerTurmasCalendario.setAdapter(adapter);
+
+                if (listaTurmas.isEmpty()) {
+
+                    preferencias.edit()
+                            .remove("id_turma_selecionada")
+                            .apply();
+
+                    eventosDoMes.clear();
+
+                    populateCalendar(
+                            calendarGrid,
+                            LayoutInflater.from(contextoAtual)
+                    );
+
+                    atualizarDetalhesDiaSelecionado();
+
+                    Toast.makeText(
+                            contextoAtual,
+                            "Nenhuma turma ativa encontrada.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                    return;
+                }
+
+                // Recupera a mesma turma salva pela HomePage.
+                int idTurmaSalva = preferencias.getInt(
+                        "id_turma_selecionada",
+                        -1
+                );
+
+                int posicaoInicial = 0;
+
+                for (int i = 0; i < listaTurmas.size(); i++) {
+
+                    if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
+                        posicaoInicial = i;
+                        break;
+                    }
+                }
+
+                spinnerTurmasCalendario.setOnItemSelectedListener(
+                        new AdapterView.OnItemSelectedListener() {
+
+                            @Override
+                            public void onItemSelected(
+                                    AdapterView<?> parent,
+                                    View selectedView,
+                                    int position,
+                                    long id
+                            ) {
+
+                                if (position < 0 || position >= listaTurmas.size()) {
+                                    return;
+                                }
+
+                                TurmaModelo turmaSelecionada =
+                                        (TurmaModelo) parent.getItemAtPosition(position);
+
+                                if (turmaSelecionada == null) {
+                                    return;
+                                }
+
+                                int novoIdTurma = turmaSelecionada.getIdTurma();
+
+                                SharedPreferences prefsAtuais =
+                                        requireContext().getSharedPreferences(
+                                                "SessaoApp",
+                                                Context.MODE_PRIVATE
+                                        );
+
+                                int idSalvo = prefsAtuais.getInt(
+                                        "id_turma_selecionada",
+                                        -1
+                                );
+
+                                // Compartilha a seleção com a HomePage.
+                                prefsAtuais.edit()
+                                        .putInt(
+                                                "id_turma_selecionada",
+                                                novoIdTurma
+                                        )
+                                        .apply();
+
+                                // Só consulta novamente se a turma mudou.
+                                if (novoIdTurma != ultimaTurmaCarregada) {
+
+                                    carregarCalendarioEEventos(
+                                            LayoutInflater.from(requireContext())
+                                    );
+                                }
+                            }
+
+                            @Override
+                            public void onNothingSelected(
+                                    AdapterView<?> parent
+                            ) {
+                                // Nenhuma ação necessária.
+                            }
+                        });
+
+                spinnerTurmasCalendario.setSelection(
+                        posicaoInicial,
+                        false
+                );
+
+                // Garante uma turma válida mesmo na primeira utilização.
+                TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
+
+                if (idTurmaSalva != turmaInicial.getIdTurma()) {
+
+                    preferencias.edit()
+                            .putInt(
+                                    "id_turma_selecionada",
+                                    turmaInicial.getIdTurma()
+                            )
+                            .apply();
+
+                    carregarCalendarioEEventos(
+                            LayoutInflater.from(contextoAtual)
+                    );
+                }
+            });
+        });
     }
 
     private void garantirExecutorAtivo() {

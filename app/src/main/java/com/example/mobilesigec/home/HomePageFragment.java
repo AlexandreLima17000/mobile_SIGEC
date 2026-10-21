@@ -826,4 +826,46 @@ public class HomePageFragment extends Fragment {
         textDataHome = null;
         spinnerTurmasHome = null;
     }
+    @Override
+    public void onResume() {
+        super.onResume();
+        sincronizarSpinnerComTurmaSelecionada();
+    }
+
+    private void sincronizarSpinnerComTurmaSelecionada() {
+
+        if (!isAdded()
+                || getContext() == null
+                || spinnerTurmasHome == null
+                || spinnerTurmasHome.getAdapter() == null) {
+            return;
+        }
+
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+
+        int idTurmaSalva = prefs.getInt(
+                "id_turma_selecionada",
+                -1
+        );
+
+        for (int i = 0; i < spinnerTurmasHome.getAdapter().getCount(); i++) {
+
+            Object item = spinnerTurmasHome.getAdapter().getItem(i);
+
+            if (item instanceof TurmaModelo) {
+
+                TurmaModelo turma = (TurmaModelo) item;
+
+                if (turma.getIdTurma() == idTurmaSalva) {
+
+                    if (spinnerTurmasHome.getSelectedItemPosition() != i) {
+                        spinnerTurmasHome.setSelection(i);
+                    }
+
+                    return;
+                }
+            }
+        }
+    }
 }
