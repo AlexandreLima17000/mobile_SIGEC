@@ -71,9 +71,13 @@ public class HomePageFragment extends Fragment {
         Context context = getContext();
         if (context != null) {
             SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-            String nome = prefs.getString("nome_usuario", "Instrutor");
+            String nomeCompleto = prefs.getString("nome_usuario", "Instrutor");
+
+            // Aplica a formatação para pegar apenas os dois primeiros nomes
+            String nomeFormatado = formatarNomeCurto(nomeCompleto);
+
             if (textSaudacao != null) {
-                textSaudacao.setText("Bom dia, " + nome + "!");
+                textSaudacao.setText("Bom dia, " + nomeFormatado + "!");
             }
         }
 
@@ -270,6 +274,26 @@ public class HomePageFragment extends Fragment {
             this.idFicha = idFicha;
             this.nomeFicha = nomeFicha;
             this.concluido = concluido;
+        }
+    }
+
+    // ==================================================
+    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
+    // ==================================================
+    private String formatarNomeCurto(String nomeCompleto) {
+        if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
+            return "";
+        }
+
+        // Divide o nome completo em uma lista de palavras usando os espaços
+        String[] partes = nomeCompleto.trim().split("\\s+");
+
+        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
+        if (partes.length >= 2) {
+            return partes[0] + " " + partes[1];
+        } else {
+            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
+            return partes[0];
         }
     }
 
