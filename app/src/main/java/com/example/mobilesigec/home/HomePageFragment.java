@@ -790,6 +790,26 @@ public class HomePageFragment extends Fragment {
         }
     }
 
+    // ==================================================
+    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
+    // ==================================================
+    private String formatarNomeCurto(String nomeCompleto) {
+        if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
+            return "";
+        }
+
+        // Divide o nome completo em uma lista de palavras usando os espaços
+        String[] partes = nomeCompleto.trim().split("\\s+");
+
+        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
+        if (partes.length >= 2) {
+            return partes[0] + " " + partes[1];
+        } else {
+            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
+            return partes[0];
+        }
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();

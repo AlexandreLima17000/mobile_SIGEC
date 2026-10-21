@@ -69,6 +69,12 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                 return;
             }
 
+            if (!email.toLowerCase().endsWith("df.senac.br")) {
+                Toast.makeText(RecuperarSenhaEmailActivity.this, "O e-mail deve pertencer ao domínio df.senac.br", Toast.LENGTH_SHORT).show();
+                etEmail.setError("Domínio inválido. Use um e-mail @df.senac.br");
+                return;
+            }
+
             // Ativa estado de carregamento
             btnEnviar.setEnabled(false);
             btnEnviar.setText(R.string.forgot_password_checking);
