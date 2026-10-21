@@ -183,26 +183,24 @@ public class HomePageFragment extends Fragment {
 
         executorService.execute(() -> {
             List<ItemReceitaData> receitasList = new ArrayList<>();
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
-                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
+                    String sql = "SELECT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
                             "FROM ficha f " +
                             "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
                             "WHERE f.id_turma = ?";
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idTurma);
-                    ResultSet rs = stmt.executeQuery();
-
-                    while (rs.next()) {
-                        String nomeFicha = rs.getString("nome_ficha");
-                        String concluido = rs.getString("concluido");
-                        receitasList.add(new ItemReceitaData(nomeFicha, concluido));
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idTurma);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                int idFicha = rs.getInt("id_ficha");
+                                String nomeFicha = rs.getString("nome_ficha");
+                                String concluido = rs.getString("concluido");
+                                receitasList.add(new ItemReceitaData(idFicha, nomeFicha, concluido));
+                            }
+                        }
                     }
-                    rs.close();
-                    stmt.close();
-                    con.close();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Erro ao carregar receitas da turma", e);
@@ -250,6 +248,13 @@ public class HomePageFragment extends Fragment {
                         }
                     }
 
+                    itemReceita.setOnClickListener(v -> {
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("id_ficha", itemData.idFicha);
+                        bundle.putString("nome_ficha", itemData.nomeFicha);
+                        Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
+                    });
+
                     currentContainer.addView(itemReceita);
                 }
             });
@@ -257,10 +262,12 @@ public class HomePageFragment extends Fragment {
     }
 
     private static class ItemReceitaData {
+        final int idFicha;
         final String nomeFicha;
         final String concluido;
 
-        ItemReceitaData(String nomeFicha, String concluido) {
+        ItemReceitaData(int idFicha, String nomeFicha, String concluido) {
+            this.idFicha = idFicha;
             this.nomeFicha = nomeFicha;
             this.concluido = concluido;
         }
