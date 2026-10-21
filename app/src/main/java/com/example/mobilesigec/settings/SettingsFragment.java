@@ -82,9 +82,9 @@ public class SettingsFragment extends Fragment {
         if (activity == null) return;
 
         SharedPreferences prefs = activity.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
-        String prefNome = prefs.getString("NOME_USUARIO", "Instrutor Gastronomia");
-        String prefEmail = prefs.getString("EMAIL_USUARIO", "");
+        int idUsuarioLogado = prefs.getInt("ID_USUARIO", prefs.getInt("id_usuario", -1));
+        String prefNome = prefs.getString("NOME_USUARIO", prefs.getString("nome_usuario", "Instrutor Gastronomia"));
+        String prefEmail = prefs.getString("EMAIL_USUARIO", prefs.getString("email", ""));
 
         // Preenche com os dados salvos da sessão imediatamente
         if (tvNomeInstrutor != null) {
