@@ -257,11 +257,14 @@ public class SettingsFragment extends Fragment {
             mainLayout.setOrientation(LinearLayout.VERTICAL);
             mainLayout.setPadding((int) (16 * density), (int) (16 * density), (int) (16 * density), (int) (16 * density));
 
-            // Header azul do card da turma
+            // Header azul do card da turma com pontas arredondadas
             LinearLayout headerLayout = new LinearLayout(getContext());
             headerLayout.setOrientation(LinearLayout.HORIZONTAL);
-            headerLayout.setBackgroundColor(Color.parseColor("#0B1A30"));
-            headerLayout.setPadding((int) (10 * density), (int) (10 * density), (int) (10 * density), (int) (10 * density));
+            android.graphics.drawable.GradientDrawable headerBg = new android.graphics.drawable.GradientDrawable();
+            headerBg.setColor(Color.parseColor("#0B1A30"));
+            headerBg.setCornerRadius(10 * density);
+            headerLayout.setBackground(headerBg);
+            headerLayout.setPadding((int) (12 * density), (int) (10 * density), (int) (12 * density), (int) (10 * density));
             headerLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
             TextView tvHeaderTitle = new TextView(getContext());
