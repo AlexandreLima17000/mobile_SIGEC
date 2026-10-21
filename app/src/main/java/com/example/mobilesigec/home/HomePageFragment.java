@@ -9,12 +9,13 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -54,12 +55,10 @@ public class HomePageFragment extends Fragment {
     private final Handler mainHandler =
             new Handler(Looper.getMainLooper());
 
-    // Evita carregar a mesma turma mais de uma vez
-    // quando o Spinner restaura a seleção.
     private int idTurmaReceitasCarregada = Integer.MIN_VALUE;
 
     public HomePageFragment() {
-        // Construtor obrigatório do Fragment.
+        // Construtor obrigatório.
     }
 
     @Override
@@ -83,8 +82,6 @@ public class HomePageFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         executorService = Executors.newSingleThreadExecutor();
-
-        // A View é recriada quando o Fragment volta a ser exibido.
         idTurmaReceitasCarregada = Integer.MIN_VALUE;
 
         textSaudacao = view.findViewById(R.id.textSaudacao);
@@ -99,7 +96,7 @@ public class HomePageFragment extends Fragment {
         CardView cardReceitasHoje =
                 view.findViewById(R.id.card_receitas_hoje);
 
-        // Nome do usuário logado.
+        // Nome do usuário.
         Context context = getContext();
 
         if (context != null) {
@@ -114,7 +111,9 @@ public class HomePageFragment extends Fragment {
             );
 
             if (textSaudacao != null) {
-                textSaudacao.setText("Bom dia, " + nome + "!");
+                textSaudacao.setText(
+                        "Bom dia, " + formatarNomeCurto(nome) + "!"
+                );
             }
         }
 
@@ -131,10 +130,10 @@ public class HomePageFragment extends Fragment {
             textDataHome.setText(dataFormatada);
         }
 
-        // Carrega as turmas disponíveis para o usuário.
+        // Carrega as turmas disponíveis.
         carregarTurmasNoSpinner(view);
 
-        // Navegação para checklist de insumos.
+        // Navegação para o checklist de insumos.
         if (cardInsumos != null) {
             cardInsumos.setOnClickListener(v ->
                     Navigation.findNavController(v)
@@ -142,7 +141,7 @@ public class HomePageFragment extends Fragment {
             );
         }
 
-        // Navegação para checklist de utensílios.
+        // Navegação para o checklist de utensílios.
         if (cardUtensilios != null) {
             cardUtensilios.setOnClickListener(v ->
                     Navigation.findNavController(v)
@@ -154,7 +153,6 @@ public class HomePageFragment extends Fragment {
         if (cardReceitasHoje != null) {
             cardReceitasHoje.setOnClickListener(v -> {
 
-                // Evita abrir o calendário sem uma turma selecionada.
                 Context contextoAtual = getContext();
 
                 if (contextoAtual == null) {
@@ -173,10 +171,10 @@ public class HomePageFragment extends Fragment {
                 );
 
                 if (idTurma == -1) {
-                    android.widget.Toast.makeText(
+                    Toast.makeText(
                             contextoAtual,
                             "Selecione uma turma antes de abrir o calendário.",
-                            android.widget.Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT
                     ).show();
 
                     return;
@@ -189,28 +187,24 @@ public class HomePageFragment extends Fragment {
     }
 
     /**
-     * Carrega do MySQL as turmas disponíveis
-     * e preenche o Spinner da HomePage.
+     * Carrega as turmas do banco e configura o Spinner.
      */
     private void carregarTurmasNoSpinner(View view) {
 
         spinnerTurmasHome =
                 view.findViewById(R.id.spinnerTurmasHome);
 
-        if (spinnerTurmasHome == null) {
+        if (spinnerTurmasHome == null
+                || getContext() == null
+                || executorService == null) {
             return;
         }
 
-        Context context = getContext();
-
-        if (context == null || executorService == null) {
-            return;
-        }
-
-        SharedPreferences prefs = context.getSharedPreferences(
-                NOME_PREFERENCIAS,
-                Context.MODE_PRIVATE
-        );
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences(
+                        NOME_PREFERENCIAS,
+                        Context.MODE_PRIVATE
+                );
 
         int idUsuarioLogado = prefs.getInt(
                 "id_usuario",
@@ -230,19 +224,10 @@ public class HomePageFragment extends Fragment {
                     return;
                 }
 
-                /*
-                 * Se existe um usuário logado, carrega somente
-                 * as turmas relacionadas a ele.
-                 *
-                 * Se o ID do usuário não estiver salvo,
-                 * mantém o comportamento anterior do projeto:
-                 * carregar todas as turmas ativas.
-                 */
                 if (idUsuarioLogado != -1) {
 
                     sql =
-                            "SELECT t.id_turma, " +
-                                    "t.nome_turma, " +
+                            "SELECT t.id_turma, t.nome_turma, " +
                                     "l.nome_laboratorio " +
                                     "FROM turma t " +
                                     "INNER JOIN usuario_turma ut " +
@@ -256,8 +241,7 @@ public class HomePageFragment extends Fragment {
                 } else {
 
                     sql =
-                            "SELECT t.id_turma, " +
-                                    "t.nome_turma, " +
+                            "SELECT t.id_turma, t.nome_turma, " +
                                     "l.nome_laboratorio " +
                                     "FROM turma t " +
                                     "INNER JOIN laboratorio l " +
@@ -266,8 +250,7 @@ public class HomePageFragment extends Fragment {
                                     "ORDER BY t.nome_turma";
                 }
 
-                try (PreparedStatement stmt =
-                             con.prepareStatement(sql)) {
+                try (PreparedStatement stmt = con.prepareStatement(sql)) {
 
                     if (idUsuarioLogado != -1) {
                         stmt.setInt(1, idUsuarioLogado);
@@ -277,20 +260,11 @@ public class HomePageFragment extends Fragment {
 
                         while (rs.next()) {
 
-                            int idTurma =
-                                    rs.getInt("id_turma");
-
-                            String nomeTurma =
-                                    rs.getString("nome_turma");
-
-                            String nomeLaboratorio =
-                                    rs.getString("nome_laboratorio");
-
                             listaTurmas.add(
                                     new TurmaModelo(
-                                            idTurma,
-                                            nomeTurma,
-                                            nomeLaboratorio
+                                            rs.getInt("id_turma"),
+                                            rs.getString("nome_turma"),
+                                            rs.getString("nome_laboratorio")
                                     )
                             );
                         }
@@ -298,13 +272,7 @@ public class HomePageFragment extends Fragment {
                 }
 
             } catch (Exception e) {
-
-                Log.e(
-                        TAG,
-                        "Erro ao carregar turmas do banco de dados.",
-                        e
-                );
-
+                Log.e(TAG, "Erro ao carregar turmas.", e);
                 return;
             }
 
@@ -329,7 +297,6 @@ public class HomePageFragment extends Fragment {
                                 Context.MODE_PRIVATE
                         );
 
-                // Caso não existam turmas disponíveis.
                 if (listaTurmas.isEmpty()) {
 
                     preferencias.edit()
@@ -337,47 +304,43 @@ public class HomePageFragment extends Fragment {
                             .apply();
 
                     spinnerTurmasHome.setAdapter(
-                            new ArrayAdapter<>(
+                            new ArrayAdapter<String>(
                                     contextoAtual,
                                     android.R.layout.simple_spinner_item,
-                                    new ArrayList<String>()
+                                    new ArrayList<>()
                             )
                     );
 
-                    LinearLayout containerReceitas =
+                    idTurmaReceitasCarregada = Integer.MIN_VALUE;
+
+                    LinearLayout container =
                             getView().findViewById(
                                     R.id.container_receitas
                             );
 
-                    if (containerReceitas != null) {
+                    if (container != null) {
+                        container.removeAllViews();
 
-                        containerReceitas.removeAllViews();
-
-                        TextView mensagem = new TextView(
-                                contextoAtual
-                        );
+                        TextView mensagem =
+                                new TextView(contextoAtual);
 
                         mensagem.setText(
                                 "Nenhuma turma ativa encontrada."
                         );
-
                         mensagem.setTextColor(
                                 android.graphics.Color.parseColor(
-                                        "#64748B"
+                                        "#FFFFFF"
                                 )
                         );
-
                         mensagem.setTextSize(14);
+                        mensagem.setPadding(8, 12, 8, 12);
 
-                        mensagem.setPadding(8, 16, 8, 16);
-
-                        containerReceitas.addView(mensagem);
+                        container.addView(mensagem);
                     }
 
                     return;
                 }
 
-                // Cria o adaptador do Spinner.
                 ArrayAdapter<TurmaModelo> adapter =
                         new ArrayAdapter<>(
                                 contextoAtual,
@@ -391,7 +354,7 @@ public class HomePageFragment extends Fragment {
 
                 spinnerTurmasHome.setAdapter(adapter);
 
-                // Recupera a última turma selecionada.
+                // Recupera a turma anteriormente selecionada.
                 int idTurmaSalva = preferencias.getInt(
                         CHAVE_TURMA_SELECIONADA,
                         -1
@@ -399,18 +362,14 @@ public class HomePageFragment extends Fragment {
 
                 int posicaoInicial = 0;
 
-                // Procura a turma salva na lista carregada do banco.
                 for (int i = 0; i < listaTurmas.size(); i++) {
-
                     if (listaTurmas.get(i).getIdTurma()
                             == idTurmaSalva) {
-
                         posicaoInicial = i;
                         break;
                     }
                 }
 
-                // Monitora as alterações na seleção do Spinner.
                 spinnerTurmasHome.setOnItemSelectedListener(
                         new AdapterView.OnItemSelectedListener() {
 
@@ -421,47 +380,32 @@ public class HomePageFragment extends Fragment {
                                     int position,
                                     long id
                             ) {
-
                                 if (position < 0
                                         || position >= listaTurmas.size()) {
                                     return;
                                 }
 
                                 TurmaModelo turmaSelecionada =
-                                        (TurmaModelo)
-                                                parent.getItemAtPosition(
-                                                        position
-                                                );
+                                        (TurmaModelo) parent.getItemAtPosition(
+                                                position
+                                        );
 
-                                if (turmaSelecionada == null) {
-                                    return;
-                                }
-
-                                salvarTurmaSelecionada(
-                                        turmaSelecionada
-                                );
+                                salvarTurmaSelecionada(turmaSelecionada);
                             }
 
                             @Override
                             public void onNothingSelected(
                                     AdapterView<?> parent
                             ) {
-                                // Nenhuma ação necessária.
                             }
-                        }
-                );
+                        });
 
-                // Restaura a seleção anterior.
                 spinnerTurmasHome.setSelection(
                         posicaoInicial,
                         false
                 );
 
-                /*
-                 * Processa explicitamente a seleção inicial.
-                 * Isso garante o carregamento das receitas
-                 * mesmo se o Spinner não disparar o listener.
-                 */
+                // Garante o carregamento da turma inicial.
                 salvarTurmaSelecionada(
                         listaTurmas.get(posicaoInicial)
                 );
@@ -470,13 +414,11 @@ public class HomePageFragment extends Fragment {
     }
 
     /**
-     * Salva a turma selecionada e carrega as receitas
-     * correspondentes no card da HomePage.
+     * Salva a turma escolhida para a HomePage e o calendário.
      */
     private void salvarTurmaSelecionada(
             TurmaModelo turmaSelecionada
     ) {
-
         if (turmaSelecionada == null || getContext() == null) {
             return;
         }
@@ -489,11 +431,6 @@ public class HomePageFragment extends Fragment {
 
         int idTurma = turmaSelecionada.getIdTurma();
 
-        /*
-         * IMPORTANTE:
-         * O ID fica salvo para que o CalendarioFragment
-         * possa utilizá-lo como filtro na consulta SQL.
-         */
         SharedPreferences prefs =
                 contextoAtual.getSharedPreferences(
                         NOME_PREFERENCIAS,
@@ -501,13 +438,9 @@ public class HomePageFragment extends Fragment {
                 );
 
         prefs.edit()
-                .putInt(
-                        CHAVE_TURMA_SELECIONADA,
-                        idTurma
-                )
+                .putInt(CHAVE_TURMA_SELECIONADA, idTurma)
                 .apply();
 
-        // Evita uma consulta duplicada para a mesma seleção.
         if (idTurmaReceitasCarregada == idTurma) {
             return;
         }
@@ -521,14 +454,12 @@ public class HomePageFragment extends Fragment {
     }
 
     /**
-     * Carrega as fichas da turma selecionada no card
-     * "Receitas de Hoje".
+     * Busca as fichas associadas à turma selecionada.
      */
     private void carregarReceitasDaTurma(
             int idTurma,
             String nomeLaboratorio
     ) {
-
         View view = getView();
 
         if (view == null || executorService == null) {
@@ -542,37 +473,59 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        // Limpa as receitas da seleção anterior.
         containerReceitas.removeAllViews();
 
         executorService.execute(() -> {
-            List<ItemReceitaData> receitasList = new ArrayList<>();
-            try {
-                Connection con = ConexaoMySQL.conectar();
-                if (con != null) {
-                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
-                            "FROM ficha f " +
-                            "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                            "WHERE f.id_turma = ?";
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
+            List<ItemReceitaData> receitasList =
+                    new ArrayList<>();
+
+            try (Connection con = ConexaoMySQL.conectar()) {
+
+                if (con == null) {
+                    Log.e(TAG, "Não foi possível conectar ao MySQL.");
+                    return;
+                }
+
+                // Inclui id_ficha para abrir os detalhes da receita.
+                String sql =
+                        "SELECT f.id_ficha, f.nome_ficha, " +
+                                "COALESCE(a.concluido, 'N') AS concluido " +
+                                "FROM ficha f " +
+                                "LEFT JOIN agendamento a " +
+                                "ON f.id_ficha = a.id_ficha " +
+                                "WHERE f.id_turma = ?";
+
+                try (PreparedStatement stmt =
+                             con.prepareStatement(sql)) {
+
                     stmt.setInt(1, idTurma);
-                    ResultSet rs = stmt.executeQuery();
 
-                    while (rs.next()) {
-                        String nomeFicha = rs.getString("nome_ficha");
-                        String concluido = rs.getString("concluido");
-                        receitasList.add(new ItemReceitaData(nomeFicha, concluido));
+                    try (ResultSet rs = stmt.executeQuery()) {
+
+                        while (rs.next()) {
+
+                            int idFicha = rs.getInt("id_ficha");
+
+                            String nomeFicha =
+                                    rs.getString("nome_ficha");
+
+                            String concluido =
+                                    rs.getString("concluido");
+
+                            receitasList.add(
+                                    new ItemReceitaData(
+                                            idFicha,
+                                            nomeFicha,
+                                            concluido
+                                    )
+                            );
+                        }
                     }
                 }
 
             } catch (Exception e) {
-
-                Log.e(
-                        TAG,
-                        "Erro ao carregar receitas da turma.",
-                        e
-                );
+                Log.e(TAG, "Erro ao carregar receitas da turma.", e);
             }
 
             mainHandler.post(() -> {
@@ -583,17 +536,13 @@ public class HomePageFragment extends Fragment {
                     return;
                 }
 
-                /*
-                 * Confere se a seleção continua sendo a mesma.
-                 * Evita exibir resultados antigos caso o professor
-                 * mude rapidamente de turma.
-                 */
                 SharedPreferences prefs =
                         requireContext().getSharedPreferences(
                                 NOME_PREFERENCIAS,
                                 Context.MODE_PRIVATE
                         );
 
+                // Evita mostrar resultados de uma seleção antiga.
                 int turmaAtual = prefs.getInt(
                         CHAVE_TURMA_SELECIONADA,
                         -1
@@ -621,34 +570,26 @@ public class HomePageFragment extends Fragment {
                 currentContainer.removeAllViews();
 
                 LayoutInflater inflater =
-                        LayoutInflater.from(getContext());
+                        LayoutInflater.from(requireContext());
 
                 if (receitasList.isEmpty()) {
 
-                    TextView mensagem = new TextView(
-                            requireContext()
-                    );
+                    TextView mensagem =
+                            new TextView(requireContext());
 
                     mensagem.setText(
                             "Nenhuma receita encontrada para esta turma."
                     );
-
                     mensagem.setTextColor(
-                            android.graphics.Color.parseColor(
-                                    "#FFFFFF"
-                            )
+                            android.graphics.Color.parseColor("#FFFFFF")
                     );
-
                     mensagem.setTextSize(14);
-
                     mensagem.setPadding(8, 12, 8, 12);
 
                     currentContainer.addView(mensagem);
-
                     return;
                 }
 
-                // Monta os cards das receitas.
                 for (ItemReceitaData itemData : receitasList) {
 
                     View itemReceita = inflater.inflate(
@@ -687,11 +628,8 @@ public class HomePageFragment extends Fragment {
 
                     if ("S".equals(itemData.concluido)) {
 
-                        // Receita concluída.
                         if (tvStatusText != null) {
-
                             tvStatusText.setText("CONCLUÍDO");
-
                             tvStatusText.setTextColor(
                                     android.graphics.Color.parseColor(
                                             "#15803D"
@@ -700,11 +638,9 @@ public class HomePageFragment extends Fragment {
                         }
 
                         if (ivStatusIcon != null) {
-
                             ivStatusIcon.setImageResource(
                                     R.drawable.ic_check_circle
                             );
-
                             ivStatusIcon.setColorFilter(
                                     android.graphics.Color.parseColor(
                                             "#15803D"
@@ -714,11 +650,8 @@ public class HomePageFragment extends Fragment {
 
                     } else {
 
-                        // Receita pendente.
                         if (tvStatusText != null) {
-
                             tvStatusText.setText("PENDENTE");
-
                             tvStatusText.setTextColor(
                                     android.graphics.Color.parseColor(
                                             "#42474F"
@@ -727,11 +660,9 @@ public class HomePageFragment extends Fragment {
                         }
 
                         if (ivStatusIcon != null) {
-
                             ivStatusIcon.setImageResource(
                                     R.drawable.ic_notifications
                             );
-
                             ivStatusIcon.setColorFilter(
                                     android.graphics.Color.parseColor(
                                             "#42474F"
@@ -740,11 +671,26 @@ public class HomePageFragment extends Fragment {
                         }
                     }
 
+                    // Abre os detalhes da receita selecionada.
                     itemReceita.setOnClickListener(v -> {
+
                         Bundle bundle = new Bundle();
-                        bundle.putInt("id_ficha", itemData.idFicha);
-                        bundle.putString("nome_ficha", itemData.nomeFicha);
-                        Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
+
+                        bundle.putInt(
+                                "id_ficha",
+                                itemData.idFicha
+                        );
+
+                        bundle.putString(
+                                "nome_ficha",
+                                itemData.nomeFicha
+                        );
+
+                        Navigation.findNavController(v)
+                                .navigate(
+                                        R.id.nav_detalhes_receita,
+                                        bundle
+                                );
                     });
 
                     currentContainer.addView(itemReceita);
@@ -754,57 +700,51 @@ public class HomePageFragment extends Fragment {
     }
 
     /**
-     * Modelo simples usado para exibir cada ficha na HomePage.
+     * Modelo dos dados utilizados nos cards de receita.
      */
     private static class ItemReceitaData {
+
+        final int idFicha;
         final String nomeFicha;
         final String concluido;
 
-        ItemReceitaData(String nomeFicha, String concluido) {
+        ItemReceitaData(
+                int idFicha,
+                String nomeFicha,
+                String concluido
+        ) {
+            this.idFicha = idFicha;
             this.nomeFicha = nomeFicha;
             this.concluido = concluido;
         }
     }
 
-    // ==================================================
-    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
-    // ==================================================
+    /**
+     * Retorna os dois primeiros nomes do usuário.
+     */
     private String formatarNomeCurto(String nomeCompleto) {
-        if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
+
+        if (nomeCompleto == null
+                || nomeCompleto.trim().isEmpty()) {
             return "";
         }
 
-        // Divide o nome completo em uma lista de palavras usando os espaços
         String[] partes = nomeCompleto.trim().split("\\s+");
 
-        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
         if (partes.length >= 2) {
             return partes[0] + " " + partes[1];
-        } else {
-            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
-            return partes[0];
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-
-        if (executorService != null
-                && !executorService.isShutdown()) {
-
-            executorService.shutdown();
         }
 
-        executorService = null;
-
-        textSaudacao = null;
-        textDataHome = null;
-        spinnerTurmasHome = null;
+        return partes[0];
     }
+
+    /**
+     * Sincroniza o Spinner ao retornar do calendário.
+     */
     @Override
     public void onResume() {
         super.onResume();
+
         sincronizarSpinnerComTurmaSelecionada();
     }
 
@@ -818,16 +758,22 @@ public class HomePageFragment extends Fragment {
         }
 
         SharedPreferences prefs = requireContext()
-                .getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+                .getSharedPreferences(
+                        NOME_PREFERENCIAS,
+                        Context.MODE_PRIVATE
+                );
 
         int idTurmaSalva = prefs.getInt(
-                "id_turma_selecionada",
+                CHAVE_TURMA_SELECIONADA,
                 -1
         );
 
-        for (int i = 0; i < spinnerTurmasHome.getAdapter().getCount(); i++) {
+        for (int i = 0;
+             i < spinnerTurmasHome.getAdapter().getCount();
+             i++) {
 
-            Object item = spinnerTurmasHome.getAdapter().getItem(i);
+            Object item =
+                    spinnerTurmasHome.getAdapter().getItem(i);
 
             if (item instanceof TurmaModelo) {
 
@@ -835,7 +781,8 @@ public class HomePageFragment extends Fragment {
 
                 if (turma.getIdTurma() == idTurmaSalva) {
 
-                    if (spinnerTurmasHome.getSelectedItemPosition() != i) {
+                    if (spinnerTurmasHome.getSelectedItemPosition()
+                            != i) {
                         spinnerTurmasHome.setSelection(i);
                     }
 
@@ -843,5 +790,21 @@ public class HomePageFragment extends Fragment {
                 }
             }
         }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+
+        if (executorService != null
+                && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
+
+        executorService = null;
+
+        textSaudacao = null;
+        textDataHome = null;
+        spinnerTurmasHome = null;
     }
 }
