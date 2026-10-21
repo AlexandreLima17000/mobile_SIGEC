@@ -57,7 +57,10 @@ public class CalendarioFragment extends Fragment {
     private ImageView btnNextMonth;
 
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private ExecutorService executorService =
+            Executors.newSingleThreadExecutor();
+
+    private int ultimaTurmaCarregada = Integer.MIN_VALUE;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private View lastSelectedDayView = null;
@@ -117,6 +120,33 @@ public class CalendarioFragment extends Fragment {
         return view;
     }
 
+    private void garantirExecutorAtivo() {
+        if (executorService == null || executorService.isShutdown()) {
+            executorService = Executors.newSingleThreadExecutor();
+        }
+    }
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (getView() == null || getContext() == null) {
+            return;
+        }
+
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+
+        int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
+
+        // Recarrega o calendário se a turma foi alterada na HomePage.
+        if (idTurmaAtual != ultimaTurmaCarregada) {
+            carregarCalendarioEEventos(
+                    LayoutInflater.from(requireContext())
+            );
+        }
+    }
     private void carregarCalendarioEEventos(LayoutInflater inflater) {
         atualizarTituloMesAno();
         atualizarDataSelecionada();
@@ -164,10 +194,33 @@ public class CalendarioFragment extends Fragment {
         final int mes = currentCalendar.get(Calendar.MONTH) + 1;
         final int ano = currentCalendar.get(Calendar.YEAR);
 
+        Context context = getContext();
+
+        if (context == null) {
+            return;
+        }
+
+        // Recupera a turma selecionada na HomePage.
+        SharedPreferences prefs = context.getSharedPreferences(
+                "SessaoApp",
+                Context.MODE_PRIVATE
+        );
+
+        final int idTurmaSelecionada = prefs.getInt(
+                "id_turma_selecionada",
+                -1
+        );
+
+        ultimaTurmaCarregada = idTurmaSelecionada;
+
+        // Evita executar tarefas em um executor que já foi encerrado.
+        garantirExecutorAtivo();
+
         executorService.execute(() -> {
             try (Connection con = ConexaoMySQL.conectar()) {
 
                 if (con != null) {
+
                     String sql =
                             "SELECT " +
                                     "a.id_agendamento, " +
@@ -179,20 +232,26 @@ public class CalendarioFragment extends Fragment {
                                     "f.preparo, " +
                                     "t.nome_turma " +
                                     "FROM agendamento a " +
-                                    "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
-                                    "LEFT JOIN turma t ON t.id_turma = f.id_turma " +
+                                    "INNER JOIN ficha f " +
+                                    "ON f.id_ficha = a.id_ficha " +
+                                    "LEFT JOIN turma t " +
+                                    "ON t.id_turma = f.id_turma " +
                                     "WHERE MONTH(a.data) = ? " +
                                     "AND YEAR(a.data) = ? " +
                                     "AND a.situacao = 'A' " +
                                     "AND a.concluido = 'N' " +
                                     "AND f.situacao = 'A' " +
+                                    "AND f.id_turma = ? " +
                                     "ORDER BY a.data, f.nome_ficha";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
+
                         stmt.setInt(1, mes);
                         stmt.setInt(2, ano);
+                        stmt.setInt(3, idTurmaSelecionada);
 
                         try (ResultSet rs = stmt.executeQuery()) {
+
                             while (rs.next()) {
 
                                 int idAgendamento =
@@ -213,8 +272,6 @@ public class CalendarioFragment extends Fragment {
                                 String situacao =
                                         rs.getString("situacao_agendamento");
 
-                                // A tabela agendamento não possui id_usuario.
-                                // Por isso, utilizamos 0 neste campo do modelo.
                                 AulaAgenda aula = new AulaAgenda(
                                         idAgendamento,
                                         0,
@@ -246,9 +303,11 @@ public class CalendarioFragment extends Fragment {
                 }
 
             } catch (SQLException e) {
-                Log.e(TAG,
-                        "Erro ao consultar fichas agendadas",
-                        e);
+                Log.e(
+                        TAG,
+                        "Erro ao consultar fichas da turma selecionada",
+                        e
+                );
             }
 
             mainHandler.post(() -> {
