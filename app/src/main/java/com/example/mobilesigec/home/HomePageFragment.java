@@ -487,19 +487,35 @@ public class HomePageFragment extends Fragment {
                     return;
                 }
 
+                SharedPreferences prefs = requireContext().getSharedPreferences(
+                        NOME_PREFERENCIAS,
+                        Context.MODE_PRIVATE
+                );
+
+                int idUsuarioLogado = prefs.getInt(
+                        "id_usuario",
+                        -1
+                );
+
                 // Inclui id_ficha para abrir os detalhes da receita.
                 String sql =
                         "SELECT f.id_ficha, f.nome_ficha, " +
                                 "COALESCE(a.concluido, 'N') AS concluido " +
                                 "FROM ficha f " +
-                                "LEFT JOIN agendamento a " +
+                                "INNER JOIN agendamento a " +
                                 "ON f.id_ficha = a.id_ficha " +
-                                "WHERE f.id_turma = ?";
+                                "INNER JOIN usuario_turma ut " +
+                                "ON f.id_turma = ut.id_turma " +
+                                "WHERE f.id_turma = ? " +
+                                "AND ut.id_usuario = ? " +
+                                "AND a.data = CURDATE() " +
+                                "AND a.situacao = 'A'";
 
                 try (PreparedStatement stmt =
                              con.prepareStatement(sql)) {
 
                     stmt.setInt(1, idTurma);
+                    stmt.setInt(2, idUsuarioLogado);
 
                     try (ResultSet rs = stmt.executeQuery()) {
 
