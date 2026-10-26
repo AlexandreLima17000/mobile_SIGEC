@@ -9,13 +9,11 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,11 +28,15 @@ import com.example.mobilesigec.model.TurmaModelo;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -42,769 +44,406 @@ public class HomePageFragment extends Fragment {
 
     private static final String TAG = "HomePageFragment";
 
-    private static final String NOME_PREFERENCIAS = "SessaoApp";
-    private static final String CHAVE_TURMA_SELECIONADA =
-            "id_turma_selecionada";
-
-    private TextView textSaudacao;
-    private TextView textDataHome;
+    private TextView textSaudacao, textDataHome;
     private Spinner spinnerTurmasHome;
 
     private ExecutorService executorService;
-
-    private final Handler mainHandler =
-            new Handler(Looper.getMainLooper());
-
-    private int idTurmaReceitasCarregada = Integer.MIN_VALUE;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public HomePageFragment() {
-        // Construtor obrigatório.
+        // Required empty public constructor
     }
 
     @Override
-    public View onCreateView(
-            LayoutInflater inflater,
-            ViewGroup container,
-            Bundle savedInstanceState
-    ) {
-        return inflater.inflate(
-                R.layout.fragment_home_page,
-                container,
-                false
-        );
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_home_page, container, false);
     }
 
     @Override
-    public void onViewCreated(
-            @NonNull View view,
-            @Nullable Bundle savedInstanceState
-    ) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
         executorService = Executors.newSingleThreadExecutor();
-        idTurmaReceitasCarregada = Integer.MIN_VALUE;
 
         textSaudacao = view.findViewById(R.id.textSaudacao);
         textDataHome = view.findViewById(R.id.textDataHome);
+        CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
+        CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
+        View cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
 
-        CardView cardInsumos =
-                view.findViewById(R.id.card_checklist_insumos);
-
-        CardView cardUtensilios =
-                view.findViewById(R.id.card_checklist_utensilios);
-
-        CardView cardReceitasHoje =
-                view.findViewById(R.id.card_receitas_hoje);
-
-        // Nome do usuário.
         Context context = getContext();
-
         if (context != null) {
-            SharedPreferences prefs = context.getSharedPreferences(
-                    NOME_PREFERENCIAS,
-                    Context.MODE_PRIVATE
-            );
+            SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+            String nomeCompleto = prefs.getString("nome_usuario", "Instrutor");
 
-            String nome = prefs.getString(
-                    "nome_usuario",
-                    "Instrutor"
-            );
+            // Aplica a formatação para pegar apenas os dois primeiros nomes
+            String nomeFormatado = formatarNomeCurto(nomeCompleto);
 
             if (textSaudacao != null) {
-                textSaudacao.setText(
-                        "Bom dia, " + formatarNomeCurto(nome) + "!"
-                );
+                textSaudacao.setText("Bom dia, " + nomeFormatado + "!");
             }
         }
 
-        // Data atual.
-        SimpleDateFormat sdf = new SimpleDateFormat(
-                "EEEE, dd 'DE' MMMM",
-                Locale.forLanguageTag("pt-BR")
-        );
-
-        String dataFormatada =
-                sdf.format(new Date()).toUpperCase(Locale.ROOT);
-
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE, dd 'DE' MMMM", Locale.forLanguageTag("pt-BR"));
+        String dataFormatada = sdf.format(new Date()).toUpperCase();
         if (textDataHome != null) {
             textDataHome.setText(dataFormatada);
         }
 
-        // Carrega as turmas disponíveis.
         carregarTurmasNoSpinner(view);
 
-        // Navegação para o checklist de insumos.
         if (cardInsumos != null) {
-            cardInsumos.setOnClickListener(v ->
-                    Navigation.findNavController(v)
-                            .navigate(R.id.action_home_to_insumos)
-            );
+            cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
         }
-
-        // Navegação para o checklist de utensílios.
         if (cardUtensilios != null) {
-            cardUtensilios.setOnClickListener(v ->
-                    Navigation.findNavController(v)
-                            .navigate(R.id.action_home_to_utensilios)
-            );
+            cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
         }
-
-        // Navegação para o calendário.
         if (cardReceitasHoje != null) {
-            cardReceitasHoje.setOnClickListener(v -> {
-
-                Context contextoAtual = getContext();
-
-                if (contextoAtual == null) {
-                    return;
-                }
-
-                SharedPreferences prefs =
-                        contextoAtual.getSharedPreferences(
-                                NOME_PREFERENCIAS,
-                                Context.MODE_PRIVATE
-                        );
-
-                int idTurma = prefs.getInt(
-                        CHAVE_TURMA_SELECIONADA,
-                        -1
-                );
-
-                if (idTurma == -1) {
-                    Toast.makeText(
-                            contextoAtual,
-                            "Selecione uma turma antes de abrir o calendário.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-
-                    return;
-                }
-
-                Navigation.findNavController(v)
-                        .navigate(R.id.nav_calendario);
-            });
+            cardReceitasHoje.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_calendario));
         }
     }
 
-    /**
-     * Carrega as turmas do banco e configura o Spinner.
-     */
     private void carregarTurmasNoSpinner(View view) {
+        spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
+        if (spinnerTurmasHome == null) return;
 
-        spinnerTurmasHome =
-                view.findViewById(R.id.spinnerTurmasHome);
+        Context context = getContext();
+        if (context == null) return;
 
-        if (spinnerTurmasHome == null
-                || getContext() == null
-                || executorService == null) {
-            return;
-        }
-
-        SharedPreferences prefs = requireContext()
-                .getSharedPreferences(
-                        NOME_PREFERENCIAS,
-                        Context.MODE_PRIVATE
-                );
-
-        int idUsuarioLogado = prefs.getInt(
-                "id_usuario",
-                -1
-        );
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
 
         executorService.execute(() -> {
-
             List<TurmaModelo> listaTurmas = new ArrayList<>();
-
-            String sql;
-
-            try (Connection con = ConexaoMySQL.conectar()) {
-
-                if (con == null) {
-                    Log.e(TAG, "Não foi possível conectar ao MySQL.");
-                    return;
-                }
-
-                if (idUsuarioLogado != -1) {
-
-                    sql =
-                            "SELECT t.id_turma, t.nome_turma, " +
-                                    "l.nome_laboratorio " +
-                                    "FROM turma t " +
-                                    "INNER JOIN usuario_turma ut " +
-                                    "ON t.id_turma = ut.id_turma " +
-                                    "INNER JOIN laboratorio l " +
-                                    "ON t.id_laboratorio = l.id_laboratorio " +
-                                    "WHERE ut.id_usuario = ? " +
-                                    "AND t.situacao = 'A' " +
-                                    "ORDER BY t.nome_turma";
-
-                } else {
-
-                    sql =
-                            "SELECT t.id_turma, t.nome_turma, " +
-                                    "l.nome_laboratorio " +
-                                    "FROM turma t " +
-                                    "INNER JOIN laboratorio l " +
-                                    "ON t.id_laboratorio = l.id_laboratorio " +
-                                    "WHERE t.situacao = 'A' " +
-                                    "ORDER BY t.nome_turma";
-                }
-
-                try (PreparedStatement stmt = con.prepareStatement(sql)) {
-
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql;
+                    PreparedStatement stmt;
                     if (idUsuarioLogado != -1) {
+                        sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                "FROM turma t " +
+                                "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                                "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
+                        stmt = con.prepareStatement(sql);
                         stmt.setInt(1, idUsuarioLogado);
+                    } else {
+                        sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                "FROM turma t " +
+                                "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
+                                "WHERE t.situacao = 'A'";
+                        stmt = con.prepareStatement(sql);
                     }
 
-                    try (ResultSet rs = stmt.executeQuery()) {
+                    ResultSet rs = stmt.executeQuery();
 
-                        while (rs.next()) {
-
-                            listaTurmas.add(
-                                    new TurmaModelo(
-                                            rs.getInt("id_turma"),
-                                            rs.getString("nome_turma"),
-                                            rs.getString("nome_laboratorio")
-                                    )
-                            );
-                        }
+                    while (rs.next()) {
+                        int idTurma = rs.getInt("id_turma");
+                        String nomeTurma = rs.getString("nome_turma");
+                        String nomeLab = rs.getString("nome_laboratorio");
+                        listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
                     }
+                    rs.close();
+                    stmt.close();
+                    con.close();
                 }
-
             } catch (Exception e) {
-                Log.e(TAG, "Erro ao carregar turmas.", e);
-                return;
+                Log.e(TAG, "Erro ao carregar turmas", e);
             }
 
             mainHandler.post(() -> {
+                if (!isAdded() || getContext() == null) return;
 
-                if (!isAdded()
-                        || getContext() == null
-                        || getView() == null
-                        || spinnerTurmasHome == null) {
-                    return;
-                }
-
-                Context contextoAtual = getContext();
-
-                if (contextoAtual == null) {
-                    return;
-                }
-
-                SharedPreferences preferencias =
-                        contextoAtual.getSharedPreferences(
-                                NOME_PREFERENCIAS,
-                                Context.MODE_PRIVATE
-                        );
-
-                if (listaTurmas.isEmpty()) {
-
-                    preferencias.edit()
-                            .remove(CHAVE_TURMA_SELECIONADA)
-                            .apply();
-
-                    spinnerTurmasHome.setAdapter(
-                            new ArrayAdapter<String>(
-                                    contextoAtual,
-                                    android.R.layout.simple_spinner_item,
-                                    new ArrayList<>()
-                            )
-                    );
-
-                    idTurmaReceitasCarregada = Integer.MIN_VALUE;
-
-                    LinearLayout container =
-                            getView().findViewById(
-                                    R.id.container_receitas
-                            );
-
-                    if (container != null) {
-                        container.removeAllViews();
-
-                        TextView mensagem =
-                                new TextView(contextoAtual);
-
-                        mensagem.setText(
-                                "Nenhuma turma ativa encontrada."
-                        );
-                        mensagem.setTextColor(
-                                android.graphics.Color.parseColor(
-                                        "#FFFFFF"
-                                )
-                        );
-                        mensagem.setTextSize(14);
-                        mensagem.setPadding(8, 12, 8, 12);
-
-                        container.addView(mensagem);
-                    }
-
-                    return;
-                }
-
-                ArrayAdapter<TurmaModelo> adapter =
-                        new ArrayAdapter<>(
-                                contextoAtual,
-                                android.R.layout.simple_spinner_item,
-                                listaTurmas
-                        );
-
-                adapter.setDropDownViewResource(
-                        android.R.layout.simple_spinner_dropdown_item
+                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
+                        getContext(),
+                        android.R.layout.simple_spinner_item,
+                        listaTurmas
                 );
-
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinnerTurmasHome.setAdapter(adapter);
 
-                // Recupera a turma anteriormente selecionada.
-                int idTurmaSalva = preferencias.getInt(
-                        CHAVE_TURMA_SELECIONADA,
-                        -1
-                );
-
-                int posicaoInicial = 0;
-
-                for (int i = 0; i < listaTurmas.size(); i++) {
-                    if (listaTurmas.get(i).getIdTurma()
-                            == idTurmaSalva) {
-                        posicaoInicial = i;
-                        break;
+                spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
+                        TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
+                        if (turmaSelecionada != null) {
+                            carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
+                        }
                     }
-                }
 
-                spinnerTurmasHome.setOnItemSelectedListener(
-                        new AdapterView.OnItemSelectedListener() {
-
-                            @Override
-                            public void onItemSelected(
-                                    AdapterView<?> parent,
-                                    View selectedView,
-                                    int position,
-                                    long id
-                            ) {
-                                if (position < 0
-                                        || position >= listaTurmas.size()) {
-                                    return;
-                                }
-
-                                TurmaModelo turmaSelecionada =
-                                        (TurmaModelo) parent.getItemAtPosition(
-                                                position
-                                        );
-
-                                salvarTurmaSelecionada(turmaSelecionada);
-                            }
-
-                            @Override
-                            public void onNothingSelected(
-                                    AdapterView<?> parent
-                            ) {
-                            }
-                        });
-
-                spinnerTurmasHome.setSelection(
-                        posicaoInicial,
-                        false
-                );
-
-                // Garante o carregamento da turma inicial.
-                salvarTurmaSelecionada(
-                        listaTurmas.get(posicaoInicial)
-                );
+                    @Override
+                    public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+                });
             });
         });
     }
 
-    /**
-     * Salva a turma escolhida para a HomePage e o calendário.
-     */
-    private void salvarTurmaSelecionada(
-            TurmaModelo turmaSelecionada
-    ) {
-        if (turmaSelecionada == null || getContext() == null) {
-            return;
-        }
-
-        Context contextoAtual = getContext();
-
-        if (contextoAtual == null) {
-            return;
-        }
-
-        int idTurma = turmaSelecionada.getIdTurma();
-
-        SharedPreferences prefs =
-                contextoAtual.getSharedPreferences(
-                        NOME_PREFERENCIAS,
-                        Context.MODE_PRIVATE
-                );
-
-        prefs.edit()
-                .putInt(CHAVE_TURMA_SELECIONADA, idTurma)
-                .apply();
-
-        if (idTurmaReceitasCarregada == idTurma) {
-            return;
-        }
-
-        idTurmaReceitasCarregada = idTurma;
-
-        carregarReceitasDaTurma(
-                idTurma,
-                turmaSelecionada.getNomeLaboratorio()
-        );
-    }
-
-    /**
-     * Busca as fichas associadas à turma selecionada.
-     */
-    private void carregarReceitasDaTurma(
-            int idTurma,
-            String nomeLaboratorio
-    ) {
+    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
         View view = getView();
+        if (view == null) return;
 
-        if (view == null || executorService == null) {
-            return;
-        }
-
-        LinearLayout containerReceitas =
-                view.findViewById(R.id.container_receitas);
-
-        if (containerReceitas == null) {
-            return;
-        }
+        LinearLayout containerReceitas = view.findViewById(R.id.container_receitas);
+        if (containerReceitas == null) return;
 
         containerReceitas.removeAllViews();
 
         executorService.execute(() -> {
+            Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
+            for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
+                mapDias.put(dayIndex, new ArrayList<>());
+            }
 
-            List<ItemReceitaData> receitasList =
-                    new ArrayList<>();
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.* " +
+                            "FROM ficha f " +
+                            "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
+                            "WHERE f.id_turma = ?";
 
-            try (Connection con = ConexaoMySQL.conectar()) {
-
-                if (con == null) {
-                    Log.e(TAG, "Não foi possível conectar ao MySQL.");
-                    return;
-                }
-
-                // Inclui id_ficha para abrir os detalhes da receita.
-                String sql =
-                        "SELECT f.id_ficha, f.nome_ficha, " +
-                                "COALESCE(a.concluido, 'N') AS concluido " +
-                                "FROM ficha f " +
-                                "LEFT JOIN agendamento a " +
-                                "ON f.id_ficha = a.id_ficha " +
-                                "WHERE f.id_turma = ?";
-
-                try (PreparedStatement stmt =
-                             con.prepareStatement(sql)) {
-
+                    PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idTurma);
+                    ResultSet rs = stmt.executeQuery();
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
 
-                    try (ResultSet rs = stmt.executeQuery()) {
+                    // Calcula o início (Segunda 00:00:00) e fim (Domingo 23:59:59) da semana ATUAL
+                    Calendar calNow = Calendar.getInstance();
+                    calNow.set(Calendar.HOUR_OF_DAY, 0);
+                    calNow.set(Calendar.MINUTE, 0);
+                    calNow.set(Calendar.SECOND, 0);
+                    calNow.set(Calendar.MILLISECOND, 0);
 
-                        while (rs.next()) {
+                    int dow = calNow.get(Calendar.DAY_OF_WEEK);
+                    int daysToMonday = (dow == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dow);
 
-                            int idFicha = rs.getInt("id_ficha");
+                    Calendar startOfWeek = (Calendar) calNow.clone();
+                    startOfWeek.add(Calendar.DAY_OF_MONTH, daysToMonday);
 
-                            String nomeFicha =
-                                    rs.getString("nome_ficha");
+                    Calendar endOfWeek = (Calendar) startOfWeek.clone();
+                    endOfWeek.add(Calendar.DAY_OF_MONTH, 6);
+                    endOfWeek.set(Calendar.HOUR_OF_DAY, 23);
+                    endOfWeek.set(Calendar.MINUTE, 59);
+                    endOfWeek.set(Calendar.SECOND, 59);
+                    endOfWeek.set(Calendar.MILLISECOND, 999);
 
-                            String concluido =
-                                    rs.getString("concluido");
+                    long startMillis = startOfWeek.getTimeInMillis();
+                    long endMillis = endOfWeek.getTimeInMillis();
 
-                            receitasList.add(
-                                    new ItemReceitaData(
-                                            idFicha,
-                                            nomeFicha,
-                                            concluido
-                                    )
-                            );
+                    while (rs.next()) {
+                        String nomeFicha = rs.getString("nome_ficha");
+                        String concluido = rs.getString("concluido");
+
+                        int dayOfWeek = -1;
+                        boolean temData = false;
+                        boolean pertenceASemanaAtual = false;
+
+                        for (int i = 1; i <= columnCount; i++) {
+                            String colName = metaData.getColumnLabel(i).toLowerCase();
+                            int colType = metaData.getColumnType(i);
+
+                            if (!colName.startsWith("id_") && (colType == java.sql.Types.DATE || colType == java.sql.Types.TIMESTAMP || colName.contains("data") || colName.contains("date"))) {
+                                try {
+                                    java.util.Date dateVal = rs.getTimestamp(i);
+                                    if (dateVal == null) {
+                                        dateVal = rs.getDate(i);
+                                    }
+                                    if (dateVal != null) {
+                                        temData = true;
+                                        long t = dateVal.getTime();
+                                        if (t >= startMillis && t <= endMillis) {
+                                            pertenceASemanaAtual = true;
+                                            Calendar itemCal = Calendar.getInstance();
+                                            itemCal.setTime(dateVal);
+                                            dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
+                                        }
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            } else if (colName.equals("dia_semana") || colName.equals("dia")) {
+                                try {
+                                    int val = rs.getInt(i);
+                                    if (val >= 1 && val <= 7) {
+                                        dayOfWeek = val;
+                                        temData = true;
+                                        pertenceASemanaAtual = true;
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+
+                        // Se a receita tem data no banco e NÃO pertence à semana atual, ignora (semanas passadas/futuras)
+                        if (temData && !pertenceASemanaAtual) {
+                            continue;
+                        }
+
+                        ItemReceitaData item = new ItemReceitaData(nomeFicha, concluido);
+                        List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
+                        if (targetList != null) {
+                            targetList.add(item);
+                        } else {
+                            // Se a receita não possui data específica de agendamento na tabela, aloca no dia de hoje (ou Segunda)
+                            int hojeDow = calNow.get(Calendar.DAY_OF_WEEK);
+                            List<ItemReceitaData> fallbackList = mapDias.get(hojeDow);
+                            if (fallbackList != null) {
+                                fallbackList.add(item);
+                            } else {
+                                List<ItemReceitaData> segList = mapDias.get(Calendar.MONDAY);
+                                if (segList != null) {
+                                    segList.add(item);
+                                }
+                            }
                         }
                     }
+                    rs.close();
+                    stmt.close();
+                    con.close();
                 }
-
             } catch (Exception e) {
-                Log.e(TAG, "Erro ao carregar receitas da turma.", e);
+                Log.e(TAG, "Erro ao carregar receitas da turma", e);
             }
 
             mainHandler.post(() -> {
-
-                if (!isAdded()
-                        || getContext() == null
-                        || getView() == null) {
-                    return;
-                }
-
-                SharedPreferences prefs =
-                        requireContext().getSharedPreferences(
-                                NOME_PREFERENCIAS,
-                                Context.MODE_PRIVATE
-                        );
-
-                // Evita mostrar resultados de uma seleção antiga.
-                int turmaAtual = prefs.getInt(
-                        CHAVE_TURMA_SELECIONADA,
-                        -1
-                );
-
-                if (turmaAtual != idTurma) {
-                    return;
-                }
-
+                if (!isAdded() || getContext() == null) return;
                 View currentView = getView();
+                if (currentView == null) return;
 
-                if (currentView == null) {
-                    return;
-                }
-
-                LinearLayout currentContainer =
-                        currentView.findViewById(
-                                R.id.container_receitas
-                        );
-
-                if (currentContainer == null) {
-                    return;
-                }
+                LinearLayout currentContainer = currentView.findViewById(R.id.container_receitas);
+                if (currentContainer == null) return;
 
                 currentContainer.removeAllViews();
+                LayoutInflater inflater = LayoutInflater.from(getContext());
 
-                LayoutInflater inflater =
-                        LayoutInflater.from(requireContext());
+                Calendar now = Calendar.getInstance();
+                int hojeDiaSemana = now.get(Calendar.DAY_OF_WEEK);
 
-                if (receitasList.isEmpty()) {
+                int[] diasSemana = new int[]{
+                        Calendar.MONDAY,
+                        Calendar.TUESDAY,
+                        Calendar.WEDNESDAY,
+                        Calendar.THURSDAY,
+                        Calendar.FRIDAY
+                };
 
-                    TextView mensagem =
-                            new TextView(requireContext());
+                String[] nomesDias = new String[]{
+                        "Segunda-feira",
+                        "Terça-feira",
+                        "Quarta-feira",
+                        "Quinta-feira",
+                        "Sexta-feira"
+                };
 
-                    mensagem.setText(
-                            "Nenhuma receita encontrada para esta turma."
-                    );
-                    mensagem.setTextColor(
-                            android.graphics.Color.parseColor("#FFFFFF")
-                    );
-                    mensagem.setTextSize(14);
-                    mensagem.setPadding(8, 12, 8, 12);
+                for (int i = 0; i < diasSemana.length; i++) {
+                    int diaNum = diasSemana[i];
+                    String nomeDiaBase = nomesDias[i];
+                    boolean ehHoje = (diaNum == hojeDiaSemana);
 
-                    currentContainer.addView(mensagem);
-                    return;
-                }
+                    String tituloDia = ehHoje ? nomeDiaBase + " (Hoje)" : nomeDiaBase;
 
-                for (ItemReceitaData itemData : receitasList) {
+                    View cardDia = inflater.inflate(R.layout.item_dia_semana, currentContainer, false);
 
-                    View itemReceita = inflater.inflate(
-                            R.layout.item_receita,
-                            currentContainer,
-                            false
-                    );
+                    TextView tvNomeDia = cardDia.findViewById(R.id.tv_nome_dia);
+                    ImageView ivChevron = cardDia.findViewById(R.id.iv_chevron);
+                    LinearLayout containerReceitasDia = cardDia.findViewById(R.id.container_receitas_dia);
+                    TextView tvSemReceitas = cardDia.findViewById(R.id.tv_sem_receitas);
+                    View headerDiaSemana = cardDia.findViewById(R.id.header_dia_semana);
 
-                    TextView tvNome =
-                            itemReceita.findViewById(
-                                    R.id.tv_nome_receita
-                            );
-
-                    TextView tvDetalhes =
-                            itemReceita.findViewById(
-                                    R.id.tv_detalhes_receita
-                            );
-
-                    TextView tvStatusText =
-                            itemReceita.findViewById(
-                                    R.id.tv_status_text
-                            );
-
-                    ImageView ivStatusIcon =
-                            itemReceita.findViewById(
-                                    R.id.iv_status_icon
-                            );
-
-                    if (tvNome != null) {
-                        tvNome.setText(itemData.nomeFicha);
+                    if (tvNomeDia != null) {
+                        tvNomeDia.setText(tituloDia);
                     }
 
-                    if (tvDetalhes != null) {
-                        tvDetalhes.setText(nomeLaboratorio);
-                    }
+                    List<ItemReceitaData> receitasDoDia = mapDias.get(diaNum);
 
-                    if ("S".equals(itemData.concluido)) {
-
-                        if (tvStatusText != null) {
-                            tvStatusText.setText("CONCLUÍDO");
-                            tvStatusText.setTextColor(
-                                    android.graphics.Color.parseColor(
-                                            "#15803D"
-                                    )
-                            );
+                    if (receitasDoDia == null || receitasDoDia.isEmpty()) {
+                        if (tvSemReceitas != null) {
+                            tvSemReceitas.setVisibility(View.VISIBLE);
                         }
-
-                        if (ivStatusIcon != null) {
-                            ivStatusIcon.setImageResource(
-                                    R.drawable.ic_check_circle
-                            );
-                            ivStatusIcon.setColorFilter(
-                                    android.graphics.Color.parseColor(
-                                            "#15803D"
-                                    )
-                            );
-                        }
-
                     } else {
-
-                        if (tvStatusText != null) {
-                            tvStatusText.setText("PENDENTE");
-                            tvStatusText.setTextColor(
-                                    android.graphics.Color.parseColor(
-                                            "#42474F"
-                                    )
-                            );
+                        if (tvSemReceitas != null) {
+                            tvSemReceitas.setVisibility(View.GONE);
                         }
+                        for (ItemReceitaData itemData : receitasDoDia) {
+                            View itemReceitaView = inflater.inflate(R.layout.item_receita_semana, containerReceitasDia, false);
+                            TextView tvNome = itemReceitaView.findViewById(R.id.tv_nome_receita);
+                            TextView tvDetalhes = itemReceitaView.findViewById(R.id.tv_detalhes_receita);
 
-                        if (ivStatusIcon != null) {
-                            ivStatusIcon.setImageResource(
-                                    R.drawable.ic_notifications
-                            );
-                            ivStatusIcon.setColorFilter(
-                                    android.graphics.Color.parseColor(
-                                            "#42474F"
-                                    )
-                            );
+                            if (tvNome != null) {
+                                tvNome.setText(itemData.nomeFicha);
+                            }
+                            if (tvDetalhes != null) {
+                                tvDetalhes.setText(nomeLaboratorio);
+                            }
+                            containerReceitasDia.addView(itemReceitaView);
                         }
                     }
 
-                    // Abre os detalhes da receita selecionada.
-                    itemReceita.setOnClickListener(v -> {
+                    // Configuração inicial: Se for hoje, inicia aberto; caso contrário, fechado
+                    if (ehHoje) {
+                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
+                        if (ivChevron != null) ivChevron.setRotation(180f);
+                    } else {
+                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.GONE);
+                        if (ivChevron != null) ivChevron.setRotation(0f);
+                    }
 
-                        Bundle bundle = new Bundle();
+                    // Alterna visibilidade ao clicar no cabeçalho
+                    if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
+                        headerDiaSemana.setOnClickListener(v -> {
+                            boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
+                            if (estaVisivel) {
+                                containerReceitasDia.setVisibility(View.GONE);
+                                ivChevron.animate().rotation(0f).setDuration(200).start();
+                            } else {
+                                containerReceitasDia.setVisibility(View.VISIBLE);
+                                ivChevron.animate().rotation(180f).setDuration(200).start();
+                            }
+                        });
+                    }
 
-                        bundle.putInt(
-                                "id_ficha",
-                                itemData.idFicha
-                        );
-
-                        bundle.putString(
-                                "nome_ficha",
-                                itemData.nomeFicha
-                        );
-
-                        Navigation.findNavController(v)
-                                .navigate(
-                                        R.id.nav_detalhes_receita,
-                                        bundle
-                                );
-                    });
-
-                    currentContainer.addView(itemReceita);
+                    currentContainer.addView(cardDia);
                 }
             });
         });
     }
 
-    /**
-     * Modelo dos dados utilizados nos cards de receita.
-     */
     private static class ItemReceitaData {
-
-        final int idFicha;
         final String nomeFicha;
         final String concluido;
 
-        ItemReceitaData(
-                int idFicha,
-                String nomeFicha,
-                String concluido
-        ) {
-            this.idFicha = idFicha;
+        ItemReceitaData(String nomeFicha, String concluido) {
             this.nomeFicha = nomeFicha;
             this.concluido = concluido;
         }
     }
 
-    /**
-     * Retorna os dois primeiros nomes do usuário.
-     */
+    // ==================================================
+    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
+    // ==================================================
     private String formatarNomeCurto(String nomeCompleto) {
-
-        if (nomeCompleto == null
-                || nomeCompleto.trim().isEmpty()) {
+        if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
             return "";
         }
 
+        // Divide o nome completo em uma lista de palavras usando os espaços
         String[] partes = nomeCompleto.trim().split("\\s+");
 
+        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
         if (partes.length >= 2) {
             return partes[0] + " " + partes[1];
-        }
-
-        return partes[0];
-    }
-
-    /**
-     * Sincroniza o Spinner ao retornar do calendário.
-     */
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        sincronizarSpinnerComTurmaSelecionada();
-    }
-
-    private void sincronizarSpinnerComTurmaSelecionada() {
-
-        if (!isAdded()
-                || getContext() == null
-                || spinnerTurmasHome == null
-                || spinnerTurmasHome.getAdapter() == null) {
-            return;
-        }
-
-        SharedPreferences prefs = requireContext()
-                .getSharedPreferences(
-                        NOME_PREFERENCIAS,
-                        Context.MODE_PRIVATE
-                );
-
-        int idTurmaSalva = prefs.getInt(
-                CHAVE_TURMA_SELECIONADA,
-                -1
-        );
-
-        for (int i = 0;
-             i < spinnerTurmasHome.getAdapter().getCount();
-             i++) {
-
-            Object item =
-                    spinnerTurmasHome.getAdapter().getItem(i);
-
-            if (item instanceof TurmaModelo) {
-
-                TurmaModelo turma = (TurmaModelo) item;
-
-                if (turma.getIdTurma() == idTurmaSalva) {
-
-                    if (spinnerTurmasHome.getSelectedItemPosition()
-                            != i) {
-                        spinnerTurmasHome.setSelection(i);
-                    }
-
-                    return;
-                }
-            }
+        } else {
+            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
+            return partes[0];
         }
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-
-        if (executorService != null
-                && !executorService.isShutdown()) {
+        if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
         }
-
-        executorService = null;
-
-        textSaudacao = null;
-        textDataHome = null;
-        spinnerTurmasHome = null;
     }
 }
