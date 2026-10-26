@@ -501,12 +501,14 @@ public class HomePageFragment extends Fragment {
                 String sql =
                         "SELECT f.id_ficha, f.nome_ficha, " +
                                 "COALESCE(a.concluido, 'N') AS concluido " +
-                                "FROM ficha f " +
-                                "INNER JOIN agendamento a " +
+                                "FROM agendamento a " +
+                                "INNER JOIN ficha f " +
                                 "ON f.id_ficha = a.id_ficha " +
+                                "INNER JOIN turma t " +
+                                "ON t.id_turma = a.id_turma " +
                                 "INNER JOIN usuario_turma ut " +
-                                "ON f.id_turma = ut.id_turma " +
-                                "WHERE f.id_turma = ? " +
+                                "ON t.id_turma = ut.id_turma " +
+                                "WHERE a.id_turma = ? " +
                                 "AND ut.id_usuario = ? " +
                                 "AND a.data = CURDATE() " +
                                 "AND a.situacao = 'A'";

@@ -486,13 +486,13 @@ public class CalendarioFragment extends Fragment {
                                     "INNER JOIN ficha f " +
                                     "ON f.id_ficha = a.id_ficha " +
                                     "LEFT JOIN turma t " +
-                                    "ON t.id_turma = f.id_turma " +
+                                    "ON t.id_turma = a.id_turma " +
                                     "WHERE MONTH(a.data) = ? " +
                                     "AND YEAR(a.data) = ? " +
                                     "AND a.situacao = 'A' " +
                                     "AND a.concluido = 'N' " +
                                     "AND f.situacao = 'A' " +
-                                    "AND f.id_turma = ? " +
+                                    "AND a.id_turma = ? " +
                                     "ORDER BY a.data, f.nome_ficha";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {

@@ -91,10 +91,9 @@ public class ListaReceitasFragment extends Fragment {
             try {
                 conexao = ConexaoMySQL.conectar();
 
-                // SQL corrigido usando os campos reais da tabela 'ficha' e 'turma'
-                String sql = "SELECT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                // SQL corrigido: fichas são globais, não possuem id_turma na tabela ficha
+                String sql = "SELECT f.id_ficha, f.nome_ficha, f.preparo " +
                         "FROM ficha f " +
-                        "LEFT JOIN turma t ON f.id_turma = t.id_turma " +
                         "WHERE f.situacao = 'A' " +
                         "ORDER BY f.nome_ficha ASC";
 
@@ -105,12 +104,7 @@ public class ListaReceitasFragment extends Fragment {
                     int idFicha = rs.getInt("id_ficha");
                     String nome = rs.getString("nome_ficha");
                     String preparo = rs.getString("preparo");
-                    String turma = rs.getString("nome_turma");
-
-                    // Se a receita não estiver associada a uma turma específica, exibe um rótulo padrão
-                    if (turma == null || turma.trim().isEmpty()) {
-                        turma = "RECEITA GERAL";
-                    }
+                    String turma = "RECEITA GERAL";
 
                     resultado.add(new Receita(idFicha, nome, preparo, turma));
                 }

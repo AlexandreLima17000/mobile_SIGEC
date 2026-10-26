@@ -109,12 +109,12 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
                     String sql = "SELECT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
-                            "FROM ficha f " +
-                            "INNER JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                            "INNER JOIN turma t ON f.id_turma = t.id_turma " +
+                            "FROM agendamento a " +
+                            "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                            "INNER JOIN turma t ON t.id_turma = a.id_turma " +
                             "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                             "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND f.id_turma = ? AND t.situacao = 'A' AND a.data = CURDATE() AND a.situacao = 'A'";
+                            "WHERE ut.id_usuario = ? AND a.id_turma = ? AND t.situacao = 'A' AND a.data = CURDATE() AND a.situacao = 'A'";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idUsuarioLogado);

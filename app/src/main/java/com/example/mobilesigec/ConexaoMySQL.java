@@ -38,8 +38,18 @@ public class ConexaoMySQL {
                 Log.e("ConexaoMySQL", ultimoErro, e);
                 return null;
             }
-            Connection con = DriverManager.getConnection(URL, USUARIO, SENHA);
-            Log.d("ConexaoMySQL", "Conectado com sucesso ao MySQL: " + URL);
+            String urlTratada = URL != null ? URL : DEFAULT_URL;
+            if (urlTratada.contains("sslMode=REQUIRED")) {
+                urlTratada = urlTratada.replace("sslMode=REQUIRED", "useSSL=false&allowPublicKeyRetrieval=true");
+            } else if (urlTratada.contains("sslMode=DISABLED")) {
+                urlTratada = urlTratada.replace("sslMode=DISABLED", "useSSL=false");
+            }
+            if (!urlTratada.contains("useSSL=")) {
+                urlTratada += (urlTratada.contains("?") ? "&" : "?") + "useSSL=false&allowPublicKeyRetrieval=true";
+            }
+
+            Connection con = DriverManager.getConnection(urlTratada, USUARIO, SENHA);
+            Log.d("ConexaoMySQL", "Conectado com sucesso ao MySQL: " + urlTratada);
             return con;
         } catch (SQLException e) {
             ultimoErro = e.getMessage() != null ? e.getMessage() : e.toString();
