@@ -28,11 +28,15 @@ import com.example.mobilesigec.model.TurmaModelo;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -66,7 +70,7 @@ public class HomePageFragment extends Fragment {
         textDataHome = view.findViewById(R.id.textDataHome);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
-        CardView cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
+        View cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
 
         Context context = getContext();
         if (context != null) {
@@ -186,11 +190,15 @@ public class HomePageFragment extends Fragment {
         containerReceitas.removeAllViews();
 
         executorService.execute(() -> {
-            List<ItemReceitaData> receitasList = new ArrayList<>();
+            Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
+            for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
+                mapDias.put(dayIndex, new ArrayList<>());
+            }
+
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
+                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.* " +
                             "FROM ficha f " +
                             "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
                             "WHERE f.id_turma = ?";
@@ -198,11 +206,97 @@ public class HomePageFragment extends Fragment {
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idTurma);
                     ResultSet rs = stmt.executeQuery();
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
+
+                    // Calcula o início (Segunda 00:00:00) e fim (Domingo 23:59:59) da semana ATUAL
+                    Calendar calNow = Calendar.getInstance();
+                    calNow.set(Calendar.HOUR_OF_DAY, 0);
+                    calNow.set(Calendar.MINUTE, 0);
+                    calNow.set(Calendar.SECOND, 0);
+                    calNow.set(Calendar.MILLISECOND, 0);
+
+                    int dow = calNow.get(Calendar.DAY_OF_WEEK);
+                    int daysToMonday = (dow == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dow);
+
+                    Calendar startOfWeek = (Calendar) calNow.clone();
+                    startOfWeek.add(Calendar.DAY_OF_MONTH, daysToMonday);
+
+                    Calendar endOfWeek = (Calendar) startOfWeek.clone();
+                    endOfWeek.add(Calendar.DAY_OF_MONTH, 6);
+                    endOfWeek.set(Calendar.HOUR_OF_DAY, 23);
+                    endOfWeek.set(Calendar.MINUTE, 59);
+                    endOfWeek.set(Calendar.SECOND, 59);
+                    endOfWeek.set(Calendar.MILLISECOND, 999);
+
+                    long startMillis = startOfWeek.getTimeInMillis();
+                    long endMillis = endOfWeek.getTimeInMillis();
 
                     while (rs.next()) {
                         String nomeFicha = rs.getString("nome_ficha");
                         String concluido = rs.getString("concluido");
-                        receitasList.add(new ItemReceitaData(nomeFicha, concluido));
+
+                        int dayOfWeek = -1;
+                        boolean temData = false;
+                        boolean pertenceASemanaAtual = false;
+
+                        for (int i = 1; i <= columnCount; i++) {
+                            String colName = metaData.getColumnLabel(i).toLowerCase();
+                            int colType = metaData.getColumnType(i);
+
+                            if (!colName.startsWith("id_") && (colType == java.sql.Types.DATE || colType == java.sql.Types.TIMESTAMP || colName.contains("data") || colName.contains("date"))) {
+                                try {
+                                    java.util.Date dateVal = rs.getTimestamp(i);
+                                    if (dateVal == null) {
+                                        dateVal = rs.getDate(i);
+                                    }
+                                    if (dateVal != null) {
+                                        temData = true;
+                                        long t = dateVal.getTime();
+                                        if (t >= startMillis && t <= endMillis) {
+                                            pertenceASemanaAtual = true;
+                                            Calendar itemCal = Calendar.getInstance();
+                                            itemCal.setTime(dateVal);
+                                            dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
+                                        }
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            } else if (colName.equals("dia_semana") || colName.equals("dia")) {
+                                try {
+                                    int val = rs.getInt(i);
+                                    if (val >= 1 && val <= 7) {
+                                        dayOfWeek = val;
+                                        temData = true;
+                                        pertenceASemanaAtual = true;
+                                        break;
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+
+                        // Se a receita tem data no banco e NÃO pertence à semana atual, ignora (semanas passadas/futuras)
+                        if (temData && !pertenceASemanaAtual) {
+                            continue;
+                        }
+
+                        ItemReceitaData item = new ItemReceitaData(nomeFicha, concluido);
+                        List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
+                        if (targetList != null) {
+                            targetList.add(item);
+                        } else {
+                            // Se a receita não possui data específica de agendamento na tabela, aloca no dia de hoje (ou Segunda)
+                            int hojeDow = calNow.get(Calendar.DAY_OF_WEEK);
+                            List<ItemReceitaData> fallbackList = mapDias.get(hojeDow);
+                            if (fallbackList != null) {
+                                fallbackList.add(item);
+                            } else {
+                                List<ItemReceitaData> segList = mapDias.get(Calendar.MONDAY);
+                                if (segList != null) {
+                                    segList.add(item);
+                                }
+                            }
+                        }
                     }
                     rs.close();
                     stmt.close();
@@ -223,38 +317,93 @@ public class HomePageFragment extends Fragment {
                 currentContainer.removeAllViews();
                 LayoutInflater inflater = LayoutInflater.from(getContext());
 
-                for (ItemReceitaData itemData : receitasList) {
-                    View itemReceita = inflater.inflate(R.layout.item_receita, currentContainer, false);
+                Calendar now = Calendar.getInstance();
+                int hojeDiaSemana = now.get(Calendar.DAY_OF_WEEK);
 
-                    TextView tvNome = itemReceita.findViewById(R.id.tv_nome_receita);
-                    TextView tvDetalhes = itemReceita.findViewById(R.id.tv_detalhes_receita);
-                    TextView tvStatusText = itemReceita.findViewById(R.id.tv_status_text);
-                    ImageView ivStatusIcon = itemReceita.findViewById(R.id.iv_status_icon);
+                int[] diasSemana = new int[]{
+                        Calendar.MONDAY,
+                        Calendar.TUESDAY,
+                        Calendar.WEDNESDAY,
+                        Calendar.THURSDAY,
+                        Calendar.FRIDAY
+                };
 
-                    if (tvNome != null) tvNome.setText(itemData.nomeFicha);
-                    if (tvDetalhes != null) tvDetalhes.setText(nomeLaboratorio);
+                String[] nomesDias = new String[]{
+                        "Segunda-feira",
+                        "Terça-feira",
+                        "Quarta-feira",
+                        "Quinta-feira",
+                        "Sexta-feira"
+                };
 
-                    if ("S".equals(itemData.concluido)) {
-                        if (tvStatusText != null) {
-                            tvStatusText.setText("CONCLUÍDO");
-                            tvStatusText.setTextColor(android.graphics.Color.parseColor("#15803d"));
-                        }
-                        if (ivStatusIcon != null) {
-                            ivStatusIcon.setImageResource(R.drawable.ic_check_circle);
-                            ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#15803d"));
+                for (int i = 0; i < diasSemana.length; i++) {
+                    int diaNum = diasSemana[i];
+                    String nomeDiaBase = nomesDias[i];
+                    boolean ehHoje = (diaNum == hojeDiaSemana);
+
+                    String tituloDia = ehHoje ? nomeDiaBase + " (Hoje)" : nomeDiaBase;
+
+                    View cardDia = inflater.inflate(R.layout.item_dia_semana, currentContainer, false);
+
+                    TextView tvNomeDia = cardDia.findViewById(R.id.tv_nome_dia);
+                    ImageView ivChevron = cardDia.findViewById(R.id.iv_chevron);
+                    LinearLayout containerReceitasDia = cardDia.findViewById(R.id.container_receitas_dia);
+                    TextView tvSemReceitas = cardDia.findViewById(R.id.tv_sem_receitas);
+                    View headerDiaSemana = cardDia.findViewById(R.id.header_dia_semana);
+
+                    if (tvNomeDia != null) {
+                        tvNomeDia.setText(tituloDia);
+                    }
+
+                    List<ItemReceitaData> receitasDoDia = mapDias.get(diaNum);
+
+                    if (receitasDoDia == null || receitasDoDia.isEmpty()) {
+                        if (tvSemReceitas != null) {
+                            tvSemReceitas.setVisibility(View.VISIBLE);
                         }
                     } else {
-                        if (tvStatusText != null) {
-                            tvStatusText.setText("PENDENTE");
-                            tvStatusText.setTextColor(android.graphics.Color.parseColor("#42474f"));
+                        if (tvSemReceitas != null) {
+                            tvSemReceitas.setVisibility(View.GONE);
                         }
-                        if (ivStatusIcon != null) {
-                            ivStatusIcon.setImageResource(R.drawable.ic_notifications);
-                            ivStatusIcon.setColorFilter(android.graphics.Color.parseColor("#42474f"));
+                        for (ItemReceitaData itemData : receitasDoDia) {
+                            View itemReceitaView = inflater.inflate(R.layout.item_receita_semana, containerReceitasDia, false);
+                            TextView tvNome = itemReceitaView.findViewById(R.id.tv_nome_receita);
+                            TextView tvDetalhes = itemReceitaView.findViewById(R.id.tv_detalhes_receita);
+
+                            if (tvNome != null) {
+                                tvNome.setText(itemData.nomeFicha);
+                            }
+                            if (tvDetalhes != null) {
+                                tvDetalhes.setText(nomeLaboratorio);
+                            }
+                            containerReceitasDia.addView(itemReceitaView);
                         }
                     }
 
-                    currentContainer.addView(itemReceita);
+                    // Configuração inicial: Se for hoje, inicia aberto; caso contrário, fechado
+                    if (ehHoje) {
+                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
+                        if (ivChevron != null) ivChevron.setRotation(180f);
+                    } else {
+                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.GONE);
+                        if (ivChevron != null) ivChevron.setRotation(0f);
+                    }
+
+                    // Alterna visibilidade ao clicar no cabeçalho
+                    if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
+                        headerDiaSemana.setOnClickListener(v -> {
+                            boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
+                            if (estaVisivel) {
+                                containerReceitasDia.setVisibility(View.GONE);
+                                ivChevron.animate().rotation(0f).setDuration(200).start();
+                            } else {
+                                containerReceitasDia.setVisibility(View.VISIBLE);
+                                ivChevron.animate().rotation(180f).setDuration(200).start();
+                            }
+                        });
+                    }
+
+                    currentContainer.addView(cardDia);
                 }
             });
         });
