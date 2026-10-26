@@ -1,4 +1,0 @@
-- [x] Fix navigation in `LoginActivity.java`
-    - [x] Change `startActivity` target to `MainActivity`
-    - [x] Remove unused import of `HomePageFragment`
-- [x] Verify changes

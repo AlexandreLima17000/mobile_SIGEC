@@ -157,51 +157,75 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- SEÇÃO CENTRAL: Receitas da Semana -->
-            <LinearLayout
+            <!-- CARD CENTRAL: Receitas de Hoje -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_receitas_hoje"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="18dp"
-                android:orientation="vertical">
+                app:cardCornerRadius="12dp"
+                app:cardElevation="12dp"
+                android:outlineSpotShadowColor="#000000"
+                android:outlineAmbientShadowColor="#000000"
+                app:cardBackgroundColor="@color/primary">
 
-                <!-- Cabeçalho da Seção: Receitas da Semana -->
-                <LinearLayout
-                    android:id="@+id/card_receitas_hoje"
+                <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?attr/selectableItemBackground"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:layout_height="wrap_content">
 
                     <ImageView
-                        android:layout_width="26dp"
-                        android:layout_height="26dp"
-                        android:contentDescription="@string/app_name"
-                        android:src="@drawable/ic_calendar"
-                        app:tint="#F7941D" />
+                        android:layout_width="45dp"
+                        android:layout_height="45dp"
+                        android:layout_gravity="top|end"
+                        android:src="@drawable/bg_card_corner_accent"
+                        app:tint="#40000000"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:text="Receitas da Semana"
-                        android:textColor="#002747"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:orientation="vertical"
+                        android:paddingBottom="10dp">
 
-                </LinearLayout>
+                        <!-- Topo do Card -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@color/primary"
+                            android:padding="16dp"
+                            android:gravity="center_vertical">
 
-                <!-- Container dos Dias da Semana -->
-                <LinearLayout
-                    android:id="@+id/container_receitas"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:src="@drawable/ic_calendar"
+                                app:tint="@color/secondary_container" />
 
-            </LinearLayout>
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="14dp"
+                                android:text="Receitas de Hoje"
+                                android:textColor="#FFFFFF"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Container vazio mantido para injetarmos as receitas na próxima etapa -->
+                        <LinearLayout
+                            android:id="@+id/container_receitas"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="8dp" />
+
+                    </LinearLayout>
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
 
             <!-- Botões de Checklist (Grid Inferior) -->
             <LinearLayout
