@@ -94,7 +94,7 @@ public class HomePageFragment extends Fragment {
         carregarTurmasNoSpinner(view);
 
         if (cardInsumos != null) {
-            cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
+            cardInsumos.setOnClickListener(v ->  Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
         }
         if (cardUtensilios != null) {
             cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
