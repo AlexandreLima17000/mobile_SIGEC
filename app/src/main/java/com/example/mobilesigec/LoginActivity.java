@@ -73,6 +73,12 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
+                if (!email.toLowerCase().endsWith("df.senac.br")) {
+                    Toast.makeText(LoginActivity.this, "O e-mail deve pertencer ao domínio df.senac.br", Toast.LENGTH_SHORT).show();
+                    emailLogin.setError("Domínio inválido. Use um e-mail @df.senac.br");
+                    return;
+                }
+
                 // Ativa o estado de Carregamento (Cor Laranja e Texto correspondente)
                 btnEntrar.setEnabled(false);
                 btnEntrar.setText("Carregando...");
@@ -101,7 +107,8 @@ public class LoginActivity extends AppCompatActivity {
                                     int idUsuario = rs.getInt("id_usuario");
                                     String nomeUsuario = rs.getString("nome_usuario");
 
-                                    // 1. Validação defensiva do formato do hash
+                                    // 1. Validação do hash BCrypt ou texto simples
+                                    boolean senhaValida = false;
                                     if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
                                         try {
                                             String hashTratado = hashBanco.trim();
@@ -111,23 +118,34 @@ public class LoginActivity extends AppCompatActivity {
                                                 hashTratado = "$2a$" + hashTratado.substring(4);
                                             }
 
-                                            // 2. Compara a senha digitada com o hash
-                                            if (BCrypt.checkpw(senha, hashTratado)) {
-                                                loginEfetuado = true;
-
-                                                getSharedPreferences("SessaoApp", MODE_PRIVATE)
-                                                        .edit()
-                                                        .putBoolean("logado", true)
-                                                        .putInt("id_usuario", idUsuario)
-                                                        .putString("nome_usuario", nomeUsuario)
-                                                        .apply();
-                                            }
+                                            senhaValida = BCrypt.checkpw(senha, hashTratado);
                                         } catch (IllegalArgumentException ex) {
                                             android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
-                                            loginEfetuado = false;
                                         }
-                                    } else {
-                                        android.util.Log.w("AuthError", "Senha não está em formato BCrypt: " + hashBanco);
+                                    }
+                                    
+                                    if (!senhaValida && hashBanco != null) {
+                                        senhaValida = senha.equals(hashBanco.trim());
+                                    }
+
+                                    if (senhaValida) {
+                                        loginEfetuado = true;
+
+                                        if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
+                                            nomeUsuario = email.contains("@") ? email.split("@")[0] : email;
+                                        }
+
+                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                                .edit()
+                                                .clear()
+                                                .putBoolean("logado", true)
+                                                .putInt("id_usuario", idUsuario)
+                                                .putInt("ID_USUARIO", idUsuario)
+                                                .putString("nome_usuario", nomeUsuario)
+                                                .putString("NOME_USUARIO", nomeUsuario)
+                                                .putString("EMAIL_USUARIO", email)
+                                                .putString("email", email)
+                                                .apply();
                                     }
                                 }
                                 if (loginEfetuado) {

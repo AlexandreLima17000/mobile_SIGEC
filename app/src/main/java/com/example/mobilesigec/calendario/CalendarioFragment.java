@@ -42,6 +42,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+
+import com.example.mobilesigec.model.TurmaModelo;
 
 public class CalendarioFragment extends Fragment {
 
@@ -58,13 +63,12 @@ public class CalendarioFragment extends Fragment {
     private TextView textNoFichas;
     private ImageView btnPrevMonth;
     private ImageView btnNextMonth;
-    private EditText etPesquisa;
-
-    private String termoFiltro = "";
-    private LayoutInflater currentInflater;
-
+    private Spinner spinnerTurmasCalendario;
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private ExecutorService executorService =
+            Executors.newSingleThreadExecutor();
+
+    private int ultimaTurmaCarregada = Integer.MIN_VALUE;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private View lastSelectedDayView = null;
@@ -85,7 +89,6 @@ public class CalendarioFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendario, container, false);
-        this.currentInflater = inflater;
 
         calendarGrid = view.findViewById(R.id.calendar_grid);
         textMonthYear = view.findViewById(R.id.text_month_year);
@@ -95,24 +98,7 @@ public class CalendarioFragment extends Fragment {
         textNoFichas = view.findViewById(R.id.text_no_fichas);
         btnPrevMonth = view.findViewById(R.id.btn_prev_month);
         btnNextMonth = view.findViewById(R.id.btn_next_month);
-
-        etPesquisa = view.findViewById(R.id.et_pesquisa_calendario);
-
-        if (etPesquisa != null) {
-            etPesquisa.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    termoFiltro = (s != null) ? s.toString().trim().toLowerCase() : "";
-                    aplicarFiltroEAtualizarUI();
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {}
-            });
-        }
+        spinnerTurmasCalendario = view.findViewById(R.id.spinnerTurmasCalendario);
 
         if (getActivity() != null) {
             SharedPreferences prefs = getActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -138,50 +124,284 @@ public class CalendarioFragment extends Fragment {
             });
         }
 
+        carregarTurmasNoSpinner();
         carregarCalendarioEEventos(inflater);
 
         return view;
     }
 
-    private List<AulaAgenda> filtrarAulas(List<AulaAgenda> aulas) {
-        if (aulas == null || aulas.isEmpty()) return new ArrayList<>();
-        if (termoFiltro.isEmpty()) return aulas;
+    private void carregarTurmasNoSpinner() {
 
-        List<AulaAgenda> filtradas = new ArrayList<>();
-        for (AulaAgenda aula : aulas) {
-            boolean matchTitulo = (aula.getTitulo() != null && aula.getTitulo().toLowerCase().contains(termoFiltro));
-            boolean matchDesc = (aula.getDescricao() != null && aula.getDescricao().toLowerCase().contains(termoFiltro));
-            boolean matchTurma = (aula.getTurma() != null && aula.getTurma().toLowerCase().contains(termoFiltro));
-
-            if (matchTitulo || matchDesc || matchTurma) {
-                filtradas.add(aula);
-            }
+        if (spinnerTurmasCalendario == null || getContext() == null) {
+            return;
         }
-        return filtradas;
-    }
 
-    private void aplicarFiltroEAtualizarUI() {
-        if (currentInflater == null) return;
+        Context context = getContext();
 
-        if (!termoFiltro.isEmpty()) {
-            boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
-            if (!diaAtualTemMatch) {
-                for (Map.Entry<Integer, List<AulaAgenda>> entry : eventosDoMes.entrySet()) {
-                    if (!filtrarAulas(entry.getValue()).isEmpty()) {
-                        selectedDay = entry.getKey();
+        if (context == null) {
+            return;
+        }
+
+        SharedPreferences prefs = context.getSharedPreferences(
+                "SessaoApp",
+                Context.MODE_PRIVATE
+        );
+
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+
+        garantirExecutorAtivo();
+
+        executorService.execute(() -> {
+
+            List<TurmaModelo> listaTurmas = new ArrayList<>();
+
+            String sql;
+
+            try (Connection con = ConexaoMySQL.conectar()) {
+
+                if (con == null) {
+                    Log.e(TAG, "Não foi possível conectar ao MySQL.");
+                    return;
+                }
+
+                if (idUsuarioLogado != -1) {
+
+                    sql =
+                            "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                    "FROM turma t " +
+                                    "INNER JOIN usuario_turma ut " +
+                                    "ON t.id_turma = ut.id_turma " +
+                                    "INNER JOIN laboratorio l " +
+                                    "ON t.id_laboratorio = l.id_laboratorio " +
+                                    "WHERE ut.id_usuario = ? " +
+                                    "AND t.situacao = 'A' " +
+                                    "ORDER BY t.nome_turma";
+
+                } else {
+
+                    sql =
+                            "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
+                                    "FROM turma t " +
+                                    "INNER JOIN laboratorio l " +
+                                    "ON t.id_laboratorio = l.id_laboratorio " +
+                                    "WHERE t.situacao = 'A' " +
+                                    "ORDER BY t.nome_turma";
+                }
+
+                try (PreparedStatement stmt = con.prepareStatement(sql)) {
+
+                    if (idUsuarioLogado != -1) {
+                        stmt.setInt(1, idUsuarioLogado);
+                    }
+
+                    try (ResultSet rs = stmt.executeQuery()) {
+
+                        while (rs.next()) {
+
+                            listaTurmas.add(
+                                    new TurmaModelo(
+                                            rs.getInt("id_turma"),
+                                            rs.getString("nome_turma"),
+                                            rs.getString("nome_laboratorio")
+                                    )
+                            );
+                        }
+                    }
+                }
+
+            } catch (Exception e) {
+
+                Log.e(TAG, "Erro ao carregar turmas do calendário", e);
+                return;
+            }
+
+            mainHandler.post(() -> {
+
+                if (!isAdded()
+                        || getContext() == null
+                        || getView() == null
+                        || spinnerTurmasCalendario == null) {
+                    return;
+                }
+
+                Context contextoAtual = getContext();
+
+                if (contextoAtual == null) {
+                    return;
+                }
+
+                SharedPreferences preferencias =
+                        contextoAtual.getSharedPreferences(
+                                "SessaoApp",
+                                Context.MODE_PRIVATE
+                        );
+
+                ArrayAdapter<TurmaModelo> adapter =
+                        new ArrayAdapter<>(
+                                contextoAtual,
+                                android.R.layout.simple_spinner_item,
+                                listaTurmas
+                        );
+
+                adapter.setDropDownViewResource(
+                        android.R.layout.simple_spinner_dropdown_item
+                );
+
+                spinnerTurmasCalendario.setAdapter(adapter);
+
+                if (listaTurmas.isEmpty()) {
+
+                    preferencias.edit()
+                            .remove("id_turma_selecionada")
+                            .apply();
+
+                    eventosDoMes.clear();
+
+                    populateCalendar(
+                            calendarGrid,
+                            LayoutInflater.from(contextoAtual)
+                    );
+
+                    atualizarDetalhesDiaSelecionado();
+
+                    Toast.makeText(
+                            contextoAtual,
+                            "Nenhuma turma ativa encontrada.",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                    return;
+                }
+
+                // Recupera a mesma turma salva pela HomePage.
+                int idTurmaSalva = preferencias.getInt(
+                        "id_turma_selecionada",
+                        -1
+                );
+
+                int posicaoInicial = 0;
+
+                for (int i = 0; i < listaTurmas.size(); i++) {
+
+                    if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
+                        posicaoInicial = i;
                         break;
                     }
                 }
-            }
-        }
 
-        atualizarDataSelecionada();
-        populateCalendar(calendarGrid, currentInflater);
-        atualizarDetalhesDiaSelecionado();
+                spinnerTurmasCalendario.setOnItemSelectedListener(
+                        new AdapterView.OnItemSelectedListener() {
+
+                            @Override
+                            public void onItemSelected(
+                                    AdapterView<?> parent,
+                                    View selectedView,
+                                    int position,
+                                    long id
+                            ) {
+
+                                if (position < 0 || position >= listaTurmas.size()) {
+                                    return;
+                                }
+
+                                TurmaModelo turmaSelecionada =
+                                        (TurmaModelo) parent.getItemAtPosition(position);
+
+                                if (turmaSelecionada == null) {
+                                    return;
+                                }
+
+                                int novoIdTurma = turmaSelecionada.getIdTurma();
+
+                                SharedPreferences prefsAtuais =
+                                        requireContext().getSharedPreferences(
+                                                "SessaoApp",
+                                                Context.MODE_PRIVATE
+                                        );
+
+                                int idSalvo = prefsAtuais.getInt(
+                                        "id_turma_selecionada",
+                                        -1
+                                );
+
+                                // Compartilha a seleção com a HomePage.
+                                prefsAtuais.edit()
+                                        .putInt(
+                                                "id_turma_selecionada",
+                                                novoIdTurma
+                                        )
+                                        .apply();
+
+                                // Só consulta novamente se a turma mudou.
+                                if (novoIdTurma != ultimaTurmaCarregada) {
+
+                                    carregarCalendarioEEventos(
+                                            LayoutInflater.from(requireContext())
+                                    );
+                                }
+                            }
+
+                            @Override
+                            public void onNothingSelected(
+                                    AdapterView<?> parent
+                            ) {
+                                // Nenhuma ação necessária.
+                            }
+                        });
+
+                spinnerTurmasCalendario.setSelection(
+                        posicaoInicial,
+                        false
+                );
+
+                // Garante uma turma válida mesmo na primeira utilização.
+                TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
+
+                if (idTurmaSalva != turmaInicial.getIdTurma()) {
+
+                    preferencias.edit()
+                            .putInt(
+                                    "id_turma_selecionada",
+                                    turmaInicial.getIdTurma()
+                            )
+                            .apply();
+
+                    carregarCalendarioEEventos(
+                            LayoutInflater.from(contextoAtual)
+                    );
+                }
+            });
+        });
     }
 
+    private void garantirExecutorAtivo() {
+        if (executorService == null || executorService.isShutdown()) {
+            executorService = Executors.newSingleThreadExecutor();
+        }
+    }
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if (getView() == null || getContext() == null) {
+            return;
+        }
+
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+
+        int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
+
+        // Recarrega o calendário se a turma foi alterada na HomePage.
+        if (idTurmaAtual != ultimaTurmaCarregada) {
+            carregarCalendarioEEventos(
+                    LayoutInflater.from(requireContext())
+            );
+        }
+    }
     private void carregarCalendarioEEventos(LayoutInflater inflater) {
-        this.currentInflater = inflater;
         atualizarTituloMesAno();
         atualizarDataSelecionada();
         buscarEventosEAtualizarGrid(inflater);
@@ -221,71 +441,142 @@ public class CalendarioFragment extends Fragment {
         return null;
     }
 
+
     private void buscarEventosEAtualizarGrid(LayoutInflater inflater) {
         eventosDoMes.clear();
-        int mes = currentCalendar.get(Calendar.MONTH) + 1; // 1-based
-        int ano = currentCalendar.get(Calendar.YEAR);
 
-        int idUsuarioLogado = -1;
-        if (getActivity() != null) {
-            SharedPreferences prefs = getActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-            idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        final int mes = currentCalendar.get(Calendar.MONTH) + 1;
+        final int ano = currentCalendar.get(Calendar.YEAR);
+
+        Context context = getContext();
+
+        if (context == null) {
+            return;
         }
 
-        final int finalIdUsuario = idUsuarioLogado;
+        // Recupera a turma selecionada na HomePage.
+        SharedPreferences prefs = context.getSharedPreferences(
+                "SessaoApp",
+                Context.MODE_PRIVATE
+        );
+
+        final int idTurmaSelecionada = prefs.getInt(
+                "id_turma_selecionada",
+                -1
+        );
+
+        ultimaTurmaCarregada = idTurmaSelecionada;
+
+        // Evita executar tarefas em um executor que já foi encerrado.
+        garantirExecutorAtivo();
 
         executorService.execute(() -> {
             try (Connection con = ConexaoMySQL.conectar()) {
+
                 if (con != null) {
-                    String sql = "SELECT id_agenda, id_usuario, data_aula, titulo, descricao, turma, status, cor_indicador " +
-                            "FROM agenda_aula WHERE MONTH(data_aula) = ? AND YEAR(data_aula) = ?" +
-                            (finalIdUsuario != -1 ? " AND (id_usuario = ? OR id_usuario IS NULL)" : "");
+
+                    String sql =
+                            "SELECT " +
+                                    "a.id_agendamento, " +
+                                    "a.data AS data_agendada, " +
+                                    "a.situacao AS situacao_agendamento, " +
+                                    "a.concluido, " +
+                                    "f.id_ficha, " +
+                                    "f.nome_ficha, " +
+                                    "f.preparo, " +
+                                    "t.nome_turma " +
+                                    "FROM agendamento a " +
+                                    "INNER JOIN ficha f " +
+                                    "ON f.id_ficha = a.id_ficha " +
+                                    "LEFT JOIN turma t " +
+                                    "ON t.id_turma = f.id_turma " +
+                                    "WHERE MONTH(a.data) = ? " +
+                                    "AND YEAR(a.data) = ? " +
+                                    "AND a.situacao = 'A' " +
+                                    "AND a.concluido = 'N' " +
+                                    "AND f.situacao = 'A' " +
+                                    "AND f.id_turma = ? " +
+                                    "ORDER BY a.data, f.nome_ficha";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
+
                         stmt.setInt(1, mes);
                         stmt.setInt(2, ano);
-                        if (finalIdUsuario != -1) {
-                            stmt.setInt(3, finalIdUsuario);
-                        }
-                        try (ResultSet rs = stmt.executeQuery()) {
-                            while (rs.next()) {
-                                int idAgenda = rs.getInt("id_agenda");
-                                int idUsuario = rs.getInt("id_usuario");
-                                Date dataAula = rs.getDate("data_aula");
-                                String titulo = rs.getString("titulo");
-                                String descricao = rs.getString("descricao");
-                                String turma = rs.getString("turma");
-                                String status = rs.getString("status");
-                                String corIndicador = rs.getString("cor_indicador");
+                        stmt.setInt(3, idTurmaSelecionada);
 
-                                AulaAgenda aula = new AulaAgenda(idAgenda, idUsuario, dataAula, titulo, descricao, turma, status, corIndicador);
+                        try (ResultSet rs = stmt.executeQuery()) {
+
+                            while (rs.next()) {
+
+                                int idAgendamento =
+                                        rs.getInt("id_agendamento");
+
+                                java.sql.Date dataAgendada =
+                                        rs.getDate("data_agendada");
+
+                                String nomeFicha =
+                                        rs.getString("nome_ficha");
+
+                                String preparo =
+                                        rs.getString("preparo");
+
+                                String nomeTurma =
+                                        rs.getString("nome_turma");
+
+                                String situacao =
+                                        rs.getString("situacao_agendamento");
+
+                                AulaAgenda aula = new AulaAgenda(
+                                        idAgendamento,
+                                        0,
+                                        dataAgendada,
+                                        nomeFicha,
+                                        preparo,
+                                        nomeTurma,
+                                        situacao,
+                                        "#F7941D"
+                                );
 
                                 Calendar cal = Calendar.getInstance();
-                                cal.setTime(dataAula);
+                                cal.setTime(dataAgendada);
+
                                 int dia = cal.get(Calendar.DAY_OF_MONTH);
 
-                                List<AulaAgenda> listaDia = eventosDoMes.get(dia);
+                                List<AulaAgenda> listaDia =
+                                        eventosDoMes.get(dia);
+
                                 if (listaDia == null) {
                                     listaDia = new ArrayList<>();
                                     eventosDoMes.put(dia, listaDia);
                                 }
+
                                 listaDia.add(aula);
                             }
                         }
                     }
                 }
+
             } catch (SQLException e) {
-                Log.e(TAG, "Erro ao buscar eventos do banco de dados: " + e.getMessage());
+                Log.e(
+                        TAG,
+                        "Erro ao consultar fichas da turma selecionada",
+                        e
+                );
             }
 
             mainHandler.post(() -> {
-                if (isAdded()) {
+                if (isAdded()
+                        && calendarGrid != null
+                        && getView() != null) {
+
                     populateCalendar(calendarGrid, inflater);
+                    atualizarDataSelecionada();
                     atualizarDetalhesDiaSelecionado();
                 }
             });
         });
     }
+
 
     private void populateCalendar(GridLayout grid, LayoutInflater inflater) {
         grid.removeAllViews();
@@ -344,8 +635,8 @@ public class CalendarioFragment extends Fragment {
                 lastSelectedTextView = dayText;
             }
 
-            // Exibir indicadores dinâmicos de aulas (filtradas pela busca)
-            List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
+            // Exibir indicadores dinâmicos de aulas
+            List<AulaAgenda> aulas = eventosDoMes.get(day);
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
                 String hexColor = (aulas.get(0).getCorIndicador() != null) ? aulas.get(0).getCorIndicador() : "#F7941D";
@@ -363,12 +654,6 @@ public class CalendarioFragment extends Fragment {
                     } catch (Exception e) {
                         dot2.setImageTintList(ColorStateList.valueOf(Color.parseColor("#F7941D")));
                     }
-                }
-
-                // Destaque para os dias que contêm a receita pesquisada
-                if (!termoFiltro.isEmpty() && day != selectedDay) {
-                    dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_selected);
-                    dayText.setTextColor(Color.WHITE);
                 }
             }
 
@@ -459,7 +744,7 @@ public class CalendarioFragment extends Fragment {
             return;
         }
 
-        List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
+        List<AulaAgenda> aulas = eventosDoMes.get(selectedDay);
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
@@ -524,13 +809,9 @@ public class CalendarioFragment extends Fragment {
         } else {
             if (textNoFichas == null) {
                 textNoFichas = new TextView(getContext());
+                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
                 textNoFichas.setTextColor(Color.parseColor("#64748B"));
                 textNoFichas.setTextSize(14);
-            }
-            if (!termoFiltro.isEmpty()) {
-                textNoFichas.setText("Nenhuma receita ou aula encontrada para \"" + termoFiltro + "\".");
-            } else {
-                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
             }
             layoutFichasLista.addView(textNoFichas);
         }
