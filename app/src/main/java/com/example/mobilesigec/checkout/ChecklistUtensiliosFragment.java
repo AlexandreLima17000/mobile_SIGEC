@@ -95,30 +95,48 @@ public class ChecklistUtensiliosFragment extends Fragment {
     private void carregarReceitasNoSpinner() {
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+        if (idUsuarioLogado == -1) {
+            idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        }
         int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idUsuarioLogado == -1 || idTurmaSelecionada == -1) return;
+        if (idTurmaSelecionada == -1) return;
 
         progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando"
         spinnerReceitas.setEnabled(false); // Desativa o spinner para evitar cliques acidentais
 
+        final int finalIdUsuario = idUsuarioLogado;
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             List<ReceitaModelo> listaReceitas = new ArrayList<>();
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "SELECT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
-                            "FROM agendamento a " +
-                            "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
-                            "INNER JOIN turma t ON t.id_turma = a.id_turma " +
-                            "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                            "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND a.id_turma = ? AND t.situacao = 'A' AND a.data = CURDATE() AND a.situacao = 'A'";
+                    String sql;
+                    if (finalIdUsuario != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
+                                "FROM agendamento a " +
+                                "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "INNER JOIN laboratorio l ON l.id_laboratorio = t.id_laboratorio " +
+                                "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
+                                "WHERE ut.id_usuario = ? AND f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                    } else {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
+                                "FROM agendamento a " +
+                                "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "INNER JOIN laboratorio l ON l.id_laboratorio = t.id_laboratorio " +
+                                "WHERE f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                    }
 
                     PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idUsuarioLogado);
-                    stmt.setInt(2, idTurmaSelecionada);
+                    if (finalIdUsuario != -1) {
+                        stmt.setInt(1, finalIdUsuario);
+                        stmt.setInt(2, idTurmaSelecionada);
+                    } else {
+                        stmt.setInt(1, idTurmaSelecionada);
+                    }
                     ResultSet rs = stmt.executeQuery();
 
                     while (rs.next()) {
@@ -178,10 +196,10 @@ public class ChecklistUtensiliosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "SELECT u.id_utensilio, u.nome_utensilio, u.quantidade " +
+                    String sql = "SELECT u.id_utensilio, u.nome_utensilio, COALESCE(cu.quantidade, u.quantidade, 1) AS quantidade " +
                             "FROM checklist_utensilho cu " +
                             "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
-                            "WHERE cu.id_ficha = ? AND cu.situacao = 'A'";
+                            "WHERE cu.id_ficha = ? AND (cu.situacao = 'A' OR cu.situacao IS NULL OR cu.situacao = '')";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idFicha);

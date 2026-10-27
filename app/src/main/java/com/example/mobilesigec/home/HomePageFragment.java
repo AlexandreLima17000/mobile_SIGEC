@@ -492,32 +492,33 @@ public class HomePageFragment extends Fragment {
                         Context.MODE_PRIVATE
                 );
 
-                int idUsuarioLogado = prefs.getInt(
-                        "id_usuario",
-                        -1
-                );
+                int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+                if (idUsuarioLogado == -1) {
+                    idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+                }
 
                 // Inclui id_ficha para abrir os detalhes da receita.
-                String sql =
-                        "SELECT f.id_ficha, f.nome_ficha, " +
-                                "COALESCE(a.concluido, 'N') AS concluido " +
-                                "FROM agendamento a " +
-                                "INNER JOIN ficha f " +
-                                "ON f.id_ficha = a.id_ficha " +
-                                "INNER JOIN turma t " +
-                                "ON t.id_turma = a.id_turma " +
-                                "INNER JOIN usuario_turma ut " +
-                                "ON t.id_turma = ut.id_turma " +
-                                "WHERE a.id_turma = ? " +
-                                "AND ut.id_usuario = ? " +
-                                "AND a.data = CURDATE() " +
-                                "AND a.situacao = 'A'";
+                String sql;
+                if (idUsuarioLogado != -1) {
+                    sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
+                            "FROM agendamento a " +
+                            "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                            "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                            "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
+                            "WHERE f.id_turma = ? AND ut.id_usuario = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                } else {
+                    sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido " +
+                            "FROM agendamento a " +
+                            "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                            "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                            "WHERE f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                }
 
-                try (PreparedStatement stmt =
-                             con.prepareStatement(sql)) {
-
+                try (PreparedStatement stmt = con.prepareStatement(sql)) {
                     stmt.setInt(1, idTurma);
-                    stmt.setInt(2, idUsuarioLogado);
+                    if (idUsuarioLogado != -1) {
+                        stmt.setInt(2, idUsuarioLogado);
+                    }
 
                     try (ResultSet rs = stmt.executeQuery()) {
 
