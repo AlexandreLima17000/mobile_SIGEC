@@ -32,6 +32,9 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.EditText;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -55,6 +58,10 @@ public class CalendarioFragment extends Fragment {
     private TextView textNoFichas;
     private ImageView btnPrevMonth;
     private ImageView btnNextMonth;
+    private EditText etPesquisa;
+
+    private String termoFiltro = "";
+    private LayoutInflater currentInflater;
 
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
@@ -78,6 +85,7 @@ public class CalendarioFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendario, container, false);
+        this.currentInflater = inflater;
 
         calendarGrid = view.findViewById(R.id.calendar_grid);
         textMonthYear = view.findViewById(R.id.text_month_year);
@@ -87,6 +95,24 @@ public class CalendarioFragment extends Fragment {
         textNoFichas = view.findViewById(R.id.text_no_fichas);
         btnPrevMonth = view.findViewById(R.id.btn_prev_month);
         btnNextMonth = view.findViewById(R.id.btn_next_month);
+
+        etPesquisa = view.findViewById(R.id.et_pesquisa_calendario);
+
+        if (etPesquisa != null) {
+            etPesquisa.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    termoFiltro = (s != null) ? s.toString().trim().toLowerCase() : "";
+                    aplicarFiltroEAtualizarUI();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
 
         if (getActivity() != null) {
             SharedPreferences prefs = getActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -117,7 +143,45 @@ public class CalendarioFragment extends Fragment {
         return view;
     }
 
+    private List<AulaAgenda> filtrarAulas(List<AulaAgenda> aulas) {
+        if (aulas == null || aulas.isEmpty()) return new ArrayList<>();
+        if (termoFiltro.isEmpty()) return aulas;
+
+        List<AulaAgenda> filtradas = new ArrayList<>();
+        for (AulaAgenda aula : aulas) {
+            boolean matchTitulo = (aula.getTitulo() != null && aula.getTitulo().toLowerCase().contains(termoFiltro));
+            boolean matchDesc = (aula.getDescricao() != null && aula.getDescricao().toLowerCase().contains(termoFiltro));
+            boolean matchTurma = (aula.getTurma() != null && aula.getTurma().toLowerCase().contains(termoFiltro));
+
+            if (matchTitulo || matchDesc || matchTurma) {
+                filtradas.add(aula);
+            }
+        }
+        return filtradas;
+    }
+
+    private void aplicarFiltroEAtualizarUI() {
+        if (currentInflater == null) return;
+
+        if (!termoFiltro.isEmpty()) {
+            boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
+            if (!diaAtualTemMatch) {
+                for (Map.Entry<Integer, List<AulaAgenda>> entry : eventosDoMes.entrySet()) {
+                    if (!filtrarAulas(entry.getValue()).isEmpty()) {
+                        selectedDay = entry.getKey();
+                        break;
+                    }
+                }
+            }
+        }
+
+        atualizarDataSelecionada();
+        populateCalendar(calendarGrid, currentInflater);
+        atualizarDetalhesDiaSelecionado();
+    }
+
     private void carregarCalendarioEEventos(LayoutInflater inflater) {
+        this.currentInflater = inflater;
         atualizarTituloMesAno();
         atualizarDataSelecionada();
         buscarEventosEAtualizarGrid(inflater);
@@ -280,8 +344,8 @@ public class CalendarioFragment extends Fragment {
                 lastSelectedTextView = dayText;
             }
 
-            // Exibir indicadores dinâmicos de aulas
-            List<AulaAgenda> aulas = eventosDoMes.get(day);
+            // Exibir indicadores dinâmicos de aulas (filtradas pela busca)
+            List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
                 String hexColor = (aulas.get(0).getCorIndicador() != null) ? aulas.get(0).getCorIndicador() : "#F7941D";
@@ -299,6 +363,12 @@ public class CalendarioFragment extends Fragment {
                     } catch (Exception e) {
                         dot2.setImageTintList(ColorStateList.valueOf(Color.parseColor("#F7941D")));
                     }
+                }
+
+                // Destaque para os dias que contêm a receita pesquisada
+                if (!termoFiltro.isEmpty() && day != selectedDay) {
+                    dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_selected);
+                    dayText.setTextColor(Color.WHITE);
                 }
             }
 
@@ -389,7 +459,7 @@ public class CalendarioFragment extends Fragment {
             return;
         }
 
-        List<AulaAgenda> aulas = eventosDoMes.get(selectedDay);
+        List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
@@ -454,9 +524,13 @@ public class CalendarioFragment extends Fragment {
         } else {
             if (textNoFichas == null) {
                 textNoFichas = new TextView(getContext());
-                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
                 textNoFichas.setTextColor(Color.parseColor("#64748B"));
                 textNoFichas.setTextSize(14);
+            }
+            if (!termoFiltro.isEmpty()) {
+                textNoFichas.setText("Nenhuma receita ou aula encontrada para \"" + termoFiltro + "\".");
+            } else {
+                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
             }
             layoutFichasLista.addView(textNoFichas);
         }
