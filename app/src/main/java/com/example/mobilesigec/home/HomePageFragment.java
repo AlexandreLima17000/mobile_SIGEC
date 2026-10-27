@@ -164,11 +164,27 @@ public class HomePageFragment extends Fragment {
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinnerTurmasHome.setAdapter(adapter);
 
+                if (listaTurmas.isEmpty()) {
+                    prefs.edit().remove("id_turma_selecionada").apply();
+                    return;
+                }
+
+                int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
+                int posicaoInicial = 0;
+                for (int i = 0; i < listaTurmas.size(); i++) {
+                    if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
+                        posicaoInicial = i;
+                        break;
+                    }
+                }
+
                 spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
+                        if (position < 0 || position >= listaTurmas.size()) return;
                         TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
                         if (turmaSelecionada != null) {
+                            prefs.edit().putInt("id_turma_selecionada", turmaSelecionada.getIdTurma()).apply();
                             carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
                         }
                     }
@@ -176,8 +192,34 @@ public class HomePageFragment extends Fragment {
                     @Override
                     public void onNothingSelected(android.widget.AdapterView<?> parent) {}
                 });
+
+                spinnerTurmasHome.setSelection(posicaoInicial, false);
+                TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
+                if (idTurmaSalva != turmaInicial.getIdTurma()) {
+                    prefs.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
+                }
+                carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio());
             });
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getContext() != null && spinnerTurmasHome != null && spinnerTurmasHome.getAdapter() != null) {
+            SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+            int idSalvo = prefs.getInt("id_turma_selecionada", -1);
+            ArrayAdapter<TurmaModelo> adapter = (ArrayAdapter<TurmaModelo>) spinnerTurmasHome.getAdapter();
+            for (int i = 0; i < adapter.getCount(); i++) {
+                TurmaModelo t = adapter.getItem(i);
+                if (t != null && t.getIdTurma() == idSalvo) {
+                    if (spinnerTurmasHome.getSelectedItemPosition() != i) {
+                        spinnerTurmasHome.setSelection(i, false);
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
@@ -275,8 +317,8 @@ public class HomePageFragment extends Fragment {
                             }
                         }
 
-                        // Se a receita tem data no banco e NÃO pertence à semana atual, ignora (semanas passadas/futuras)
-                        if (temData && !pertenceASemanaAtual) {
+                        // Se não tem data ou NÃO pertence à semana atual, ignora
+                        if (!temData || !pertenceASemanaAtual) {
                             continue;
                         }
 
@@ -284,18 +326,6 @@ public class HomePageFragment extends Fragment {
                         List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
                         if (targetList != null) {
                             targetList.add(item);
-                        } else {
-                            // Se a receita não possui data específica de agendamento na tabela, aloca no dia de hoje (ou Segunda)
-                            int hojeDow = calNow.get(Calendar.DAY_OF_WEEK);
-                            List<ItemReceitaData> fallbackList = mapDias.get(hojeDow);
-                            if (fallbackList != null) {
-                                fallbackList.add(item);
-                            } else {
-                                List<ItemReceitaData> segList = mapDias.get(Calendar.MONDAY);
-                                if (segList != null) {
-                                    segList.add(item);
-                                }
-                            }
                         }
                     }
                     rs.close();
