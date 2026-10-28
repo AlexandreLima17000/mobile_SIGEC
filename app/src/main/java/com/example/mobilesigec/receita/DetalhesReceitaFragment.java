@@ -109,7 +109,7 @@ public class DetalhesReceitaFragment extends Fragment {
 
                 // 3. BUSCAR UTENSÍLIOS (CHECKLIST)
                 List<String> listaUtensilios = new ArrayList<>();
-                String sqlUtensilios = "SELECT u.nome_utensilio FROM checklist_utensilho c " +
+                String sqlUtensilios = "SELECT u.nome_utensilio FROM checklist_utensilio c " +
                         "JOIN utensilio u ON c.id_utensilio = u.id_utensilio " +
                         "WHERE c.id_ficha = ? GROUP BY u.nome_utensilio";
                 PreparedStatement stmtUten = conexao.prepareStatement(sqlUtensilios);
