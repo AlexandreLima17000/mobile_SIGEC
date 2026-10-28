@@ -1,14 +1,14 @@
-# Walkthrough - Ajustes nas Receitas da Semana (Home Page) e Sincronização de Turmas
+# Walkthrough - Abertura de Detalhes da Receita na Home Page
 
-Implementado o filtro restrito para exibir na Home Page apenas as receitas agendadas especificamente para a **semana atual** (segunda a sexta), descartando receitas de semanas passadas, futuras ou sem data agendada. Além disso, foi sincronizada a seleção de turmas entre a Home e o Calendário.
+Adicionado um `onClickListener` aos cards de receitas da semana na Home Page para que, ao clicar em qualquer receita, o aplicativo abra diretamente a tela de detalhes da receita (`nav_detalhes_receita`) passando o `id_ficha` correto.
 
 ## Changes
 
 ### Home Page Component
 
 #### [HomePageFragment.java](file:///C:/Users/ana57393876/StudioProjects/mobile_SIGEC/app/src/main/java/com/example/mobilesigec/home/HomePageFragment.java)
-- Atualizada a lógica em `carregarReceitasDaTurma` para garantir que apenas receitas com data pertencente à semana atual (`pertenceASemanaAtual == true` e `temData == true`) sejam exibidas nos cards dos dias da semana. Receitas de semanas passadas, futuras ou sem data são ignoradas.
-- Sincronizada a seleção do Spinner de turmas utilizando `SharedPreferences` para manter consistência com o Calendário.
+- Armazenado o `id_ficha` na classe auxiliar `ItemReceitaData`.
+- Configurado o `setOnClickListener` em cada card de receita da semana para navegar para `R.id.nav_detalhes_receita` com o ID da ficha correspondente.
 
 ## Verification Results
 

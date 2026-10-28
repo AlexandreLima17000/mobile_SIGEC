@@ -275,6 +275,7 @@ public class HomePageFragment extends Fragment {
                     long endMillis = endOfWeek.getTimeInMillis();
 
                     while (rs.next()) {
+                        int idFicha = rs.getInt("id_ficha");
                         String nomeFicha = rs.getString("nome_ficha");
                         String concluido = rs.getString("concluido");
 
@@ -322,7 +323,7 @@ public class HomePageFragment extends Fragment {
                             continue;
                         }
 
-                        ItemReceitaData item = new ItemReceitaData(nomeFicha, concluido);
+                        ItemReceitaData item = new ItemReceitaData(idFicha, nomeFicha, concluido);
                         List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
                         if (targetList != null) {
                             targetList.add(item);
@@ -406,6 +407,11 @@ public class HomePageFragment extends Fragment {
                             if (tvDetalhes != null) {
                                 tvDetalhes.setText(nomeLaboratorio);
                             }
+                            itemReceitaView.setOnClickListener(v -> {
+                                Bundle bundle = new Bundle();
+                                bundle.putInt("id_ficha", itemData.idFicha);
+                                Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
+                            });
                             containerReceitasDia.addView(itemReceitaView);
                         }
                     }
@@ -440,10 +446,12 @@ public class HomePageFragment extends Fragment {
     }
 
     private static class ItemReceitaData {
+        final int idFicha;
         final String nomeFicha;
         final String concluido;
 
-        ItemReceitaData(String nomeFicha, String concluido) {
+        ItemReceitaData(int idFicha, String nomeFicha, String concluido) {
+            this.idFicha = idFicha;
             this.nomeFicha = nomeFicha;
             this.concluido = concluido;
         }
