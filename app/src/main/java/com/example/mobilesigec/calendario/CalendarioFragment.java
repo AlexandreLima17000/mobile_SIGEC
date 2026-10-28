@@ -667,7 +667,18 @@ public class CalendarioFragment extends Fragment {
                                     eventosDoMes.put(dia, listaDia);
                                 }
 
-                                listaDia.add(aula);
+                                boolean jaExiste = false;
+                                for (AulaAgenda existente : listaDia) {
+                                    if (existente.getIdAgenda() == idFicha ||
+                                       (existente.getTitulo() != null && existente.getTitulo().equalsIgnoreCase(nomeFicha))) {
+                                        jaExiste = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!jaExiste) {
+                                    listaDia.add(aula);
+                                }
                             }
                         }
                     }
@@ -724,7 +735,14 @@ public class CalendarioFragment extends Fragment {
                                 String nome = rs.getString("nome_ficha");
                                 if (nome != null && !nome.trim().isEmpty()) {
                                     String nomeTrim = nome.trim();
-                                    if (!sugestoes.contains(nomeTrim)) {
+                                    boolean jaContem = false;
+                                    for (String s : sugestoes) {
+                                        if (s.equalsIgnoreCase(nomeTrim)) {
+                                            jaContem = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!jaContem) {
                                         sugestoes.add(nomeTrim);
                                     }
                                 }
