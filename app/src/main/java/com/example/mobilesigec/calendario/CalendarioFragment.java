@@ -158,43 +158,46 @@ public class CalendarioFragment extends Fragment {
         }
 
         carregarTurmasNoSpinner();
-        carregarCalendarioEEventos(inflater);
 
         return view;
     }
 
+    private String removerAcentos(String text) {
+        if (text == null) return "";
+        String normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase();
+    }
+
     private int calcularDistanciaLevenshtein(String s1, String s2) {
         if (s1 == null || s2 == null) return Integer.MAX_VALUE;
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
+        String str1 = removerAcentos(s1);
+        String str2 = removerAcentos(s2);
 
-        int[] costs = new int[s2.length() + 1];
-        for (int j = 0; j <= s2.length(); j++) costs[j] = j;
+        int[] costs = new int[str2.length() + 1];
+        for (int j = 0; j <= str2.length(); j++) costs[j] = j;
 
-        for (int i = 1; i <= s1.length(); i++) {
+        for (int i = 1; i <= str1.length(); i++) {
             costs[0] = i;
             int nw = i - 1;
-            for (int j = 1; j <= s2.length(); j++) {
+            for (int j = 1; j <= str2.length(); j++) {
                 int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]),
-                        s1.charAt(i - 1) == s2.charAt(j - 1) ? nw : nw + 1);
+                        str1.charAt(i - 1) == str2.charAt(j - 1) ? nw : nw + 1);
                 nw = costs[j];
                 costs[j] = cj;
             }
         }
-        return costs[s2.length()];
+        return costs[str2.length()];
     }
 
     private boolean ehSimilar(String textoBusca, String textoAlvo) {
         if (textoBusca == null || textoAlvo == null) return false;
-        String busca = textoBusca.trim().toLowerCase();
-        String alvo = textoAlvo.trim().toLowerCase();
+        String busca = removerAcentos(textoBusca.trim());
+        String alvo = removerAcentos(textoAlvo.trim());
 
         if (busca.isEmpty()) return true;
         if (alvo.contains(busca)) return true;
 
-        if (busca.length() < 3) return false;
-
-        int limiteErros = (busca.length() <= 5) ? 1 : (busca.length() <= 8 ? 2 : 3);
+        int limiteErros = (busca.length() <= 2) ? 1 : (busca.length() <= 5 ? 2 : 3);
 
         String[] palavrasAlvo = alvo.split("\\s+");
         for (String palavra : palavrasAlvo) {
@@ -474,19 +477,16 @@ public class CalendarioFragment extends Fragment {
                 // Garante uma turma válida mesmo na primeira utilização.
                 TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
 
-                if (idTurmaSalva != turmaInicial.getIdTurma()) {
+                preferencias.edit()
+                        .putInt(
+                                "id_turma_selecionada",
+                                turmaInicial.getIdTurma()
+                        )
+                        .apply();
 
-                    preferencias.edit()
-                            .putInt(
-                                    "id_turma_selecionada",
-                                    turmaInicial.getIdTurma()
-                            )
-                            .apply();
-
-                    carregarCalendarioEEventos(
-                            LayoutInflater.from(contextoAtual)
-                    );
-                }
+                carregarCalendarioEEventos(
+                        LayoutInflater.from(contextoAtual)
+                );
             });
         });
     }
@@ -606,13 +606,12 @@ public class CalendarioFragment extends Fragment {
                                     "INNER JOIN ficha f " +
                                     "ON f.id_ficha = a.id_ficha " +
                                     "LEFT JOIN turma t " +
-                                    "ON t.id_turma = a.id_turma " +
+                                    "ON t.id_turma = f.id_turma " +
                                     "WHERE MONTH(a.data) = ? " +
                                     "AND YEAR(a.data) = ? " +
                                     "AND a.situacao = 'A' " +
-                                    "AND a.concluido = 'N' " +
                                     "AND f.situacao = 'A' " +
-                                    "AND a.id_turma = ? " +
+                                    "AND (f.id_turma = ? OR ? = -1) " +
                                     "ORDER BY a.data, f.nome_ficha";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
@@ -620,13 +619,14 @@ public class CalendarioFragment extends Fragment {
                         stmt.setInt(1, mes);
                         stmt.setInt(2, ano);
                         stmt.setInt(3, idTurmaSelecionada);
+                        stmt.setInt(4, idTurmaSelecionada);
 
                         try (ResultSet rs = stmt.executeQuery()) {
 
                             while (rs.next()) {
 
-                                int idAgendamento =
-                                        rs.getInt("id_agendamento");
+                                int idFicha =
+                                        rs.getInt("id_ficha");
 
                                 java.sql.Date dataAgendada =
                                         rs.getDate("data_agendada");
@@ -644,7 +644,7 @@ public class CalendarioFragment extends Fragment {
                                         rs.getString("situacao_agendamento");
 
                                 AulaAgenda aula = new AulaAgenda(
-                                        idAgendamento,
+                                        idFicha,
                                         0,
                                         dataAgendada,
                                         nomeFicha,
@@ -698,27 +698,54 @@ public class CalendarioFragment extends Fragment {
     private void atualizarSugestoesPesquisa() {
         if (etPesquisa == null || getContext() == null) return;
 
-        List<String> sugestoes = new ArrayList<>();
-        for (List<AulaAgenda> listaDia : eventosDoMes.values()) {
-            if (listaDia != null) {
-                for (AulaAgenda aula : listaDia) {
-                    if (aula.getTitulo() != null && !aula.getTitulo().trim().isEmpty()) {
-                        String titulo = aula.getTitulo().trim();
-                        if (!sugestoes.contains(titulo)) {
-                            sugestoes.add(titulo);
+        Context context = getContext();
+        if (context == null) return;
+
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
+
+        garantirExecutorAtivo();
+
+        executorService.execute(() -> {
+            List<String> sugestoes = new ArrayList<>();
+            try (Connection con = ConexaoMySQL.conectar()) {
+                if (con != null) {
+                    String sql = "SELECT DISTINCT f.nome_ficha " +
+                            "FROM ficha f " +
+                            "WHERE f.situacao = 'A' " +
+                            "AND (f.id_turma = ? OR ? = -1) " +
+                            "ORDER BY f.nome_ficha";
+
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idTurmaSelecionada);
+                        stmt.setInt(2, idTurmaSelecionada);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                String nome = rs.getString("nome_ficha");
+                                if (nome != null && !nome.trim().isEmpty()) {
+                                    String nomeTrim = nome.trim();
+                                    if (!sugestoes.contains(nomeTrim)) {
+                                        sugestoes.add(nomeTrim);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao carregar sugestões de pesquisa", e);
             }
-        }
 
-        if (isAdded() && getContext() != null) {
-            SugestoesFuzzyAdapter adapter = new SugestoesFuzzyAdapter(
-                    requireContext(),
-                    sugestoes
-            );
-            etPesquisa.setAdapter(adapter);
-        }
+            mainHandler.post(() -> {
+                if (isAdded() && getContext() != null && etPesquisa != null) {
+                    SugestoesFuzzyAdapter adapter = new SugestoesFuzzyAdapter(
+                            requireContext(),
+                            sugestoes
+                    );
+                    etPesquisa.setAdapter(adapter);
+                }
+            });
+        });
     }
 
     private class SugestoesFuzzyAdapter extends ArrayAdapter<String> {
