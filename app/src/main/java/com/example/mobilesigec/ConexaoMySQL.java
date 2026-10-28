@@ -62,7 +62,7 @@ public class ConexaoMySQL {
             return null;
         }
     }
-
+    //
     public static void fecharConexao(Connection conexao) {
         try {
             if (conexao != null && !conexao.isClosed()) {
