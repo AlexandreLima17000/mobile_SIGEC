@@ -71,9 +71,9 @@ public class DetalhesReceitaFragment extends Fragment {
             try {
                 conexao = ConexaoMySQL.conectar();
 
-                // 1. BUSCAR DADOS DA FICHA (E NOME DA TURMA/CATEGORIA)
-                String sqlFicha = "SELECT f.nome_ficha, f.preparo, t.nome_turma " +
-                        "FROM ficha f LEFT JOIN turma t ON f.id_turma = t.id_turma " +
+                // 1. BUSCAR DADOS DA FICHA
+                String sqlFicha = "SELECT f.nome_ficha, f.preparo " +
+                        "FROM ficha f " +
                         "WHERE f.id_ficha = ?";
                 PreparedStatement stmtFicha = conexao.prepareStatement(sqlFicha);
                 stmtFicha.setInt(1, idFicha);
@@ -83,9 +83,6 @@ public class DetalhesReceitaFragment extends Fragment {
                 if (rsFicha.next()) {
                     nome = rsFicha.getString("nome_ficha");
                     preparo = rsFicha.getString("preparo");
-                    if (rsFicha.getString("nome_turma") != null) {
-                        categoria = rsFicha.getString("nome_turma");
-                    }
                 }
                 rsFicha.close();
                 stmtFicha.close();

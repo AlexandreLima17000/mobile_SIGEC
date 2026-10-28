@@ -88,28 +88,49 @@ public class ChecklistInsumosFragment extends Fragment {
 
     private void carregarReceitasNoSpinner() {
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+        if (idUsuarioLogado == -1) {
+            idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
+        }
+        int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idUsuarioLogado == -1) return;
+        if (idTurmaSelecionada == -1) return;
 
         progressLoading.setVisibility(View.VISIBLE);
         spinnerReceitas.setEnabled(false);
 
+        final int finalIdUsuario = idUsuarioLogado;
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             List<ReceitaModelo> listaReceitas = new ArrayList<>();
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "SELECT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
-                            "FROM ficha f " +
-                            "INNER JOIN turma t ON f.id_turma = t.id_turma " +
-                            "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
-                            "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
-                            "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
+                    String sql;
+                    if (finalIdUsuario != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
+                                "FROM agendamento a " +
+                                "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "INNER JOIN laboratorio l ON l.id_laboratorio = t.id_laboratorio " +
+                                "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
+                                "WHERE ut.id_usuario = ? AND f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                    } else {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
+                                "FROM agendamento a " +
+                                "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "INNER JOIN laboratorio l ON l.id_laboratorio = t.id_laboratorio " +
+                                "WHERE f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
+                    }
 
                     PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idUsuarioLogado);
+                    if (finalIdUsuario != -1) {
+                        stmt.setInt(1, finalIdUsuario);
+                        stmt.setInt(2, idTurmaSelecionada);
+                    } else {
+                        stmt.setInt(1, idTurmaSelecionada);
+                    }
                     ResultSet rs = stmt.executeQuery();
 
                     while (rs.next()) {
@@ -171,7 +192,7 @@ public class ChecklistInsumosFragment extends Fragment {
                     String sql = "SELECT i.id_insumo, p.nome_produto, i.quantidade, p.unidade " +
                             "FROM insumo i " +
                             "INNER JOIN produto p ON i.id_produto = p.id_produto " +
-                            "WHERE i.id_ficha = ? AND i.cancelado = 'N'";
+                            "WHERE i.id_ficha = ? AND (i.cancelado = 'N' OR i.cancelado IS NULL OR i.cancelado = '' OR i.cancelado = '0')";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idFicha);

@@ -73,9 +73,9 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
-                if (!email.toLowerCase().endsWith("df.senac.br")) {
-                    Toast.makeText(LoginActivity.this, "O e-mail deve pertencer ao domínio df.senac.br", Toast.LENGTH_SHORT).show();
-                    emailLogin.setError("Domínio inválido. Use um e-mail @df.senac.br");
+                if (!email.toLowerCase().contains("senac.br") && !email.contains("@")) {
+                    Toast.makeText(LoginActivity.this, "O e-mail deve ser válido", Toast.LENGTH_SHORT).show();
+                    emailLogin.setError("Domínio inválido. Use um e-mail do Senac");
                     return;
                 }
 
