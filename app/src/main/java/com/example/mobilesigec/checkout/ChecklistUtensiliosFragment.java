@@ -197,7 +197,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
                     String sql = "SELECT u.id_utensilio, u.nome_utensilio, COALESCE(cu.quantidade, u.quantidade, 1) AS quantidade " +
-                            "FROM checklist_utensilho cu " +
+                            "FROM checklist_utensilio cu " +
                             "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
                             "WHERE cu.id_ficha = ? AND (cu.situacao = 'A' OR cu.situacao IS NULL OR cu.situacao = '')";
 
@@ -295,7 +295,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
                     con.setAutoCommit(false);
 
                     // Passo B: Registra a hora de saída de cada utensílio selecionado
-                    String sqlUtensilio = "UPDATE checklist_utensilho SET data_hora_saida = NOW(), observacao = 'Retirado para aula' " +
+                    String sqlUtensilio = "UPDATE checklist_utensilio SET data_hora_saida = NOW(), observacao = 'Retirado para aula' " +
                             "WHERE id_ficha = ? AND id_utensilio = ?";
 
                     PreparedStatement stmtUtensilio = con.prepareStatement(sqlUtensilio);
@@ -385,7 +385,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 if (con != null) {
                     con.setAutoCommit(false);
 
-                    String sqlDevolucao = "UPDATE checklist_utensilho SET data_hora_entrada = NOW(), estado_atual = ?, observacao = ? " +
+                    String sqlDevolucao = "UPDATE checklist_utensilio SET data_hora_entrada = NOW(), estado_atual = ?, observacao = ? " +
                             "WHERE id_ficha = ? AND id_utensilio = ?";
                     PreparedStatement stmtDevolucao = con.prepareStatement(sqlDevolucao);
 
