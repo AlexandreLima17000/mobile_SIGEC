@@ -87,15 +87,19 @@
                         android:src="@drawable/ic_search"
                         app:tint="#CBD5E1" />
 
-                    <EditText
+                    <AutoCompleteTextView
                         android:id="@+id/et_pesquisa_calendario"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:layout_marginStart="8dp"
                         android:autofillHints="name"
                         android:background="@android:color/transparent"
+                        android:completionThreshold="1"
+                        android:dropDownVerticalOffset="8dp"
                         android:hint="Buscar receita, turma..."
+                        android:imeOptions="actionSearch"
                         android:inputType="text"
+                        android:popupBackground="@drawable/bg_spinner_popup"
                         android:textColor="#FFFFFF"
                         android:textColorHint="#94A3B8"
                         android:textSize="14sp" />
