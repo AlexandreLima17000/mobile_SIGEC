@@ -29,9 +29,18 @@ android {
         val dbUser = envProperties.getProperty("DB_USER") ?: "root"
         val dbPassword = envProperties.getProperty("DB_PASSWORD") ?: envProperties.getProperty("DB_PASS") ?: ""
 
+        val mailName = envProperties.getProperty("MAIL_NAME") ?: "sigec.teste@gmail.com"
+        val mailPass = envProperties.getProperty("MAIL_PASS") ?: "pfqrwulpoclkxgzj"
+        val mailHost = envProperties.getProperty("MAIL_HOST") ?: "smtp.gmail.com"
+        val mailPort = envProperties.getProperty("MAIL_PORT") ?: "587"
+
         buildConfigField("String", "DB_URL", "\"$dbUrl\"")
         buildConfigField("String", "DB_USER", "\"$dbUser\"")
         buildConfigField("String", "DB_PASSWORD", "\"$dbPassword\"")
+        buildConfigField("String", "MAIL_NAME", "\"$mailName\"")
+        buildConfigField("String", "MAIL_PASS", "\"$mailPass\"")
+        buildConfigField("String", "MAIL_HOST", "\"$mailHost\"")
+        buildConfigField("String", "MAIL_PORT", "\"$mailPort\"")
     }
 
     buildTypes {

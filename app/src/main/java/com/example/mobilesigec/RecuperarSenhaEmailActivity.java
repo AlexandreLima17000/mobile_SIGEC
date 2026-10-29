@@ -135,16 +135,19 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
     }
 
     private boolean enviarEmailRecuperacao(String destinatario, String codigo) {
-        String remetente = "sigec.teste@gmail.com";
-        String senhaApp = "pfqrwulpoclkxgzj";
+        final String remetente = BuildConfig.MAIL_NAME;
+        final String senhaApp = BuildConfig.MAIL_PASS;
+        final String host = BuildConfig.MAIL_HOST != null ? BuildConfig.MAIL_HOST : "smtp.gmail.com";
+        final String port = BuildConfig.MAIL_PORT != null ? BuildConfig.MAIL_PORT : "587";
+
         ultimoErroEmail = "";
 
         Properties props = new Properties();
-        props.put("mail.smtp.host", "smtp.gmail.com");
-        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.host", host);
+        props.put("mail.smtp.port", port);
         props.put("mail.smtp.auth", "true");
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        props.put("mail.smtp.ssl.trust", host);
 
         Session session = Session.getInstance(props, new Authenticator() {
             @Override
