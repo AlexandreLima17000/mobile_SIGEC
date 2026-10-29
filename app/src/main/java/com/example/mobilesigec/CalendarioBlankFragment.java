@@ -18,6 +18,9 @@ import androidx.fragment.app.Fragment;
 
 import com.example.mobilesigec.model.AulaAgenda;
 
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.EditText;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -47,13 +50,16 @@ public class CalendarioBlankFragment extends Fragment {
     private TextView textNoFichas;
     private ImageView btnPrevMonth;
     private ImageView btnNextMonth;
+    private EditText etPesquisa;
+
+    private String termoFiltro = "";
+    private LayoutInflater currentInflater;
 
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     private View lastSelectedDayView = null;
-
 
     public CalendarioBlankFragment() {
         // Required empty public constructor
@@ -67,7 +73,6 @@ public class CalendarioBlankFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         currentCalendar = Calendar.getInstance();
-        // Default to September 2026 as per layout specification or current date
         currentCalendar.set(Calendar.YEAR, 2026);
         currentCalendar.set(Calendar.MONTH, Calendar.SEPTEMBER);
         currentCalendar.set(Calendar.DAY_OF_MONTH, 2);
@@ -78,6 +83,7 @@ public class CalendarioBlankFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendario_blank, container, false);
+        this.currentInflater = inflater;
 
         calendarGrid = view.findViewById(R.id.calendar_grid);
         textMonthYear = view.findViewById(R.id.text_month_year);
@@ -86,6 +92,23 @@ public class CalendarioBlankFragment extends Fragment {
         textNoFichas = view.findViewById(R.id.text_no_fichas);
         btnPrevMonth = view.findViewById(R.id.btn_prev_month);
         btnNextMonth = view.findViewById(R.id.btn_next_month);
+
+        etPesquisa = view.findViewById(R.id.textBuscarReceita);
+        if (etPesquisa != null) {
+            etPesquisa.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    termoFiltro = (s != null) ? s.toString().trim().toLowerCase() : "";
+                    aplicarFiltroEAtualizarUI();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+        }
 
         if (btnPrevMonth != null) {
             btnPrevMonth.setOnClickListener(v -> {
@@ -106,6 +129,43 @@ public class CalendarioBlankFragment extends Fragment {
         carregarCalendarioEEventos(inflater);
 
         return view;
+    }
+
+    private List<AulaAgenda> filtrarAulas(List<AulaAgenda> aulas) {
+        if (aulas == null || aulas.isEmpty()) return new ArrayList<>();
+        if (termoFiltro.isEmpty()) return aulas;
+
+        List<AulaAgenda> filtradas = new ArrayList<>();
+        for (AulaAgenda aula : aulas) {
+            boolean matchTitulo = (aula.getTitulo() != null && aula.getTitulo().toLowerCase().contains(termoFiltro));
+            boolean matchDesc = (aula.getDescricao() != null && aula.getDescricao().toLowerCase().contains(termoFiltro));
+            boolean matchTurma = (aula.getTurma() != null && aula.getTurma().toLowerCase().contains(termoFiltro));
+
+            if (matchTitulo || matchDesc || matchTurma) {
+                filtradas.add(aula);
+            }
+        }
+        return filtradas;
+    }
+
+    private void aplicarFiltroEAtualizarUI() {
+        if (currentInflater == null) return;
+
+        if (!termoFiltro.isEmpty()) {
+            boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
+            if (!diaAtualTemMatch) {
+                for (Map.Entry<Integer, List<AulaAgenda>> entry : eventosDoMes.entrySet()) {
+                    if (!filtrarAulas(entry.getValue()).isEmpty()) {
+                        selectedDay = entry.getKey();
+                        break;
+                    }
+                }
+            }
+        }
+
+        atualizarDataSelecionada();
+        populateCalendar(calendarGrid, currentInflater);
+        atualizarDetalhesDiaSelecionado();
     }
 
     private void carregarCalendarioEEventos(LayoutInflater inflater) {
@@ -247,8 +307,8 @@ public class CalendarioBlankFragment extends Fragment {
                 lastSelectedDayView = dayContainer;
             }
 
-            // Exibir indicadores dinamicos das aulas/eventos vindos do Aiven
-            List<AulaAgenda> aulas = eventosDoMes.get(day);
+            // Exibir indicadores dinamicos das aulas/eventos vindos do Aiven (filtradas)
+            List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
                 String hexColor = (aulas.get(0).getCorIndicador() != null) ? aulas.get(0).getCorIndicador() : "#F57C00";
@@ -266,6 +326,10 @@ public class CalendarioBlankFragment extends Fragment {
                     } catch (Exception e) {
                         dot2.setImageTintList(ColorStateList.valueOf(Color.parseColor("#F57C00")));
                     }
+                }
+
+                if (!termoFiltro.isEmpty() && day != selectedDay) {
+                    dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_selected);
                 }
             }
 
@@ -329,7 +393,7 @@ public class CalendarioBlankFragment extends Fragment {
             return;
         }
 
-        List<AulaAgenda> aulas = eventosDoMes.get(selectedDay);
+        List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
@@ -371,9 +435,13 @@ public class CalendarioBlankFragment extends Fragment {
         } else {
             if (textNoFichas == null) {
                 textNoFichas = new TextView(getContext());
-                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
                 textNoFichas.setTextColor(Color.parseColor("#7f8c8d"));
                 textNoFichas.setTextSize(12);
+            }
+            if (!termoFiltro.isEmpty()) {
+                textNoFichas.setText("Nenhuma receita ou aula encontrada para \"" + termoFiltro + "\".");
+            } else {
+                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
             }
             layoutFichasLista.addView(textNoFichas);
         }

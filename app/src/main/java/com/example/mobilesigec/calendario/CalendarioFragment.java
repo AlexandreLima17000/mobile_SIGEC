@@ -32,6 +32,11 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
+import android.widget.Filter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -61,6 +66,11 @@ public class CalendarioFragment extends Fragment {
     private ImageView btnPrevMonth;
     private ImageView btnNextMonth;
     private Spinner spinnerTurmasCalendario;
+    private AutoCompleteTextView etPesquisa;
+
+    private String termoFiltro = "";
+    private LayoutInflater currentInflater;
+
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
     private ExecutorService executorService =
             Executors.newSingleThreadExecutor();
@@ -86,6 +96,7 @@ public class CalendarioFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendario, container, false);
+        this.currentInflater = inflater;
 
         calendarGrid = view.findViewById(R.id.calendar_grid);
         textMonthYear = view.findViewById(R.id.text_month_year);
@@ -96,6 +107,31 @@ public class CalendarioFragment extends Fragment {
         btnPrevMonth = view.findViewById(R.id.btn_prev_month);
         btnNextMonth = view.findViewById(R.id.btn_next_month);
         spinnerTurmasCalendario = view.findViewById(R.id.spinnerTurmasCalendario);
+        etPesquisa = view.findViewById(R.id.et_pesquisa_calendario);
+
+        if (etPesquisa != null) {
+            etPesquisa.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    termoFiltro = (s != null) ? s.toString().trim().toLowerCase() : "";
+                    aplicarFiltroEAtualizarUI();
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {}
+            });
+
+            etPesquisa.setOnItemClickListener((parent, view1, position, id) -> {
+                String selecao = (String) parent.getItemAtPosition(position);
+                if (selecao != null) {
+                    termoFiltro = selecao.trim().toLowerCase();
+                    aplicarFiltroEAtualizarUI();
+                }
+            });
+        }
 
         if (getActivity() != null) {
             SharedPreferences prefs = getActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -122,9 +158,96 @@ public class CalendarioFragment extends Fragment {
         }
 
         carregarTurmasNoSpinner();
-        carregarCalendarioEEventos(inflater);
 
         return view;
+    }
+
+    private String removerAcentos(String text) {
+        if (text == null) return "";
+        String normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase();
+    }
+
+    private int calcularDistanciaLevenshtein(String s1, String s2) {
+        if (s1 == null || s2 == null) return Integer.MAX_VALUE;
+        String str1 = removerAcentos(s1);
+        String str2 = removerAcentos(s2);
+
+        int[] costs = new int[str2.length() + 1];
+        for (int j = 0; j <= str2.length(); j++) costs[j] = j;
+
+        for (int i = 1; i <= str1.length(); i++) {
+            costs[0] = i;
+            int nw = i - 1;
+            for (int j = 1; j <= str2.length(); j++) {
+                int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]),
+                        str1.charAt(i - 1) == str2.charAt(j - 1) ? nw : nw + 1);
+                nw = costs[j];
+                costs[j] = cj;
+            }
+        }
+        return costs[str2.length()];
+    }
+
+    private boolean ehSimilar(String textoBusca, String textoAlvo) {
+        if (textoBusca == null || textoAlvo == null) return false;
+        String busca = removerAcentos(textoBusca.trim());
+        String alvo = removerAcentos(textoAlvo.trim());
+
+        if (busca.isEmpty()) return true;
+        if (alvo.contains(busca)) return true;
+
+        int limiteErros = (busca.length() <= 2) ? 1 : (busca.length() <= 5 ? 2 : 3);
+
+        String[] palavrasAlvo = alvo.split("\\s+");
+        for (String palavra : palavrasAlvo) {
+            if (calcularDistanciaLevenshtein(busca, palavra) <= limiteErros) {
+                return true;
+            }
+        }
+
+        return calcularDistanciaLevenshtein(busca, alvo) <= limiteErros;
+    }
+
+    private List<AulaAgenda> filtrarAulas(List<AulaAgenda> aulas) {
+        if (aulas == null || aulas.isEmpty()) return new ArrayList<>();
+        if (termoFiltro.isEmpty()) return aulas;
+
+        List<AulaAgenda> filtradas = new ArrayList<>();
+        for (AulaAgenda aula : aulas) {
+            boolean matchTitulo = (aula.getTitulo() != null && ehSimilar(termoFiltro, aula.getTitulo()));
+            boolean matchDesc = (aula.getDescricao() != null && ehSimilar(termoFiltro, aula.getDescricao()));
+            boolean matchTurma = (aula.getTurma() != null && ehSimilar(termoFiltro, aula.getTurma()));
+
+            if (matchTitulo || matchDesc || matchTurma) {
+                filtradas.add(aula);
+            }
+        }
+        return filtradas;
+    }
+
+    private void aplicarFiltroEAtualizarUI() {
+        if (currentInflater == null && getView() != null && getContext() != null) {
+            currentInflater = LayoutInflater.from(requireContext());
+        }
+        if (currentInflater == null) return;
+
+        if (!termoFiltro.isEmpty()) {
+            boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
+            if (!diaAtualTemMatch) {
+                for (int day = 1; day <= 31; day++) {
+                    List<AulaAgenda> aulasDoDia = eventosDoMes.get(day);
+                    if (aulasDoDia != null && !filtrarAulas(aulasDoDia).isEmpty()) {
+                        selectedDay = day;
+                        break;
+                    }
+                }
+            }
+        }
+
+        atualizarDataSelecionada();
+        populateCalendar(calendarGrid, currentInflater);
+        atualizarDetalhesDiaSelecionado();
     }
 
     private void carregarTurmasNoSpinner() {
@@ -354,19 +477,16 @@ public class CalendarioFragment extends Fragment {
                 // Garante uma turma válida mesmo na primeira utilização.
                 TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
 
-                if (idTurmaSalva != turmaInicial.getIdTurma()) {
+                preferencias.edit()
+                        .putInt(
+                                "id_turma_selecionada",
+                                turmaInicial.getIdTurma()
+                        )
+                        .apply();
 
-                    preferencias.edit()
-                            .putInt(
-                                    "id_turma_selecionada",
-                                    turmaInicial.getIdTurma()
-                            )
-                            .apply();
-
-                    carregarCalendarioEEventos(
-                            LayoutInflater.from(contextoAtual)
-                    );
-                }
+                carregarCalendarioEEventos(
+                        LayoutInflater.from(contextoAtual)
+                );
             });
         });
     }
@@ -486,13 +606,12 @@ public class CalendarioFragment extends Fragment {
                                     "INNER JOIN ficha f " +
                                     "ON f.id_ficha = a.id_ficha " +
                                     "LEFT JOIN turma t " +
-                                    "ON t.id_turma = a.id_turma " +
+                                    "ON t.id_turma = f.id_turma " +
                                     "WHERE MONTH(a.data) = ? " +
                                     "AND YEAR(a.data) = ? " +
                                     "AND a.situacao = 'A' " +
-                                    "AND a.concluido = 'N' " +
                                     "AND f.situacao = 'A' " +
-                                    "AND a.id_turma = ? " +
+                                    "AND (f.id_turma = ? OR ? = -1) " +
                                     "ORDER BY a.data, f.nome_ficha";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
@@ -500,13 +619,14 @@ public class CalendarioFragment extends Fragment {
                         stmt.setInt(1, mes);
                         stmt.setInt(2, ano);
                         stmt.setInt(3, idTurmaSelecionada);
+                        stmt.setInt(4, idTurmaSelecionada);
 
                         try (ResultSet rs = stmt.executeQuery()) {
 
                             while (rs.next()) {
 
-                                int idAgendamento =
-                                        rs.getInt("id_agendamento");
+                                int idFicha =
+                                        rs.getInt("id_ficha");
 
                                 java.sql.Date dataAgendada =
                                         rs.getDate("data_agendada");
@@ -524,7 +644,7 @@ public class CalendarioFragment extends Fragment {
                                         rs.getString("situacao_agendamento");
 
                                 AulaAgenda aula = new AulaAgenda(
-                                        idAgendamento,
+                                        idFicha,
                                         0,
                                         dataAgendada,
                                         nomeFicha,
@@ -547,7 +667,18 @@ public class CalendarioFragment extends Fragment {
                                     eventosDoMes.put(dia, listaDia);
                                 }
 
-                                listaDia.add(aula);
+                                boolean jaExiste = false;
+                                for (AulaAgenda existente : listaDia) {
+                                    if (existente.getIdAgenda() == idFicha ||
+                                       (existente.getTitulo() != null && existente.getTitulo().equalsIgnoreCase(nomeFicha))) {
+                                        jaExiste = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!jaExiste) {
+                                    listaDia.add(aula);
+                                }
                             }
                         }
                     }
@@ -569,9 +700,124 @@ public class CalendarioFragment extends Fragment {
                     populateCalendar(calendarGrid, inflater);
                     atualizarDataSelecionada();
                     atualizarDetalhesDiaSelecionado();
+                    atualizarSugestoesPesquisa();
                 }
             });
         });
+    }
+
+    private void atualizarSugestoesPesquisa() {
+        if (etPesquisa == null || getContext() == null) return;
+
+        Context context = getContext();
+        if (context == null) return;
+
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
+
+        garantirExecutorAtivo();
+
+        executorService.execute(() -> {
+            List<String> sugestoes = new ArrayList<>();
+            try (Connection con = ConexaoMySQL.conectar()) {
+                if (con != null) {
+                    String sql = "SELECT DISTINCT f.nome_ficha " +
+                            "FROM ficha f " +
+                            "WHERE f.situacao = 'A' " +
+                            "AND (f.id_turma = ? OR ? = -1) " +
+                            "ORDER BY f.nome_ficha";
+
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idTurmaSelecionada);
+                        stmt.setInt(2, idTurmaSelecionada);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                String nome = rs.getString("nome_ficha");
+                                if (nome != null && !nome.trim().isEmpty()) {
+                                    String nomeTrim = nome.trim();
+                                    boolean jaContem = false;
+                                    for (String s : sugestoes) {
+                                        if (s.equalsIgnoreCase(nomeTrim)) {
+                                            jaContem = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!jaContem) {
+                                        sugestoes.add(nomeTrim);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao carregar sugestões de pesquisa", e);
+            }
+
+            mainHandler.post(() -> {
+                if (isAdded() && getContext() != null && etPesquisa != null) {
+                    SugestoesFuzzyAdapter adapter = new SugestoesFuzzyAdapter(
+                            requireContext(),
+                            sugestoes
+                    );
+                    etPesquisa.setAdapter(adapter);
+                }
+            });
+        });
+    }
+
+    private class SugestoesFuzzyAdapter extends ArrayAdapter<String> {
+        private final List<String> todasSugestoes;
+
+        public SugestoesFuzzyAdapter(@NonNull Context context, @NonNull List<String> sugestoes) {
+            super(context, R.layout.item_autocomplete_suggestion, new ArrayList<>(sugestoes));
+            this.todasSugestoes = new ArrayList<>(sugestoes);
+        }
+
+        @NonNull
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    if (constraint == null || constraint.toString().trim().isEmpty()) {
+                        results.values = todasSugestoes;
+                        results.count = todasSugestoes.size();
+                    } else {
+                        String termo = constraint.toString().trim().toLowerCase();
+                        List<String> filtradas = new ArrayList<>();
+
+                        for (String sugestao : todasSugestoes) {
+                            if (sugestao.toLowerCase().contains(termo)) {
+                                filtradas.add(sugestao);
+                            }
+                        }
+
+                        for (String sugestao : todasSugestoes) {
+                            if (!filtradas.contains(sugestao) && ehSimilar(termo, sugestao)) {
+                                filtradas.add(sugestao);
+                            }
+                        }
+
+                        results.values = filtradas;
+                        results.count = filtradas.size();
+                    }
+                    return results;
+                }
+
+                @Override
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    clear();
+                    if (results != null && results.values != null) {
+                        @SuppressWarnings("unchecked")
+                        List<String> lista = (List<String>) results.values;
+                        addAll(lista);
+                    }
+                    notifyDataSetChanged();
+                }
+            };
+        }
     }
 
 
@@ -632,8 +878,8 @@ public class CalendarioFragment extends Fragment {
                 lastSelectedTextView = dayText;
             }
 
-            // Exibir indicadores dinâmicos de aulas
-            List<AulaAgenda> aulas = eventosDoMes.get(day);
+            // Exibir indicadores dinâmicos de aulas (filtradas pela busca)
+            List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
                 String hexColor = (aulas.get(0).getCorIndicador() != null) ? aulas.get(0).getCorIndicador() : "#F7941D";
@@ -651,6 +897,12 @@ public class CalendarioFragment extends Fragment {
                     } catch (Exception e) {
                         dot2.setImageTintList(ColorStateList.valueOf(Color.parseColor("#F7941D")));
                     }
+                }
+
+                // Quando houver filtro ativo, destacar no calendário os dias da receita pesquisada
+                if (!termoFiltro.isEmpty() && day != selectedDay) {
+                    dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_selected);
+                    dayText.setTextColor(Color.WHITE);
                 }
             }
 
@@ -741,7 +993,7 @@ public class CalendarioFragment extends Fragment {
             return;
         }
 
-        List<AulaAgenda> aulas = eventosDoMes.get(selectedDay);
+        List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
@@ -801,14 +1053,26 @@ public class CalendarioFragment extends Fragment {
 
                 innerLayout.addView(contentLayout);
                 card.addView(innerLayout);
+
+                card.setOnClickListener(v -> {
+                    Bundle bundle = new Bundle();
+                    bundle.putInt("id_ficha", aula.getIdAgenda());
+                    bundle.putString("nome_ficha", aula.getTitulo());
+                    androidx.navigation.Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
+                });
+
                 layoutFichasLista.addView(card);
             }
         } else {
             if (textNoFichas == null) {
                 textNoFichas = new TextView(getContext());
-                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
                 textNoFichas.setTextColor(Color.parseColor("#64748B"));
                 textNoFichas.setTextSize(14);
+            }
+            if (!termoFiltro.isEmpty()) {
+                textNoFichas.setText("Nenhuma receita ou aula encontrada para \"" + termoFiltro + "\".");
+            } else {
+                textNoFichas.setText("Nenhuma aula ou ficha programada para este dia.");
             }
             layoutFichasLista.addView(textNoFichas);
         }
