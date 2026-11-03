@@ -109,8 +109,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             List<ReceitaModelo> listaReceitas = new ArrayList<>();
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     String sql;
                     if (finalIdUsuario != -1) {
@@ -130,24 +129,24 @@ public class ChecklistUtensiliosFragment extends Fragment {
                                 "WHERE f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
                     }
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    if (finalIdUsuario != -1) {
-                        stmt.setInt(1, finalIdUsuario);
-                        stmt.setInt(2, idTurmaSelecionada);
-                    } else {
-                        stmt.setInt(1, idTurmaSelecionada);
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        if (finalIdUsuario != -1) {
+                            stmt.setInt(1, finalIdUsuario);
+                            stmt.setInt(2, idTurmaSelecionada);
+                        } else {
+                            stmt.setInt(1, idTurmaSelecionada);
+                        }
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                listaReceitas.add(new ReceitaModelo(
+                                        rs.getInt("id_ficha"),
+                                        rs.getString("nome_ficha"),
+                                        rs.getString("nome_turma"),
+                                        rs.getString("nome_laboratorio")
+                                ));
+                            }
+                        }
                     }
-                    ResultSet rs = stmt.executeQuery();
-
-                    while (rs.next()) {
-                        listaReceitas.add(new ReceitaModelo(
-                                rs.getInt("id_ficha"),
-                                rs.getString("nome_ficha"),
-                                rs.getString("nome_turma"),
-                                rs.getString("nome_laboratorio")
-                        ));
-                    }
-                    rs.close(); stmt.close(); con.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -193,26 +192,25 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     String sql = "SELECT u.id_utensilio, u.nome_utensilio, COALESCE(cu.quantidade, u.quantidade, 1) AS quantidade " +
                             "FROM checklist_utensilio cu " +
                             "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
                             "WHERE cu.id_ficha = ? AND (cu.situacao = 'A' OR cu.situacao IS NULL OR cu.situacao = '')";
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idFicha);
-                    ResultSet rs = stmt.executeQuery();
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idFicha);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                int idUtensilio = rs.getInt("id_utensilio");
+                                String nome = rs.getString("nome_utensilio");
+                                String qtd = String.valueOf(rs.getInt("quantidade"));
 
-                    while (rs.next()) {
-                        int idUtensilio = rs.getInt("id_utensilio");
-                        String nome = rs.getString("nome_utensilio");
-                        String qtd = String.valueOf(rs.getInt("quantidade"));
-
-                        listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
+                                listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
+                            }
+                        }
                     }
-                    rs.close(); stmt.close(); con.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();

@@ -87,104 +87,83 @@ public class LoginActivity extends AppCompatActivity {
                     progressEntrar.setVisibility(View.VISIBLE);
                 }
 
-                // Executa a operação do banco de dados em segundo plano (Thread) para não travar o carregamento visual da UI
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            con = ConexaoMySQL.conectar();
-                            sql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
+                new Thread(() -> {
+                    String querySql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
+                    boolean loginEfetuado = false;
+                    boolean conexaoOk = false;
 
-                            if (con != null) {
-                                stmt = con.prepareStatement(sql);
-                                stmt.setString(1, email);
-                                rs = stmt.executeQuery();
+                    try (Connection conexao = ConexaoMySQL.conectar()) {
+                        if (conexao != null) {
+                            conexaoOk = true;
+                            try (PreparedStatement stmtLocal = conexao.prepareStatement(querySql)) {
+                                stmtLocal.setString(1, email);
+                                try (ResultSet rsLocal = stmtLocal.executeQuery()) {
+                                    if (rsLocal.next()) {
+                                        String hashBanco = rsLocal.getString("senha");
+                                        int idUsuario = rsLocal.getInt("id_usuario");
+                                        String nomeUsuario = rsLocal.getString("nome_usuario");
 
-                                boolean loginEfetuado = false;
+                                        boolean senhaValida = false;
+                                        if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
+                                            try {
+                                                String hashTratado = hashBanco.trim();
+                                                if (hashTratado.startsWith("$2y$")) {
+                                                    hashTratado = "$2a$" + hashTratado.substring(4);
+                                                }
+                                                senhaValida = BCrypt.checkpw(senha, hashTratado);
+                                            } catch (IllegalArgumentException ex) {
+                                                android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                            }
+                                        }
 
-                                if (rs.next()) {
-                                    String hashBanco = rs.getString("senha");
-                                    int idUsuario = rs.getInt("id_usuario");
-                                    String nomeUsuario = rs.getString("nome_usuario");
+                                        if (!senhaValida && hashBanco != null) {
+                                            senhaValida = senha.equals(hashBanco.trim());
+                                        }
 
-                                    // 1. Validação do hash BCrypt ou texto simples
-                                    boolean senhaValida = false;
-                                    if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
-                                        try {
-                                            String hashTratado = hashBanco.trim();
+                                        if (senhaValida) {
+                                            loginEfetuado = true;
 
-                                            // Compatibilidade: converte prefixo $2y$ (PHP) para $2a$ (jBCrypt)
-                                            if (hashTratado.startsWith("$2y$")) {
-                                                hashTratado = "$2a$" + hashTratado.substring(4);
+                                            if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
+                                                nomeUsuario = email.contains("@") ? email.split("@")[0] : email;
                                             }
 
-                                            senhaValida = BCrypt.checkpw(senha, hashTratado);
-                                        } catch (IllegalArgumentException ex) {
-                                            android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                            getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                                    .edit()
+                                                    .clear()
+                                                    .putBoolean("logado", true)
+                                                    .putInt("id_usuario", idUsuario)
+                                                    .putInt("ID_USUARIO", idUsuario)
+                                                    .putString("nome_usuario", nomeUsuario)
+                                                    .putString("NOME_USUARIO", nomeUsuario)
+                                                    .putString("EMAIL_USUARIO", email)
+                                                    .putString("email", email)
+                                                    .apply();
                                         }
                                     }
-                                    
-                                    if (!senhaValida && hashBanco != null) {
-                                        senhaValida = senha.equals(hashBanco.trim());
-                                    }
-
-                                    if (senhaValida) {
-                                        loginEfetuado = true;
-
-                                        if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
-                                            nomeUsuario = email.contains("@") ? email.split("@")[0] : email;
-                                        }
-
-                                        getSharedPreferences("SessaoApp", MODE_PRIVATE)
-                                                .edit()
-                                                .clear()
-                                                .putBoolean("logado", true)
-                                                .putInt("id_usuario", idUsuario)
-                                                .putInt("ID_USUARIO", idUsuario)
-                                                .putString("nome_usuario", nomeUsuario)
-                                                .putString("NOME_USUARIO", nomeUsuario)
-                                                .putString("EMAIL_USUARIO", email)
-                                                .putString("email", email)
-                                                .apply();
-                                    }
                                 }
-                                if (loginEfetuado) {
-                                    // Login efetuado com sucesso -> Direciona para a MainActivity
-                                    runOnUiThread(() -> {
-                                        startActivity(new Intent(LoginActivity.this, MainActivity.class));
-                                        finish();
-
-                                    });
-
-                                } else {
-                                    // Credenciais incorretas -> Restaura o botão e mostra erro
-                                    runOnUiThread(() -> {
-                                        Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
-                                        restaurarBotaoLogin();
-                                    });
-
-                                }
-
-                                rs.close();
-                                stmt.close();
-                                con.close();
-                            } else {
-                                // Erro ao conectar ao servidor de banco de dados
-                                runOnUiThread(() -> {
-                                    String erro = ConexaoMySQL.getUltimoErro();
-                                    String msg = "Erro de conexão com o banco de dados" + (erro.isEmpty() ? "" : ": " + erro);
-                                    Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_LONG).show();
-                                    restaurarBotaoLogin();
-                                });
                             }
-
-                        } catch (SQLException e) {
-                            runOnUiThread(() -> {
-                                Toast.makeText(LoginActivity.this, "Erro: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                                restaurarBotaoLogin();
-                            });
                         }
+                    } catch (Exception e) {
+                        android.util.Log.e("LoginActivity", "Erro durante login", e);
                     }
+
+                    final boolean finalLoginEfetuado = loginEfetuado;
+                    final boolean finalConexaoOk = conexaoOk;
+
+                    runOnUiThread(() -> {
+                        if (finalLoginEfetuado) {
+                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                            finish();
+                        } else if (!finalConexaoOk) {
+                            String erro = ConexaoMySQL.getUltimoErro();
+                            String msg = "Erro de conexão com o banco de dados" + (erro.isEmpty() ? "" : ": " + erro);
+                            Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_LONG).show();
+                            restaurarBotaoLogin();
+                        } else {
+                            Toast.makeText(LoginActivity.this, "E-mail ou senha inválidos", Toast.LENGTH_SHORT).show();
+                            restaurarBotaoLogin();
+                        }
+                    });
                 }).start();
             }
         });

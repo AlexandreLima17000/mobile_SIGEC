@@ -103,8 +103,7 @@ public class ChecklistInsumosFragment extends Fragment {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             List<ReceitaModelo> listaReceitas = new ArrayList<>();
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     String sql;
                     if (finalIdUsuario != -1) {
@@ -124,24 +123,24 @@ public class ChecklistInsumosFragment extends Fragment {
                                 "WHERE f.id_turma = ? AND DATE(a.data) = CURDATE() AND (a.situacao = 'A' OR a.situacao IS NULL OR a.situacao = '')";
                     }
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    if (finalIdUsuario != -1) {
-                        stmt.setInt(1, finalIdUsuario);
-                        stmt.setInt(2, idTurmaSelecionada);
-                    } else {
-                        stmt.setInt(1, idTurmaSelecionada);
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        if (finalIdUsuario != -1) {
+                            stmt.setInt(1, finalIdUsuario);
+                            stmt.setInt(2, idTurmaSelecionada);
+                        } else {
+                            stmt.setInt(1, idTurmaSelecionada);
+                        }
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                listaReceitas.add(new ReceitaModelo(
+                                        rs.getInt("id_ficha"),
+                                        rs.getString("nome_ficha"),
+                                        rs.getString("nome_turma"),
+                                        rs.getString("nome_laboratorio")
+                                ));
+                            }
+                        }
                     }
-                    ResultSet rs = stmt.executeQuery();
-
-                    while (rs.next()) {
-                        listaReceitas.add(new ReceitaModelo(
-                                rs.getInt("id_ficha"),
-                                rs.getString("nome_ficha"),
-                                rs.getString("nome_turma"),
-                                rs.getString("nome_laboratorio")
-                        ));
-                    }
-                    rs.close(); stmt.close(); con.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -186,27 +185,26 @@ public class ChecklistInsumosFragment extends Fragment {
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     String sql = "SELECT i.id_insumo, p.nome_produto, i.quantidade, p.unidade " +
                             "FROM insumo i " +
                             "INNER JOIN produto p ON i.id_produto = p.id_produto " +
                             "WHERE i.id_ficha = ? AND (i.cancelado = 'N' OR i.cancelado IS NULL OR i.cancelado = '' OR i.cancelado = '0')";
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idFicha);
-                    ResultSet rs = stmt.executeQuery();
-
-                    while (rs.next()) {
-                        listaInsumosAtual.add(new InsumoModelo(
-                                rs.getInt("id_insumo"),
-                                rs.getString("nome_produto"),
-                                String.valueOf(rs.getInt("quantidade")),
-                                rs.getString("unidade")
-                        ));
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idFicha);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                listaInsumosAtual.add(new InsumoModelo(
+                                        rs.getInt("id_insumo"),
+                                        rs.getString("nome_produto"),
+                                        String.valueOf(rs.getInt("quantidade")),
+                                        rs.getString("unidade")
+                                ));
+                            }
+                        }
                     }
-                    rs.close(); stmt.close(); con.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();

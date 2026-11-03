@@ -79,25 +79,26 @@
                                     android:src="@drawable/ic_search"
                                     app:tint="#B0C4DE" />
 
-                                <EditText
+                                <AutoCompleteTextView
                                     android:id="@+id/edtPesquisaReceita"
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
                                     android:layout_marginStart="12dp"
+                                    android:autofillHints="name"
+                                    android:background="@android:color/transparent"
+                                    android:completionThreshold="1"
+                                    android:dropDownVerticalOffset="8dp"
                                     android:hint="Buscar ou filtrar receita..."
+                                    android:imeOptions="actionSearch"
+                                    android:inputType="text"
+                                    android:popupBackground="@drawable/bg_spinner_popup"
+                                    android:singleLine="true"
                                     android:textColor="#FFFFFF"
                                     android:textColorHint="#B0C4DE"
-                                    android:textSize="15sp"
-                                    android:singleLine="true"
-                                    android:background="@android:color/transparent" />
+                                    android:textSize="15sp" />
 
                                 <!-- ÍCONE NOVO DO CANVA -->
-                                <ImageView
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:src="@drawable/ic_menu"
-                                    app:tint="#B0C4DE" />
 
                             </LinearLayout>
 

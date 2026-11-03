@@ -116,38 +116,35 @@ public class HomePageFragment extends Fragment {
 
         executorService.execute(() -> {
             List<TurmaModelo> listaTurmas = new ArrayList<>();
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     String sql;
-                    PreparedStatement stmt;
                     if (idUsuarioLogado != -1) {
                         sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
                                 "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON t.id_turma = ut.id_turma " +
                                 "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                                 "WHERE ut.id_usuario = ? AND t.situacao = 'A'";
-                        stmt = con.prepareStatement(sql);
-                        stmt.setInt(1, idUsuarioLogado);
                     } else {
                         sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
                                 "FROM turma t " +
                                 "INNER JOIN laboratorio l ON t.id_laboratorio = l.id_laboratorio " +
                                 "WHERE t.situacao = 'A'";
-                        stmt = con.prepareStatement(sql);
                     }
 
-                    ResultSet rs = stmt.executeQuery();
-
-                    while (rs.next()) {
-                        int idTurma = rs.getInt("id_turma");
-                        String nomeTurma = rs.getString("nome_turma");
-                        String nomeLab = rs.getString("nome_laboratorio");
-                        listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        if (idUsuarioLogado != -1) {
+                            stmt.setInt(1, idUsuarioLogado);
+                        }
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                int idTurma = rs.getInt("id_turma");
+                                String nomeTurma = rs.getString("nome_turma");
+                                String nomeLab = rs.getString("nome_laboratorio");
+                                listaTurmas.add(new TurmaModelo(idTurma, nomeTurma, nomeLab));
+                            }
+                        }
                     }
-                    rs.close();
-                    stmt.close();
-                    con.close();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Erro ao carregar turmas", e);

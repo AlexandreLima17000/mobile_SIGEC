@@ -30,14 +30,20 @@ public class ConexaoMySQL {
         try {
             try {
                 Class.forName("com.mysql.jdbc.Driver");
-                StrictMode.ThreadPolicy policy = new
-                        StrictMode.ThreadPolicy.Builder().permitAll().build();
-                StrictMode.setThreadPolicy(policy);
             } catch (ClassNotFoundException e) {
-                ultimoErro = "Driver MySQL não encontrado: " + e.getMessage();
-                Log.e("ConexaoMySQL", ultimoErro, e);
-                return null;
+                try {
+                    Class.forName("com.mysql.cj.jdbc.Driver");
+                } catch (ClassNotFoundException e2) {
+                    ultimoErro = "Driver MySQL não encontrado: " + e2.getMessage();
+                    Log.e("ConexaoMySQL", ultimoErro, e2);
+                    return null;
+                }
             }
+
+            StrictMode.ThreadPolicy policy = new
+                    StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
+
             String urlTratada = URL != null ? URL : DEFAULT_URL;
             if (urlTratada.contains("sslMode=REQUIRED")) {
                 urlTratada = urlTratada.replace("sslMode=REQUIRED", "useSSL=false&allowPublicKeyRetrieval=true");
@@ -47,7 +53,11 @@ public class ConexaoMySQL {
             if (!urlTratada.contains("useSSL=")) {
                 urlTratada += (urlTratada.contains("?") ? "&" : "?") + "useSSL=false&allowPublicKeyRetrieval=true";
             }
+            if (!urlTratada.contains("connectTimeout=")) {
+                urlTratada += (urlTratada.contains("?") ? "&" : "?") + "connectTimeout=10000&socketTimeout=15000";
+            }
 
+            DriverManager.setLoginTimeout(10);
             Connection con = DriverManager.getConnection(urlTratada, USUARIO, SENHA);
             Log.d("ConexaoMySQL", "Conectado com sucesso ao MySQL: " + urlTratada);
             return con;
