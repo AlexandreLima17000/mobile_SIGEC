@@ -28,7 +28,6 @@ import com.example.mobilesigec.model.TurmaModelo;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -59,7 +58,7 @@ public class HomePageFragment extends Fragment {
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_home_page, container, false);
     }
-//
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -76,8 +75,6 @@ public class HomePageFragment extends Fragment {
         if (context != null) {
             SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
             String nomeCompleto = prefs.getString("nome_usuario", "Instrutor");
-
-            // Aplica a formatação para pegar apenas os dois primeiros nomes
             String nomeFormatado = formatarNomeCurto(nomeCompleto);
 
             if (textSaudacao != null) {
@@ -237,93 +234,34 @@ public class HomePageFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.* " +
-                            "FROM ficha f " +
-                            "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                            "WHERE f.id_turma = ?";
+                    // Consulta SQL corrigida: filtra direto no MySQL os agendamentos da semana atual
+                    String sql = "SELECT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.data AS data_agendada " +
+                            "FROM agendamento a " +
+                            "INNER JOIN ficha f ON a.id_ficha = f.id_ficha " +
+                            "WHERE f.id_turma = ? AND a.situacao = 'A' AND f.situacao = 'A' " +
+                            "AND a.data >= DATE_ADD(CURDATE(), INTERVAL - WEEKDAY(CURDATE()) DAY) " +
+                            "AND a.data <= DATE_ADD(CURDATE(), INTERVAL 6 - WEEKDAY(CURDATE()) DAY)";
 
                     PreparedStatement stmt = con.prepareStatement(sql);
                     stmt.setInt(1, idTurma);
                     ResultSet rs = stmt.executeQuery();
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-
-                    // Calcula o início (Segunda 00:00:00) e fim (Domingo 23:59:59) da semana ATUAL
-                    Calendar calNow = Calendar.getInstance();
-                    calNow.set(Calendar.HOUR_OF_DAY, 0);
-                    calNow.set(Calendar.MINUTE, 0);
-                    calNow.set(Calendar.SECOND, 0);
-                    calNow.set(Calendar.MILLISECOND, 0);
-
-                    int dow = calNow.get(Calendar.DAY_OF_WEEK);
-                    int daysToMonday = (dow == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dow);
-
-                    Calendar startOfWeek = (Calendar) calNow.clone();
-                    startOfWeek.add(Calendar.DAY_OF_MONTH, daysToMonday);
-
-                    Calendar endOfWeek = (Calendar) startOfWeek.clone();
-                    endOfWeek.add(Calendar.DAY_OF_MONTH, 6);
-                    endOfWeek.set(Calendar.HOUR_OF_DAY, 23);
-                    endOfWeek.set(Calendar.MINUTE, 59);
-                    endOfWeek.set(Calendar.SECOND, 59);
-                    endOfWeek.set(Calendar.MILLISECOND, 999);
-
-                    long startMillis = startOfWeek.getTimeInMillis();
-                    long endMillis = endOfWeek.getTimeInMillis();
 
                     while (rs.next()) {
                         int idFicha = rs.getInt("id_ficha");
                         String nomeFicha = rs.getString("nome_ficha");
                         String concluido = rs.getString("concluido");
+                        java.sql.Date dataAgendada = rs.getDate("data_agendada");
 
-                        int dayOfWeek = -1;
-                        boolean temData = false;
-                        boolean pertenceASemanaAtual = false;
+                        if (dataAgendada != null) {
+                            Calendar itemCal = Calendar.getInstance();
+                            itemCal.setTime(dataAgendada);
+                            int dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
 
-                        for (int i = 1; i <= columnCount; i++) {
-                            String colName = metaData.getColumnLabel(i).toLowerCase();
-                            int colType = metaData.getColumnType(i);
-
-                            if (!colName.startsWith("id_") && (colType == java.sql.Types.DATE || colType == java.sql.Types.TIMESTAMP || colName.contains("data") || colName.contains("date"))) {
-                                try {
-                                    java.util.Date dateVal = rs.getTimestamp(i);
-                                    if (dateVal == null) {
-                                        dateVal = rs.getDate(i);
-                                    }
-                                    if (dateVal != null) {
-                                        temData = true;
-                                        long t = dateVal.getTime();
-                                        if (t >= startMillis && t <= endMillis) {
-                                            pertenceASemanaAtual = true;
-                                            Calendar itemCal = Calendar.getInstance();
-                                            itemCal.setTime(dateVal);
-                                            dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
-                                        }
-                                        break;
-                                    }
-                                } catch (Exception ignored) {}
-                            } else if (colName.equals("dia_semana") || colName.equals("dia")) {
-                                try {
-                                    int val = rs.getInt(i);
-                                    if (val >= 1 && val <= 7) {
-                                        dayOfWeek = val;
-                                        temData = true;
-                                        pertenceASemanaAtual = true;
-                                        break;
-                                    }
-                                } catch (Exception ignored) {}
+                            ItemReceitaData item = new ItemReceitaData(idFicha, nomeFicha, concluido);
+                            List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
+                            if (targetList != null) {
+                                targetList.add(item);
                             }
-                        }
-
-                        // Se não tem data ou NÃO pertence à semana atual, ignora
-                        if (!temData || !pertenceASemanaAtual) {
-                            continue;
-                        }
-
-                        ItemReceitaData item = new ItemReceitaData(idFicha, nomeFicha, concluido);
-                        List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
-                        if (targetList != null) {
-                            targetList.add(item);
                         }
                     }
                     rs.close();
@@ -349,19 +287,10 @@ public class HomePageFragment extends Fragment {
                 int hojeDiaSemana = now.get(Calendar.DAY_OF_WEEK);
 
                 int[] diasSemana = new int[]{
-                        Calendar.MONDAY,
-                        Calendar.TUESDAY,
-                        Calendar.WEDNESDAY,
-                        Calendar.THURSDAY,
-                        Calendar.FRIDAY
+                        Calendar.MONDAY, Calendar.TUESDAY, Calendar.WEDNESDAY, Calendar.THURSDAY, Calendar.FRIDAY
                 };
-
                 String[] nomesDias = new String[]{
-                        "Segunda-feira",
-                        "Terça-feira",
-                        "Quarta-feira",
-                        "Quinta-feira",
-                        "Sexta-feira"
+                        "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"
                 };
 
                 for (int i = 0; i < diasSemana.length; i++) {
@@ -370,7 +299,6 @@ public class HomePageFragment extends Fragment {
                     boolean ehHoje = (diaNum == hojeDiaSemana);
 
                     String tituloDia = ehHoje ? nomeDiaBase + " (Hoje)" : nomeDiaBase;
-
                     View cardDia = inflater.inflate(R.layout.item_dia_semana, currentContainer, false);
 
                     TextView tvNomeDia = cardDia.findViewById(R.id.tv_nome_dia);
@@ -379,31 +307,22 @@ public class HomePageFragment extends Fragment {
                     TextView tvSemReceitas = cardDia.findViewById(R.id.tv_sem_receitas);
                     View headerDiaSemana = cardDia.findViewById(R.id.header_dia_semana);
 
-                    if (tvNomeDia != null) {
-                        tvNomeDia.setText(tituloDia);
-                    }
+                    if (tvNomeDia != null) tvNomeDia.setText(tituloDia);
 
                     List<ItemReceitaData> receitasDoDia = mapDias.get(diaNum);
 
                     if (receitasDoDia == null || receitasDoDia.isEmpty()) {
-                        if (tvSemReceitas != null) {
-                            tvSemReceitas.setVisibility(View.VISIBLE);
-                        }
+                        if (tvSemReceitas != null) tvSemReceitas.setVisibility(View.VISIBLE);
                     } else {
-                        if (tvSemReceitas != null) {
-                            tvSemReceitas.setVisibility(View.GONE);
-                        }
+                        if (tvSemReceitas != null) tvSemReceitas.setVisibility(View.GONE);
                         for (ItemReceitaData itemData : receitasDoDia) {
                             View itemReceitaView = inflater.inflate(R.layout.item_receita_semana, containerReceitasDia, false);
                             TextView tvNome = itemReceitaView.findViewById(R.id.tv_nome_receita);
                             TextView tvDetalhes = itemReceitaView.findViewById(R.id.tv_detalhes_receita);
 
-                            if (tvNome != null) {
-                                tvNome.setText(itemData.nomeFicha);
-                            }
-                            if (tvDetalhes != null) {
-                                tvDetalhes.setText(nomeLaboratorio);
-                            }
+                            if (tvNome != null) tvNome.setText(itemData.nomeFicha);
+                            if (tvDetalhes != null) tvDetalhes.setText(nomeLaboratorio);
+
                             itemReceitaView.setOnClickListener(v -> {
                                 Bundle bundle = new Bundle();
                                 bundle.putInt("id_ficha", itemData.idFicha);
@@ -413,7 +332,6 @@ public class HomePageFragment extends Fragment {
                         }
                     }
 
-                    // Configuração inicial: Se for hoje, inicia aberto; caso contrário, fechado
                     if (ehHoje) {
                         if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
                         if (ivChevron != null) ivChevron.setRotation(180f);
@@ -422,7 +340,6 @@ public class HomePageFragment extends Fragment {
                         if (ivChevron != null) ivChevron.setRotation(0f);
                     }
 
-                    // Alterna visibilidade ao clicar no cabeçalho
                     if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
                         headerDiaSemana.setOnClickListener(v -> {
                             boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
@@ -435,7 +352,6 @@ public class HomePageFragment extends Fragment {
                             }
                         });
                     }
-
                     currentContainer.addView(cardDia);
                 }
             });
@@ -454,22 +370,14 @@ public class HomePageFragment extends Fragment {
         }
     }
 
-    // ==================================================
-    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
-    // ==================================================
     private String formatarNomeCurto(String nomeCompleto) {
         if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
             return "";
         }
-
-        // Divide o nome completo em uma lista de palavras usando os espaços
         String[] partes = nomeCompleto.trim().split("\\s+");
-
-        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
         if (partes.length >= 2) {
             return partes[0] + " " + partes[1];
         } else {
-            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
             return partes[0];
         }
     }

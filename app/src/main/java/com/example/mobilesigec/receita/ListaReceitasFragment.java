@@ -111,18 +111,23 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
-    // ==================================================
-    // CARREGA AS RECEITAS DO BANCO DE DADOS (DB_SIGEC)
-    // ==================================================
+    @Override
+    public void onResume() {
+        super.onResume();
+        carregarReceitas();
+    }
+
     private void carregarReceitas() {
         if (getContext() == null) return;
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
             idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
         }
-
         final int idUsuario = idUsuarioLogado;
+
+        final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
@@ -131,7 +136,6 @@ public class ListaReceitasFragment extends Fragment {
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
-                    // 1. Buscar os IDs de fichas com agendamento ativo e data preenchida
                     Set<Integer> fichasDatadas = new HashSet<>();
                     String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
                     try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
@@ -141,27 +145,36 @@ public class ListaReceitasFragment extends Fragment {
                         }
                     } catch (Exception ignored) {}
 
-                    // 2. Buscar as fichas técnicas ativas vinculadas às turmas do usuário logado
                     String sql;
-                    if (idUsuario != -1) {
+                    PreparedStatement stmt = null;
+
+                    if (idTurmaSelecionada != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                                "FROM ficha f " +
+                                "LEFT JOIN turma t ON t.id_turma = f.id_turma " +
+                                "WHERE f.id_turma = ? AND f.situacao = 'A' " +
+                                "ORDER BY f.nome_ficha ASC";
+                        stmt = conexao.prepareStatement(sql);
+                        stmt.setInt(1, idTurmaSelecionada);
+                    } else if (idUsuario != -1) {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
                                 "FROM ficha f " +
                                 "INNER JOIN turma t ON t.id_turma = f.id_turma " +
                                 "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
                                 "WHERE ut.id_usuario = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
+                        stmt = conexao.prepareStatement(sql);
+                        stmt.setInt(1, idUsuario);
                     } else {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
                                 "FROM ficha f " +
                                 "LEFT JOIN turma t ON t.id_turma = f.id_turma " +
                                 "WHERE f.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
+                        stmt = conexao.prepareStatement(sql);
                     }
 
-                    try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
-                        if (idUsuario != -1) {
-                            stmt.setInt(1, idUsuario);
-                        }
+                    if (stmt != null) {
                         try (ResultSet rs = stmt.executeQuery()) {
                             while (rs.next()) {
                                 int idFicha = rs.getInt("id_ficha");
@@ -177,6 +190,7 @@ public class ListaReceitasFragment extends Fragment {
                                 resultado.add(new Receita(idFicha, nome, preparo, turma, status));
                             }
                         }
+                        stmt.close();
                     }
                 }
 
