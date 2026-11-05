@@ -37,7 +37,6 @@ public class DetalhesReceitaFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_detalhes_receita, container, false);
 
-        // Título da Toolbar
         if (getActivity() instanceof AppCompatActivity) {
             AppCompatActivity activity = (AppCompatActivity) getActivity();
             if (activity.getSupportActionBar() != null) {
@@ -45,7 +44,6 @@ public class DetalhesReceitaFragment extends Fragment {
             }
         }
 
-        // Mapeamento dos Componentes do XML
         txtCategoriaReceita = view.findViewById(R.id.txtCategoriaReceita);
         txtNomeReceita = view.findViewById(R.id.txtNomeReceita);
         containerIngredientes = view.findViewById(R.id.containerIngredientes);
@@ -87,22 +85,26 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsFicha.close();
                 stmtFicha.close();
 
-                // 2. BUSCAR INGREDIENTES (INSUMOS)
+                // 2. BUSCAR INGREDIENTES (INSUMOS) PELA NOVA TABELA insumo_ficha
                 List<String> listaIngredientes = new ArrayList<>();
-                String sqlIngredientes = "SELECT p.nome_produto, i.quantidade, p.unidade " +
-                        "FROM insumo i JOIN produto p ON i.id_produto = p.id_produto " +
-                        "WHERE i.id_ficha = ? AND i.cancelado = 'N'";
+                // Lê da insumo_ficha, pegando o nome e a unidade de medida do produto
+                String sqlIngredientes = "SELECT p.nome_produto, inf.quantidade, " +
+                        "COALESCE(inf.unidade_medida, p.unidade_m, '') AS unidade " +
+                        "FROM insumo_ficha inf " +
+                        "INNER JOIN produto p ON inf.id_produto = p.id_produto " +
+                        "WHERE inf.id_ficha = ?";
+
                 PreparedStatement stmtIngr = conexao.prepareStatement(sqlIngredientes);
                 stmtIngr.setInt(1, idFicha);
                 ResultSet rsIngr = stmtIngr.executeQuery();
                 while (rsIngr.next()) {
                     double qtd = rsIngr.getDouble("quantidade");
                     String unidade = rsIngr.getString("unidade");
+                    if (unidade == null || unidade.equalsIgnoreCase("null")) unidade = "";
                     String produto = rsIngr.getString("nome_produto");
 
-                    // Remove zeros desnecessários (ex: 500.000 -> 500)
                     String qtdFormatada = (qtd % 1 == 0) ? String.format("%.0f", qtd) : String.format("%.2f", qtd);
-                    listaIngredientes.add(qtdFormatada + unidade + " de " + produto);
+                    listaIngredientes.add(qtdFormatada + " " + unidade.trim() + " de " + produto);
                 }
                 rsIngr.close();
                 stmtIngr.close();
@@ -121,7 +123,6 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsUten.close();
                 stmtUten.close();
 
-                // Variáveis finais para acessar na UI Thread
                 final String fNome = nome;
                 final String fPreparo = preparo;
                 final String fCategoria = categoria;
@@ -131,7 +132,6 @@ public class DetalhesReceitaFragment extends Fragment {
                         txtNomeReceita.setText(fNome);
                         txtCategoriaReceita.setText(fCategoria.toUpperCase());
 
-                        // Desenha as caixas na tela dinamicamente
                         desenharCaixasAzuis(containerIngredientes, listaIngredientes, "Nenhum ingrediente registrado.");
                         desenharCaixasAzuis(containerUtensilios, listaUtensilios, "Nenhum utensílio registrado.");
                         desenharPassos(containerPassos, fPreparo);
@@ -149,11 +149,6 @@ public class DetalhesReceitaFragment extends Fragment {
         }).start();
     }
 
-    // ==================================================
-    // MÉTODOS PARA DESENHAR O DESIGN DO CANVA VIA CÓDIGO
-    // ==================================================
-
-    // Cria as caixinhas brancas com borda azul (Ingredientes e Utensílios)
     private void desenharCaixasAzuis(LinearLayout container, List<String> itens, String msgVazio) {
         container.removeAllViews();
         if (itens.isEmpty()) {
@@ -163,13 +158,12 @@ public class DetalhesReceitaFragment extends Fragment {
         for (String item : itens) {
             TextView txtItem = new TextView(getContext());
             txtItem.setText(item);
-            txtItem.setTextColor(Color.parseColor("#054584")); // Azul Escuro do Senac
+            txtItem.setTextColor(Color.parseColor("#054584"));
             txtItem.setTextSize(14f);
             txtItem.setTypeface(null, Typeface.BOLD);
             txtItem.setGravity(Gravity.CENTER);
             txtItem.setPadding(16, 24, 16, 24);
 
-            // Borda azul, fundo branco e cantos arredondados
             GradientDrawable shape = new GradientDrawable();
             shape.setShape(GradientDrawable.RECTANGLE);
             shape.setColor(Color.WHITE);
@@ -186,7 +180,6 @@ public class DetalhesReceitaFragment extends Fragment {
         }
     }
 
-    // Cria as caixas azuis escuras numeradas do Modo de Preparo
     private void desenharPassos(LinearLayout container, String preparoCompleto) {
         container.removeAllViews();
 
@@ -194,19 +187,17 @@ public class DetalhesReceitaFragment extends Fragment {
             return;
         }
 
-        // O banco tem um texto corrido. Dividimos pelos pontos finais para simular "Passos"
         String[] passos = preparoCompleto.split("\\.");
         int numeroPasso = 1;
 
         for (String passo : passos) {
-            if (passo.trim().length() > 3) { // Ignora espaços vazios
+            if (passo.trim().length() > 3) {
 
                 LinearLayout row = new LinearLayout(getContext());
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setPadding(32, 24, 32, 24);
 
-                // Fundo Azul Escuro do cartão
                 GradientDrawable shape = new GradientDrawable();
                 shape.setShape(GradientDrawable.RECTANGLE);
                 shape.setColor(Color.parseColor("#0B2647"));
@@ -218,7 +209,6 @@ public class DetalhesReceitaFragment extends Fragment {
                 rowParams.setMargins(0, 0, 0, 16);
                 row.setLayoutParams(rowParams);
 
-                // Número Grande na Esquerda
                 TextView txtNumero = new TextView(getContext());
                 txtNumero.setText(String.valueOf(numeroPasso));
                 txtNumero.setTextColor(Color.WHITE);
@@ -226,14 +216,12 @@ public class DetalhesReceitaFragment extends Fragment {
                 txtNumero.setTypeface(null, Typeface.BOLD);
                 txtNumero.setPadding(0, 0, 32, 0);
 
-                // Texto da instrução na Direita
                 TextView txtInstrucao = new TextView(getContext());
                 txtInstrucao.setText(passo.trim() + ".");
-                txtInstrucao.setTextColor(Color.parseColor("#E2E8F0")); // Cinza bem clarinho
+                txtInstrucao.setTextColor(Color.parseColor("#E2E8F0"));
                 txtInstrucao.setTextSize(14f);
                 txtInstrucao.setLineSpacing(4f, 1f);
 
-                // Configura o peso para o texto ocupar o resto do espaço
                 LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
                         0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 txtInstrucao.setLayoutParams(textParams);
