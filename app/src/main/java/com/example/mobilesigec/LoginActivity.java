@@ -12,19 +12,14 @@ import android.widget.Toast;
 
 import com.google.android.material.button.MaterialButton;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -32,21 +27,23 @@ public class LoginActivity extends AppCompatActivity {
     MaterialButton btnEntrar;
     ProgressBar progressEntrar;
 
-    Connection con = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
-    String sql;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
+
+        // Removemos o EdgeToEdge.enable(this); que causava a transparência na barra
         setContentView(R.layout.activity_login);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+
+        // Garante que a StatusBar fique Azul Escura com ícones brancos (igual à Home)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.senac_blue));
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            View decor = getWindow().getDecorView();
+            // Desativa o modo "Light Status Bar" para que os ícones (bateria, relógio) fiquem brancos
+            decor.setSystemUiVisibility(decor.getSystemUiVisibility() & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
 
         emailLogin = findViewById(R.id.emailLogin);
         senhaLogin = findViewById(R.id.senhaLogin);
@@ -179,4 +176,3 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 }
-
