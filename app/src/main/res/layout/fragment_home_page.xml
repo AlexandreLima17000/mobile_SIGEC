@@ -151,7 +151,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:background="@null"
-                            android:popupBackground="@drawable/bg_spinner_popup" />
+                            android:popupBackground="@drawable/bg_spinner_popup"
+                            android:theme="@style/SpinnerTextoPreto" />
                     </LinearLayout>
 
                 </LinearLayout>

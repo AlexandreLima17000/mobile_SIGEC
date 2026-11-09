@@ -112,7 +112,9 @@
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
                 android:autofillHints="emailAddress"
-                android:paddingVertical="16dp" />
+                android:paddingVertical="16dp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#757575" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Campo de Senha -->
@@ -139,8 +141,11 @@
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
                 android:autofillHints="password"
-                android:paddingVertical="16dp" />
+                android:paddingVertical="16dp"
+                android:textColor="@android:color/black"
+                android:textColorHint="#757575" />
         </com.google.android.material.textfield.TextInputLayout>
+
 
         <TextView
             android:id="@+id/tv_esqueci_senha"

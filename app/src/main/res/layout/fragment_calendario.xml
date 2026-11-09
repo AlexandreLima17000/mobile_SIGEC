@@ -158,7 +158,9 @@
                         android:layout_height="44dp"
                         android:paddingStart="0dp"
                         android:paddingEnd="4dp"
-                        android:spinnerMode="dropdown" />
+                        android:spinnerMode="dropdown"
+                        android:theme="@style/SpinnerTextoPreto"
+                        android:popupBackground="@drawable/bg_spinner_popup" />
 
                 </LinearLayout>
 
