@@ -3,12 +3,16 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-
-    <style name="SpinnerTextoPreto" parent="ThemeOverlay.AppCompat.Light">
+    <style name="SpinnerTextoPreto" parent="Theme.MaterialComponents.Light">
         <item name="android:textColor">#000000</item>
         <item name="android:textColorHint">#000000</item>
+        <item name="android:colorControlNormal">#002747</item>
     </style>
 
+    <style name="SpinnerItemTextoPreto">
+        <item name="android:textColor">#000000</item>
+        <item name="android:textSize">14sp</item>
+    </style>
     <!-- Cores do SIGEC -->
     <color name="primary">#002747</color>
     <color name="primary_container">#003d6b</color>

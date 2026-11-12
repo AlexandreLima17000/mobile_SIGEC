@@ -356,16 +356,24 @@ public class CalendarioFragment extends Fragment {
                                 Context.MODE_PRIVATE
                         );
 
-                ArrayAdapter<TurmaModelo> adapter =
-                        new ArrayAdapter<>(
-                                contextoAtual,
-                                android.R.layout.simple_spinner_item,
-                                listaTurmas
-                        );
+                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<TurmaModelo>(
+                        requireContext(),
+                        R.layout.spinner_item_preto,
+                        listaTurmas
+                ) {
+                    @Override
+                    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                        View view = super.getDropDownView(position, convertView, parent);
 
-                adapter.setDropDownViewResource(
-                        android.R.layout.simple_spinner_dropdown_item
-                );
+                        TextView texto = (TextView) view;
+                        texto.setTextColor(Color.BLACK);
+                        texto.setBackgroundColor(Color.WHITE);
+
+                        return view;
+                    }
+                };
+
+                adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
 
                 spinnerTurmasCalendario.setAdapter(adapter);
 

@@ -2,6 +2,7 @@ package com.example.mobilesigec.home;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -154,11 +155,23 @@ public class HomePageFragment extends Fragment {
                 if (!isAdded() || getContext() == null) return;
 
                 ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
-                        getContext(),
-                        android.R.layout.simple_spinner_item,
+                        requireContext(),
+                        R.layout.spinner_item_preto,
                         listaTurmas
-                );
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                ) {
+                    @Override
+                    public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                        View view = super.getDropDownView(position, convertView, parent);
+
+                        TextView texto = (TextView) view;
+                        texto.setTextColor(Color.BLACK);
+                        texto.setBackgroundColor(Color.WHITE);
+
+                        return view;
+                    }
+                };
+
+                adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
                 spinnerTurmasHome.setAdapter(adapter);
 
                 if (listaTurmas.isEmpty()) {
