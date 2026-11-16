@@ -25,7 +25,7 @@
         </activity>
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".auth.LoginActivity"
             android:exported="false"
             android:label="@string/app_name"
             android:resizeableActivity="true"
@@ -33,17 +33,17 @@
             tools:targetApi="24" />
 
         <activity
-            android:name=".RecuperarSenhaEmailActivity"
+            android:name=".auth.RecuperarSenhaEmailActivity"
             android:exported="false"
             android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
 
         <activity
-            android:name=".ConfirmacaoCodigoActivity"
+            android:name=".auth.ConfirmacaoCodigoActivity"
             android:exported="false"
             android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
 
         <activity
-            android:name=".RedefinirSenhaActivity"
+            android:name=".auth.RedefinirSenhaActivity"
             android:exported="false"
             android:theme="@style/Theme.MobileSIGEC.NoActionBar" />
 

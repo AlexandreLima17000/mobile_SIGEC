@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 import com.google.android.material.card.MaterialCardView;
 

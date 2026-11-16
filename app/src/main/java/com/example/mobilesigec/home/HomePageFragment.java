@@ -22,7 +22,7 @@ import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.model.TurmaModelo;
 

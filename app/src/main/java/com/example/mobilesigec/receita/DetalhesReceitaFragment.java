@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 
 import java.sql.Connection;

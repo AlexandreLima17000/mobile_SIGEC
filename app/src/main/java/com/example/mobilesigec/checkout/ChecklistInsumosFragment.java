@@ -19,7 +19,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.adapter.InsumoAdapter;
 import com.example.mobilesigec.model.InsumoModelo;

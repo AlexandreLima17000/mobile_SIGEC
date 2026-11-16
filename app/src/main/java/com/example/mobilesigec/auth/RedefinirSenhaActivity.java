@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -14,6 +14,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
