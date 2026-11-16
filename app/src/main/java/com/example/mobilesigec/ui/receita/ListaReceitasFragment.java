@@ -1,4 +1,4 @@
-package com.example.mobilesigec.receita;
+package com.example.mobilesigec.ui.receita;
 
 import android.os.Bundle;
 import android.text.Editable;
@@ -111,9 +111,6 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
-    // ==================================================
-    // CARREGA AS RECEITAS DO BANCO DE DADOS (DB_SIGEC)
-    // ==================================================
     private void carregarReceitas() {
         if (getContext() == null) return;
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
@@ -131,7 +128,6 @@ public class ListaReceitasFragment extends Fragment {
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
-                    // 1. Buscar os IDs de fichas com agendamento ativo e data preenchida
                     Set<Integer> fichasDatadas = new HashSet<>();
                     String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
                     try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
@@ -141,7 +137,6 @@ public class ListaReceitasFragment extends Fragment {
                         }
                     } catch (Exception ignored) {}
 
-                    // 2. Buscar as fichas técnicas ativas vinculadas às turmas do usuário logado
                     String sql;
                     if (idUsuario != -1) {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +

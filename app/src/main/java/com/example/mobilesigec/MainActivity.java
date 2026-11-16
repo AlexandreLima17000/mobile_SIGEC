@@ -19,7 +19,7 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.mobilesigec.auth.LoginActivity;
+import com.example.mobilesigec.ui.auth.LoginActivity;
 import com.example.mobilesigec.databinding.ActivityMainBinding;
 
 import java.sql.Connection;

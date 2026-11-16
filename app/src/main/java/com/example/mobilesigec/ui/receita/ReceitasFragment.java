@@ -1,4 +1,4 @@
-package com.example.mobilesigec.receita;
+package com.example.mobilesigec.ui.receita;
 
 import android.os.Bundle;
 

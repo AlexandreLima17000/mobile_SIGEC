@@ -1,4 +1,4 @@
-package com.example.mobilesigec.calendario;
+package com.example.mobilesigec.ui.calendario;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;

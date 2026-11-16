@@ -1,4 +1,4 @@
-package com.example.mobilesigec.auth;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -40,14 +40,12 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Receber dados da Intent
         Intent intentOriginal = getIntent();
         if (intentOriginal != null) {
             emailUsuario = intentOriginal.getStringExtra("email");
             codigoEsperado = intentOriginal.getStringExtra("codigo");
         }
 
-        // Inicializar Views
         etCode1 = findViewById(R.id.et_code_1);
         etCode2 = findViewById(R.id.et_code_2);
         etCode3 = findViewById(R.id.et_code_3);
@@ -64,10 +62,8 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
         ProgressBar progressConfirmar = findViewById(R.id.progress_confirmar);
         TextView tvVoltarLogin = findViewById(R.id.tv_voltar_login);
 
-        // Configurar transição automática de foco entre os campos de código
         setupCodeInputs();
 
-        // Botão de Confirmação
         btnConfirmarCodigo.setOnClickListener(v -> {
             String code = getEnteredCode();
             if (code.length() < 6) {
@@ -99,7 +95,6 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             }
         });
 
-        // Botão "Voltar ao Login"
         tvVoltarLogin.setOnClickListener(v -> {
             Intent intent = new Intent(ConfirmacaoCodigoActivity.this, LoginActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);

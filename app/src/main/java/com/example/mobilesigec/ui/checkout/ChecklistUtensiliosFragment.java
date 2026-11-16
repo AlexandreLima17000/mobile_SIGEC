@@ -1,4 +1,4 @@
-package com.example.mobilesigec.checkout;
+package com.example.mobilesigec.ui.checkout;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -102,8 +102,8 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         if (idTurmaSelecionada == -1) return;
 
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando"
-        spinnerReceitas.setEnabled(false); // Desativa o spinner para evitar cliques acidentais
+        progressLoading.setVisibility(View.VISIBLE);
+        spinnerReceitas.setEnabled(false);
 
         final int finalIdUsuario = idUsuarioLogado;
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -152,10 +152,9 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // Volta para a thread principal (UI Thread) para atualizar a tela
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
@@ -183,7 +182,7 @@ public class ChecklistUtensiliosFragment extends Fragment {
     }
 
     private void carregarUtensiliosDaReceita(int idFicha) {
-        progressLoading.setVisibility(View.VISIBLE); // Mostra o "carregando" para a lista
+        progressLoading.setVisibility(View.VISIBLE);
         listaUtensiliosAtual.clear();
 
         if (adapter != null) {
@@ -216,10 +215,9 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            // Volta para a tela para injetar a lista
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    progressLoading.setVisibility(View.GONE); // Esconde o "carregando"
+                    progressLoading.setVisibility(View.GONE);
 
                     adapter = new UtensilioAdapter(listaUtensiliosAtual, () -> atualizarProgresso());
                     rvUtensilios.setAdapter(adapter);
@@ -268,7 +266,6 @@ public class ChecklistUtensiliosFragment extends Fragment {
             return;
         }
 
-        //  Isola em uma nova lista apenas os utensílios que o instrutor marcou
         List<UtensilioModelo> utensiliosUtilizados = new ArrayList<>();
         for (UtensilioModelo utensilio : listaUtensiliosAtual) {
             if (utensilio.isMarcado()) {
@@ -276,7 +273,6 @@ public class ChecklistUtensiliosFragment extends Fragment {
             }
         }
 
-        //  Valida se pelo menos um item foi marcado
         if (utensiliosUtilizados.isEmpty()) {
             Toast.makeText(getContext(), "Marque pelo menos um utensílio utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
             return;
@@ -289,10 +285,8 @@ public class ChecklistUtensiliosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    // Inicia a transação segura (impede que salve dados pela metade se a internet cair)
                     con.setAutoCommit(false);
 
-                    // Passo B: Registra a hora de saída de cada utensílio selecionado
                     String sqlUtensilio = "UPDATE checklist_utensilio SET data_hora_saida = NOW(), observacao = 'Retirado para aula' " +
                             "WHERE id_ficha = ? AND id_utensilio = ?";
 
@@ -305,7 +299,6 @@ public class ChecklistUtensiliosFragment extends Fragment {
                     }
                     stmtUtensilio.close();
 
-                    // Passo C: Salva as alterações definitivamente no MySQL
                     con.commit();
                     sucesso = true;
                     con.close();

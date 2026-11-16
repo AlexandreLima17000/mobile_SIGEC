@@ -1,7 +1,6 @@
-package com.example.mobilesigec.auth;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;

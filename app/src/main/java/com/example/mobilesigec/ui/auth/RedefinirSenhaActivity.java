@@ -1,4 +1,4 @@
-package com.example.mobilesigec.auth;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -44,7 +44,6 @@ public class RedefinirSenhaActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Recebe o e-mail da Intent
         if (getIntent() != null) {
             emailUsuario = getIntent().getStringExtra("email");
         }
@@ -78,7 +77,6 @@ public class RedefinirSenhaActivity extends AppCompatActivity {
                 return;
             }
 
-            // Ativar estado de carregamento
             btnRedefinirSenha.setEnabled(false);
             btnRedefinirSenha.setText("Redefinindo...");
             progressRedefinir.setVisibility(View.VISIBLE);

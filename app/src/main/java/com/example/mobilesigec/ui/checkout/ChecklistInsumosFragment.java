@@ -1,4 +1,4 @@
-package com.example.mobilesigec.checkout;
+package com.example.mobilesigec.ui.checkout;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -259,7 +259,6 @@ public class ChecklistInsumosFragment extends Fragment {
             return;
         }
 
-        // 1. Filtrar apenas os itens que foram realmente marcados pelo instrutor
         List<InsumoModelo> insumosUtilizados = new ArrayList<>();
         for (InsumoModelo insumo : listaInsumosAtual) {
             if (insumo.isMarcado()) {
@@ -267,7 +266,6 @@ public class ChecklistInsumosFragment extends Fragment {
             }
         }
 
-        // 2. Valida se ele marcou pelo menos alguma coisa
         if (insumosUtilizados.isEmpty()) {
             Toast.makeText(getContext(), "Marque pelo menos um insumo utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
             return;
@@ -280,11 +278,8 @@ public class ChecklistInsumosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    // Desliga o commit automático para garantir a transação segura
                     con.setAutoCommit(false);
 
-
-                    // Passo B: Prepara os comandos de Histórico (Movimentação) e Baixa de Saldo (Produto)
                     String sqlEstoque = "INSERT INTO movimentacao_estoque (tipo_movimentacao, quantidade, id_produto, id_insumo, observacao) " +
                             "VALUES ('SAIDA', ?, (SELECT id_produto FROM insumo WHERE id_insumo = ?), ?, 'Baixa confirmada pelo instrutor')";
                     PreparedStatement stmtEstoque = con.prepareStatement(sqlEstoque);
@@ -292,18 +287,15 @@ public class ChecklistInsumosFragment extends Fragment {
                     String sqlBaixaProduto = "UPDATE produto SET quantidade = quantidade - ? WHERE id_produto = (SELECT id_produto FROM insumo WHERE id_insumo = ?)";
                     PreparedStatement stmtBaixaProduto = con.prepareStatement(sqlBaixaProduto);
 
-                    // Passo C: Roda os comandos para cada item que estava com a caixa marcada na tela
                     for (InsumoModelo insumo : insumosUtilizados) {
                         double qtdUtilizada = Double.parseDouble(insumo.getQuantidade());
                         int idInsumo = insumo.getIdInsumo();
 
-                        // Grava na tabela movimentacao_estoque
                         stmtEstoque.setDouble(1, qtdUtilizada);
                         stmtEstoque.setInt(2, idInsumo);
                         stmtEstoque.setInt(3, idInsumo);
                         stmtEstoque.executeUpdate();
 
-                        // Subtrai o saldo na tabela produto
                         stmtBaixaProduto.setDouble(1, qtdUtilizada);
                         stmtBaixaProduto.setInt(2, idInsumo);
                         stmtBaixaProduto.executeUpdate();
@@ -312,7 +304,6 @@ public class ChecklistInsumosFragment extends Fragment {
                     stmtEstoque.close();
                     stmtBaixaProduto.close();
 
-                    // Passo D: Salva tudo de forma definitiva no banco
                     con.commit();
                     sucesso = true;
                     con.close();

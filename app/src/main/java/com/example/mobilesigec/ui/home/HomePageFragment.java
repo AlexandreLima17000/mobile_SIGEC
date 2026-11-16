@@ -1,4 +1,4 @@
-package com.example.mobilesigec.home;
+package com.example.mobilesigec.ui.home;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -60,7 +60,7 @@ public class HomePageFragment extends Fragment {
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_home_page, container, false);
     }
-//
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -78,7 +78,6 @@ public class HomePageFragment extends Fragment {
             SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
             String nomeCompleto = prefs.getString("nome_usuario", "Instrutor");
 
-            // Aplica a formatação para pegar apenas os dois primeiros nomes
             String nomeFormatado = formatarNomeCurto(nomeCompleto);
 
             if (textSaudacao != null) {
@@ -261,7 +260,6 @@ public class HomePageFragment extends Fragment {
                     ResultSetMetaData metaData = rs.getMetaData();
                     int columnCount = metaData.getColumnCount();
 
-                    // Calcula o início (Segunda 00:00:00) e fim (Domingo 23:59:59) da semana ATUAL
                     Calendar calNow = Calendar.getInstance();
                     calNow.set(Calendar.HOUR_OF_DAY, 0);
                     calNow.set(Calendar.MINUTE, 0);
@@ -328,7 +326,6 @@ public class HomePageFragment extends Fragment {
                             }
                         }
 
-                        // Se não tem data ou NÃO pertence à semana atual, ignora
                         if (!temData || !pertenceASemanaAtual) {
                             continue;
                         }
@@ -426,7 +423,6 @@ public class HomePageFragment extends Fragment {
                         }
                     }
 
-                    // Configuração inicial: Se for hoje, inicia aberto; caso contrário, fechado
                     if (ehHoje) {
                         if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
                         if (ivChevron != null) ivChevron.setRotation(180f);
@@ -435,7 +431,6 @@ public class HomePageFragment extends Fragment {
                         if (ivChevron != null) ivChevron.setRotation(0f);
                     }
 
-                    // Alterna visibilidade ao clicar no cabeçalho
                     if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
                         headerDiaSemana.setOnClickListener(v -> {
                             boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
@@ -467,22 +462,14 @@ public class HomePageFragment extends Fragment {
         }
     }
 
-    // ==================================================
-    // FUNÇÃO PARA FORMATAR O NOME (DOIS PRIMEIROS NOMES)
-    // ==================================================
     private String formatarNomeCurto(String nomeCompleto) {
         if (nomeCompleto == null || nomeCompleto.trim().isEmpty()) {
             return "";
         }
-
-        // Divide o nome completo em uma lista de palavras usando os espaços
         String[] partes = nomeCompleto.trim().split("\\s+");
-
-        // Se tiver 2 ou mais nomes, junta apenas o primeiro e o segundo
         if (partes.length >= 2) {
             return partes[0] + " " + partes[1];
         } else {
-            // Se a pessoa tiver cadastrado só um nome, retorna apenas ele
             return partes[0];
         }
     }

@@ -1,4 +1,4 @@
-package com.example.mobilesigec.auth;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
