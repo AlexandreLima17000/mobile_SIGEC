@@ -1,4 +1,4 @@
-package com.example.mobilesigec.receita;
+package com.example.mobilesigec.ui.receita;
 
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 
 import java.sql.Connection;
@@ -69,7 +69,6 @@ public class DetalhesReceitaFragment extends Fragment {
             try {
                 conexao = ConexaoMySQL.conectar();
 
-                // 1. BUSCAR DADOS DA FICHA
                 String sqlFicha = "SELECT f.nome_ficha, f.preparo " +
                         "FROM ficha f " +
                         "WHERE f.id_ficha = ?";
@@ -85,9 +84,7 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsFicha.close();
                 stmtFicha.close();
 
-                // 2. BUSCAR INGREDIENTES (INSUMOS) PELA NOVA TABELA insumo_ficha
                 List<String> listaIngredientes = new ArrayList<>();
-                // Lê da insumo_ficha, pegando o nome e a unidade de medida do produto
                 String sqlIngredientes = "SELECT p.nome_produto, inf.quantidade, " +
                         "COALESCE(inf.unidade_medida, p.unidade_m, '') AS unidade " +
                         "FROM insumo_ficha inf " +
@@ -109,7 +106,6 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsIngr.close();
                 stmtIngr.close();
 
-                // 3. BUSCAR UTENSÍLIOS (CHECKLIST)
                 List<String> listaUtensilios = new ArrayList<>();
                 String sqlUtensilios = "SELECT u.nome_utensilio FROM checklist_utensilio c " +
                         "JOIN utensilio u ON c.id_utensilio = u.id_utensilio " +

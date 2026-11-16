@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -9,6 +9,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.mobilesigec.BuildConfig;
+import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -78,7 +81,6 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                 return;
             }
 
-            // Ativa estado de carregamento
             btnEnviar.setEnabled(false);
             btnEnviar.setText(R.string.forgot_password_checking);
             progressEnviar.setVisibility(View.VISIBLE);
@@ -92,7 +94,6 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                         stmt.setString(1, email);
                         try (ResultSet rs = stmt.executeQuery()) {
                             if (rs.next()) {
-                                // E-mail existe -> Gera código e envia e-mail
                                 String codigo = String.format(Locale.getDefault(), "%06d", new Random().nextInt(1000000));
                                 
                                 boolean enviado = enviarEmailRecuperacao(email, codigo);

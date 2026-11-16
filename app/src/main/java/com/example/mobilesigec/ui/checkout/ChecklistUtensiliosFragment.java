@@ -1,4 +1,4 @@
-package com.example.mobilesigec.checkout;
+package com.example.mobilesigec.ui.checkout;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -19,11 +19,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
-import com.example.mobilesigec.adapter.InsumoAdapter;
-import com.example.mobilesigec.model.InsumoModelo;
+import com.example.mobilesigec.adapter.UtensilioAdapter;
 import com.example.mobilesigec.model.ReceitaModelo;
+import com.example.mobilesigec.model.UtensilioModelo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
@@ -35,53 +35,59 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class ChecklistInsumosFragment extends Fragment {
+public class ChecklistUtensiliosFragment extends Fragment {
 
     private Spinner spinnerReceitas;
     private TextView tvReceitaSelecionada;
     private TextView tvLaboratorioSelecionado;
     private TextView tvTurmaSelecionada;
 
-    private RecyclerView rvInsumos;
-    private InsumoAdapter adapter;
-    private List<InsumoModelo> listaInsumosAtual = new ArrayList<>();
-    private LinearProgressIndicator progressBarInsumos;
+    private RecyclerView rvUtensilios;
+    private UtensilioAdapter adapter;
+    private List<UtensilioModelo> listaUtensiliosAtual = new ArrayList<>();
+    private LinearProgressIndicator progressBarUtensilios;
     private TextView tvProgressoTexto;
     private TextView tvProgressoPorcentagem;
     private ProgressBar progressLoading;
 
-    private MaterialButton btnLimparInsumos;
-    private MaterialButton btnConfirmarInsumos;
+    private MaterialButton btnLimparUtensilios;
+    private MaterialButton btnConfirmarUtensilios;
+    private MaterialButton btnDevolverUtensilios;
 
-    public ChecklistInsumosFragment() {}
+    public ChecklistUtensiliosFragment() {
+        // Required empty public constructor
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_checklist_insumos, container, false);
+        return inflater.inflate(R.layout.fragment_checklist_utensilios, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        spinnerReceitas = view.findViewById(R.id.spinner_receitas_insumos);
-        tvReceitaSelecionada = view.findViewById(R.id.tv_receita_selecionada);
-        tvLaboratorioSelecionado = view.findViewById(R.id.tv_laboratorio_selecionado);
-        tvTurmaSelecionada = view.findViewById(R.id.tv_turma_selecionada);
+        spinnerReceitas = view.findViewById(R.id.spinner_receitas_utensilios);
+        tvReceitaSelecionada = view.findViewById(R.id.tv_receita_selecionada_utensilios);
+        tvLaboratorioSelecionado = view.findViewById(R.id.tv_laboratorio_selecionado_utensilios);
+        tvTurmaSelecionada = view.findViewById(R.id.tv_turma_selecionada_utensilios);
 
-        rvInsumos = view.findViewById(R.id.rv_insumos);
-        rvInsumos.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvUtensilios = view.findViewById(R.id.rv_utensilios);
+        rvUtensilios.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        progressBarInsumos = view.findViewById(R.id.progress_bar_insumos);
-        tvProgressoTexto = view.findViewById(R.id.tv_progresso_texto_insumos);
-        tvProgressoPorcentagem = view.findViewById(R.id.tv_progresso_porcentagem_insumos);
-        progressLoading = view.findViewById(R.id.progress_loading);
+        progressBarUtensilios = view.findViewById(R.id.progress_bar_utensilios);
+        tvProgressoTexto = view.findViewById(R.id.tv_progresso_texto_utensilios);
+        tvProgressoPorcentagem = view.findViewById(R.id.tv_progresso_porcentagem_utensilios);
+        progressLoading = view.findViewById(R.id.progress_loading_utensilios);
 
-        btnLimparInsumos = view.findViewById(R.id.btn_limpar_insumos);
-        btnConfirmarInsumos = view.findViewById(R.id.btn_confirmar_insumos);
+        btnLimparUtensilios = view.findViewById(R.id.btn_limpar_utensilios);
+        btnConfirmarUtensilios = view.findViewById(R.id.btn_confirmar_utensilios);
 
-        btnLimparInsumos.setOnClickListener(v -> limparChecklist());
-        btnConfirmarInsumos.setOnClickListener(v -> confirmarSeparacao());
+        btnDevolverUtensilios = view.findViewById(R.id.btn_devolver_utensilios);
+        btnDevolverUtensilios.setOnClickListener(v -> abrirDialogDevolucao());
+
+        btnLimparUtensilios.setOnClickListener(v -> limparChecklist());
+        btnConfirmarUtensilios.setOnClickListener(v -> confirmarUtensilios());
 
         carregarReceitasNoSpinner();
     }
@@ -164,7 +170,7 @@ public class ChecklistInsumosFragment extends Fragment {
                                 tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
                                 tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
 
-                                carregarInsumosDaReceita(receitaSelecionada.getIdReceita());
+                                carregarUtensiliosDaReceita(receitaSelecionada.getIdReceita());
                             }
                             @Override
                             public void onNothingSelected(AdapterView<?> parent) {}
@@ -175,9 +181,9 @@ public class ChecklistInsumosFragment extends Fragment {
         });
     }
 
-    private void carregarInsumosDaReceita(int idFicha) {
+    private void carregarUtensiliosDaReceita(int idFicha) {
         progressLoading.setVisibility(View.VISIBLE);
-        listaInsumosAtual.clear();
+        listaUtensiliosAtual.clear();
 
         if (adapter != null) {
             adapter.notifyDataSetChanged();
@@ -187,21 +193,20 @@ public class ChecklistInsumosFragment extends Fragment {
         executor.execute(() -> {
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
-                    String sql = "SELECT i.id_insumo, p.nome_produto, i.quantidade, p.unidade " +
-                            "FROM insumo i " +
-                            "INNER JOIN produto p ON i.id_produto = p.id_produto " +
-                            "WHERE i.id_ficha = ? AND (i.cancelado = 'N' OR i.cancelado IS NULL OR i.cancelado = '' OR i.cancelado = '0')";
+                    String sql = "SELECT u.id_utensilio, u.nome_utensilio, COALESCE(cu.quantidade, u.quantidade, 1) AS quantidade " +
+                            "FROM checklist_utensilio cu " +
+                            "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
+                            "WHERE cu.id_ficha = ? AND (cu.situacao = 'A' OR cu.situacao IS NULL OR cu.situacao = '')";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
                         stmt.setInt(1, idFicha);
                         try (ResultSet rs = stmt.executeQuery()) {
                             while (rs.next()) {
-                                listaInsumosAtual.add(new InsumoModelo(
-                                        rs.getInt("id_insumo"),
-                                        rs.getString("nome_produto"),
-                                        String.valueOf(rs.getInt("quantidade")),
-                                        rs.getString("unidade")
-                                ));
+                                int idUtensilio = rs.getInt("id_utensilio");
+                                String nome = rs.getString("nome_utensilio");
+                                String qtd = String.valueOf(rs.getInt("quantidade"));
+
+                                listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
                             }
                         }
                     }
@@ -214,8 +219,8 @@ public class ChecklistInsumosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
 
-                    adapter = new InsumoAdapter(listaInsumosAtual, () -> atualizarProgresso());
-                    rvInsumos.setAdapter(adapter);
+                    adapter = new UtensilioAdapter(listaUtensiliosAtual, () -> atualizarProgresso());
+                    rvUtensilios.setAdapter(adapter);
                     atualizarProgresso();
                 });
             }
@@ -223,53 +228,53 @@ public class ChecklistInsumosFragment extends Fragment {
     }
 
     private void atualizarProgresso() {
-        if (listaInsumosAtual == null || listaInsumosAtual.isEmpty()) {
-            progressBarInsumos.setProgress(0);
+        if (listaUtensiliosAtual == null || listaUtensiliosAtual.isEmpty()) {
+            progressBarUtensilios.setProgress(0);
             tvProgressoTexto.setText("0 de 0 itens marcados");
             tvProgressoPorcentagem.setText("0%");
             return;
         }
 
-        int totalItens = listaInsumosAtual.size();
+        int totalItens = listaUtensiliosAtual.size();
         int itensMarcados = 0;
-        for (InsumoModelo insumo : listaInsumosAtual) {
-            if (insumo.isMarcado()) itensMarcados++;
+
+        for (UtensilioModelo utensilio : listaUtensiliosAtual) {
+            if (utensilio.isMarcado()) itensMarcados++;
         }
+
         int porcentagem = (int) (((float) itensMarcados / totalItens) * 100);
 
-        progressBarInsumos.setProgress(porcentagem);
+        progressBarUtensilios.setProgress(porcentagem);
         tvProgressoTexto.setText(itensMarcados + " de " + totalItens + " itens marcados");
         tvProgressoPorcentagem.setText(porcentagem + "%");
     }
 
     private void limparChecklist() {
-        if (listaInsumosAtual != null && adapter != null) {
-            for (InsumoModelo insumo : listaInsumosAtual) {
-                insumo.setMarcado(false);
+        if (listaUtensiliosAtual != null && adapter != null) {
+            for (UtensilioModelo utensilio : listaUtensiliosAtual) {
+                utensilio.setMarcado(false);
             }
             adapter.notifyDataSetChanged();
             atualizarProgresso();
         }
     }
 
-    private void confirmarSeparacao() {
+    private void confirmarUtensilios() {
         ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
-        if (receitaSelecionada == null || listaInsumosAtual.isEmpty()) {
+        if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
             Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // 1. Filtrar apenas os itens que foram realmente marcados pelo instrutor
-        List<InsumoModelo> insumosUtilizados = new ArrayList<>();
-        for (InsumoModelo insumo : listaInsumosAtual) {
-            if (insumo.isMarcado()) {
-                insumosUtilizados.add(insumo);
+        List<UtensilioModelo> utensiliosUtilizados = new ArrayList<>();
+        for (UtensilioModelo utensilio : listaUtensiliosAtual) {
+            if (utensilio.isMarcado()) {
+                utensiliosUtilizados.add(utensilio);
             }
         }
 
-        // 2. Valida se ele marcou pelo menos alguma coisa
-        if (insumosUtilizados.isEmpty()) {
-            Toast.makeText(getContext(), "Marque pelo menos um insumo utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
+        if (utensiliosUtilizados.isEmpty()) {
+            Toast.makeText(getContext(), "Marque pelo menos um utensílio utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -280,39 +285,20 @@ public class ChecklistInsumosFragment extends Fragment {
             try {
                 Connection con = ConexaoMySQL.conectar();
                 if (con != null) {
-                    // Desliga o commit automático para garantir a transação segura
                     con.setAutoCommit(false);
 
+                    String sqlUtensilio = "UPDATE checklist_utensilio SET data_hora_saida = NOW(), observacao = 'Retirado para aula' " +
+                            "WHERE id_ficha = ? AND id_utensilio = ?";
 
-                    // Passo B: Prepara os comandos de Histórico (Movimentação) e Baixa de Saldo (Produto)
-                    String sqlEstoque = "INSERT INTO movimentacao_estoque (tipo_movimentacao, quantidade, id_produto, id_insumo, observacao) " +
-                            "VALUES ('SAIDA', ?, (SELECT id_produto FROM insumo WHERE id_insumo = ?), ?, 'Baixa confirmada pelo instrutor')";
-                    PreparedStatement stmtEstoque = con.prepareStatement(sqlEstoque);
+                    PreparedStatement stmtUtensilio = con.prepareStatement(sqlUtensilio);
 
-                    String sqlBaixaProduto = "UPDATE produto SET quantidade = quantidade - ? WHERE id_produto = (SELECT id_produto FROM insumo WHERE id_insumo = ?)";
-                    PreparedStatement stmtBaixaProduto = con.prepareStatement(sqlBaixaProduto);
-
-                    // Passo C: Roda os comandos para cada item que estava com a caixa marcada na tela
-                    for (InsumoModelo insumo : insumosUtilizados) {
-                        double qtdUtilizada = Double.parseDouble(insumo.getQuantidade());
-                        int idInsumo = insumo.getIdInsumo();
-
-                        // Grava na tabela movimentacao_estoque
-                        stmtEstoque.setDouble(1, qtdUtilizada);
-                        stmtEstoque.setInt(2, idInsumo);
-                        stmtEstoque.setInt(3, idInsumo);
-                        stmtEstoque.executeUpdate();
-
-                        // Subtrai o saldo na tabela produto
-                        stmtBaixaProduto.setDouble(1, qtdUtilizada);
-                        stmtBaixaProduto.setInt(2, idInsumo);
-                        stmtBaixaProduto.executeUpdate();
+                    for (UtensilioModelo utensilio : utensiliosUtilizados) {
+                        stmtUtensilio.setInt(1, receitaSelecionada.getIdReceita());
+                        stmtUtensilio.setInt(2, utensilio.getIdUtensilio());
+                        stmtUtensilio.executeUpdate();
                     }
+                    stmtUtensilio.close();
 
-                    stmtEstoque.close();
-                    stmtBaixaProduto.close();
-
-                    // Passo D: Salva tudo de forma definitiva no banco
                     con.commit();
                     sucesso = true;
                     con.close();
@@ -326,9 +312,100 @@ public class ChecklistInsumosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     if (finalSucesso) {
-                        Toast.makeText(getContext(), "Separação e baixa de estoque concluídas com sucesso!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "Retirada de utensílios registrada com sucesso!", Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(getContext(), "Erro ao processar a baixa no estoque.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Erro ao processar a retirada dos utensílios.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+
+    private void abrirDialogDevolucao() {
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
+            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<UtensilioModelo> utensiliosDevolvidos = new ArrayList<>();
+        for (UtensilioModelo utensilio : listaUtensiliosAtual) {
+            if (utensilio.isMarcado()) {
+                utensiliosDevolvidos.add(utensilio);
+            }
+        }
+
+        if (utensiliosDevolvidos.isEmpty()) {
+            Toast.makeText(getContext(), "Marque os itens que deseja devolver.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.dialog_devolver_utensilio, null);
+        builder.setView(view);
+        android.app.AlertDialog dialog = builder.create();
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        Spinner spinnerEstado = view.findViewById(R.id.spinner_estado_utensilio);
+        String[] estados = {"PRONTO", "DANIFICADO", "EM_MANUTENCAO"};
+        ArrayAdapter<String> adapterEstado = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, estados);
+        adapterEstado.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerEstado.setAdapter(adapterEstado);
+
+        android.widget.EditText etObservacao = view.findViewById(R.id.et_observacao_devolucao);
+
+        view.findViewById(R.id.btn_cancelar_devolucao).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btn_confirmar_devolucao).setOnClickListener(v -> {
+            String estadoAtual = spinnerEstado.getSelectedItem().toString();
+            String observacao = etObservacao.getText().toString().trim();
+            processarDevolucao(utensiliosDevolvidos, estadoAtual, observacao, receitaSelecionada.getIdReceita(), dialog);
+        });
+
+        dialog.show();
+    }
+
+    private void processarDevolucao(List<UtensilioModelo> utensilios, String estadoAtual, String observacao, int idFicha, android.app.AlertDialog dialog) {
+        progressLoading.setVisibility(View.VISIBLE);
+        dialog.dismiss();
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            boolean sucesso = false;
+            try {
+                Connection con = ConexaoMySQL.conectar();
+                if (con != null) {
+                    con.setAutoCommit(false);
+
+                    String sqlDevolucao = "UPDATE checklist_utensilio SET data_hora_entrada = NOW(), estado_atual = ?, observacao = ? " +
+                            "WHERE id_ficha = ? AND id_utensilio = ?";
+                    PreparedStatement stmtDevolucao = con.prepareStatement(sqlDevolucao);
+
+                    for (UtensilioModelo utensilio : utensilios) {
+                        stmtDevolucao.setString(1, estadoAtual);
+                        stmtDevolucao.setString(2, observacao);
+                        stmtDevolucao.setInt(3, idFicha);
+                        stmtDevolucao.setInt(4, utensilio.getIdUtensilio());
+                        stmtDevolucao.executeUpdate();
+                    }
+                    stmtDevolucao.close();
+
+                    con.commit();
+                    sucesso = true;
+                    con.close();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            final boolean finalSucesso = sucesso;
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    progressLoading.setVisibility(View.GONE);
+                    if (finalSucesso) {
+                        Toast.makeText(getContext(), "Devolução registrada com sucesso!", Toast.LENGTH_LONG).show();
+                        limparChecklist();
+                    } else {
+                        Toast.makeText(getContext(), "Erro ao processar devolução no banco.", Toast.LENGTH_SHORT).show();
                     }
                 });
             }

@@ -1,4 +1,4 @@
-package com.example.mobilesigec.calendario;
+package com.example.mobilesigec.ui.calendario;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -21,7 +21,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.model.AulaAgenda;
 
@@ -401,7 +401,6 @@ public class CalendarioFragment extends Fragment {
                     return;
                 }
 
-                // Recupera a mesma turma salva pela HomePage.
                 int idTurmaSalva = preferencias.getInt(
                         "id_turma_selecionada",
                         -1
@@ -452,7 +451,6 @@ public class CalendarioFragment extends Fragment {
                                         -1
                                 );
 
-                                // Compartilha a seleção com a HomePage.
                                 prefsAtuais.edit()
                                         .putInt(
                                                 "id_turma_selecionada",
@@ -460,7 +458,6 @@ public class CalendarioFragment extends Fragment {
                                         )
                                         .apply();
 
-                                // Só consulta novamente se a turma mudou.
                                 if (novoIdTurma != ultimaTurmaCarregada) {
 
                                     carregarCalendarioEEventos(
@@ -473,7 +470,6 @@ public class CalendarioFragment extends Fragment {
                             public void onNothingSelected(
                                     AdapterView<?> parent
                             ) {
-                                // Nenhuma ação necessária.
                             }
                         });
 
@@ -482,7 +478,6 @@ public class CalendarioFragment extends Fragment {
                         false
                 );
 
-                // Garante uma turma válida mesmo na primeira utilização.
                 TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
 
                 preferencias.edit()
@@ -519,7 +514,6 @@ public class CalendarioFragment extends Fragment {
 
         int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
 
-        // Recarrega o calendário se a turma foi alterada na HomePage.
         if (idTurmaAtual != ultimaTurmaCarregada) {
             carregarCalendarioEEventos(
                     LayoutInflater.from(requireContext())
@@ -551,7 +545,7 @@ public class CalendarioFragment extends Fragment {
 
     private String getFeriadoNacional(Calendar cal) {
         int dia = cal.get(Calendar.DAY_OF_MONTH);
-        int mes = cal.get(Calendar.MONTH); // 0-based: JANUARY = 0 ... DECEMBER = 11
+        int mes = cal.get(Calendar.MONTH);
 
         if (mes == Calendar.JANUARY && dia == 1) return "Confraternização Universal";
         if (mes == Calendar.APRIL && dia == 21) return "Tiradentes";
@@ -579,7 +573,6 @@ public class CalendarioFragment extends Fragment {
             return;
         }
 
-        // Recupera a turma selecionada na HomePage.
         SharedPreferences prefs = context.getSharedPreferences(
                 "SessaoApp",
                 Context.MODE_PRIVATE
@@ -592,7 +585,6 @@ public class CalendarioFragment extends Fragment {
 
         ultimaTurmaCarregada = idTurmaSelecionada;
 
-        // Evita executar tarefas em um executor que já foi encerrado.
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
@@ -886,7 +878,6 @@ public class CalendarioFragment extends Fragment {
                 lastSelectedTextView = dayText;
             }
 
-            // Exibir indicadores dinâmicos de aulas (filtradas pela busca)
             List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
@@ -907,7 +898,6 @@ public class CalendarioFragment extends Fragment {
                     }
                 }
 
-                // Quando houver filtro ativo, destacar no calendário os dias da receita pesquisada
                 if (!termoFiltro.isEmpty() && day != selectedDay) {
                     dayContainer.setBackgroundResource(R.drawable.bg_calendar_day_selected);
                     dayText.setTextColor(Color.WHITE);

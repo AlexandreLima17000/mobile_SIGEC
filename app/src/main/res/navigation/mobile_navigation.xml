@@ -8,25 +8,25 @@
 
     <fragment
         android:id="@+id/nav_checklist_insumos"
-        android:name="com.example.mobilesigec.checkout.ChecklistInsumosFragment"
+        android:name="com.example.mobilesigec.ui.checkout.ChecklistInsumosFragment"
         android:label="Checklist de Insumos"
         tools:layout="@layout/fragment_checklist_insumos" />
 
     <fragment
         android:id="@+id/nav_checklist_utensilios"
-        android:name="com.example.mobilesigec.checkout.ChecklistUtensiliosFragment"
+        android:name="com.example.mobilesigec.ui.checkout.ChecklistUtensiliosFragment"
         android:label="Checklist de Utensílios"
         tools:layout="@layout/fragment_checklist_utensilios" />
 
     <fragment
         android:id="@+id/nav_detalhes_receita"
-        android:name="com.example.mobilesigec.receita.DetalhesReceitaFragment"
+        android:name="com.example.mobilesigec.ui.receita.DetalhesReceitaFragment"
         android:label="Detalhes da Receita"
         tools:layout="@layout/fragment_detalhes_receita" />
 
     <fragment
         android:id="@+id/nav_home"
-        android:name="com.example.mobilesigec.home.HomePageFragment"
+        android:name="com.example.mobilesigec.ui.home.HomePageFragment"
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home_page">
 
@@ -43,25 +43,25 @@
 
     <fragment
         android:id="@+id/nav_receita"
-        android:name="com.example.mobilesigec.receita.ListaReceitasFragment"
+        android:name="com.example.mobilesigec.ui.receita.ListaReceitasFragment"
         android:label="@string/menu_receitas"
         tools:layout="@layout/fragment_lista_receitas" />
 
     <fragment
         android:id="@+id/nav_calendario"
-        android:name="com.example.mobilesigec.calendario.CalendarioFragment"
+        android:name="com.example.mobilesigec.ui.calendario.CalendarioFragment"
         android:label="@string/menu_calendario"
         tools:layout="@layout/fragment_calendario" />
 
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.example.mobilesigec.settings.SettingsFragment"
+        android:name="com.example.mobilesigec.ui.settings.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_configuracoes" />
 
     <fragment
         android:id="@+id/nav_receitas"
-        android:name="com.example.mobilesigec.ReceitasFragment"
+        android:name="com.example.mobilesigec.ui.receita.ReceitasFragment"
         android:label="Receitas"
         tools:layout="@layout/fragment_recaitas" />
 </navigation>
