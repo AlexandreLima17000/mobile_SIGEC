@@ -3,12 +3,6 @@ package com.example.mobilesigec.ui.checkout;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,19 +13,32 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.adapter.UtensilioAdapter;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.model.ReceitaModelo;
 import com.example.mobilesigec.model.UtensilioModelo;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -93,7 +100,8 @@ public class ChecklistUtensiliosFragment extends Fragment {
     }
 
     private void carregarReceitasNoSpinner() {
-        SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        if (getContext() == null) return;
+        SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
             idUsuarioLogado = prefs.getInt("ID_USUARIO", -1);
@@ -102,6 +110,21 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         if (idTurmaSelecionada == -1) return;
 
+        String dataHoje = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
+        String chaveCacheReceitasDia = CacheManager.CHAVE_CHECKLIST_INSUMOS + "_receitas_dia_"
+                + idUsuarioLogado + "_" + idTurmaSelecionada + "_" + dataHoje;
+
+        // 1. Tenta carregar as receitas do dia direto do cache local
+        String jsonReceitasCache = CacheManager.obterJson(requireContext(), chaveCacheReceitasDia, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonReceitasCache != null) {
+            List<ReceitaModelo> receitasCache = desserializarReceitasSpinner(jsonReceitasCache);
+            if (!receitasCache.isEmpty()) {
+                configurarSpinnerReceitas(receitasCache);
+                return;
+            }
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
         progressLoading.setVisibility(View.VISIBLE);
         spinnerReceitas.setEnabled(false);
 
@@ -109,8 +132,11 @@ public class ChecklistUtensiliosFragment extends Fragment {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             List<ReceitaModelo> listaReceitas = new ArrayList<>();
+            boolean conexaoOk = false;
+
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
+                    conexaoOk = true;
                     String sql;
                     if (finalIdUsuario != -1) {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, t.nome_turma, l.nome_laboratorio " +
@@ -152,47 +178,80 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 e.printStackTrace();
             }
 
+            if (conexaoOk && !listaReceitas.isEmpty() && getContext() != null) {
+                CacheManager.salvarJson(getContext(), chaveCacheReceitasDia, serializarReceitasSpinner(listaReceitas));
+            }
+
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
-                        ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
-                        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                        spinnerReceitas.setAdapter(spinnerAdapter);
-
-                        spinnerReceitas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                            @Override
-                            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                                ReceitaModelo receitaSelecionada = (ReceitaModelo) parent.getItemAtPosition(position);
-                                tvReceitaSelecionada.setText("Receita: " + receitaSelecionada.getNomeReceita());
-                                tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
-                                tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
-
-                                carregarUtensiliosDaReceita(receitaSelecionada.getIdReceita());
-                            }
-                            @Override
-                            public void onNothingSelected(AdapterView<?> parent) {}
-                        });
+                        configurarSpinnerReceitas(listaReceitas);
                     }
                 });
             }
         });
     }
 
-    private void carregarUtensiliosDaReceita(int idFicha) {
-        progressLoading.setVisibility(View.VISIBLE);
-        listaUtensiliosAtual.clear();
+    private void configurarSpinnerReceitas(List<ReceitaModelo> listaReceitas) {
+        if (!isAdded() || getContext() == null) return;
 
+        ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(
+                getContext(),
+                android.R.layout.simple_spinner_item,
+                listaReceitas
+        );
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerReceitas.setAdapter(spinnerAdapter);
+
+        spinnerReceitas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                ReceitaModelo receitaSelecionada = (ReceitaModelo) parent.getItemAtPosition(position);
+                tvReceitaSelecionada.setText("Receita: " + receitaSelecionada.getNomeReceita());
+                tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
+                tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
+
+                carregarUtensiliosDaReceita(receitaSelecionada.getIdReceita());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+    }
+
+    private void carregarUtensiliosDaReceita(int idFicha) {
+        if (getContext() == null) return;
+
+        listaUtensiliosAtual.clear();
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
 
+        final String chaveCacheItens = CacheManager.CHAVE_CHECKLIST_UTENSILIOS + "_itens_" + idFicha;
+
+        // 1. Tenta carregar os utensílios desta ficha direto do cache local
+        String jsonItensCache = CacheManager.obterJson(requireContext(), chaveCacheItens, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonItensCache != null) {
+            List<UtensilioModelo> utensiliosCache = desserializarUtensilios(jsonItensCache);
+            listaUtensiliosAtual.addAll(utensiliosCache);
+            exibirListaUtensilios();
+            return;
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
+        progressLoading.setVisibility(View.VISIBLE);
+
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
+            JSONArray jsonArrayParaCache = new JSONArray();
+            boolean conexaoOk = false;
+
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
+                    conexaoOk = true;
                     String sql = "SELECT u.id_utensilio, u.nome_utensilio, COALESCE(cu.quantidade, u.quantidade, 1) AS quantidade " +
                             "FROM checklist_utensilio cu " +
                             "INNER JOIN utensilio u ON cu.id_utensilio = u.id_utensilio " +
@@ -207,6 +266,12 @@ public class ChecklistUtensiliosFragment extends Fragment {
                                 String qtd = String.valueOf(rs.getInt("quantidade"));
 
                                 listaUtensiliosAtual.add(new UtensilioModelo(idUtensilio, nome, qtd));
+
+                                JSONObject obj = new JSONObject();
+                                obj.put("id_utensilio", idUtensilio);
+                                obj.put("nome_utensilio", nome != null ? nome : "");
+                                obj.put("quantidade", qtd);
+                                jsonArrayParaCache.put(obj);
                             }
                         }
                     }
@@ -215,16 +280,24 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 e.printStackTrace();
             }
 
+            if (conexaoOk && getContext() != null) {
+                CacheManager.salvarJson(getContext(), chaveCacheItens, jsonArrayParaCache.toString());
+            }
+
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
-
-                    adapter = new UtensilioAdapter(listaUtensiliosAtual, () -> atualizarProgresso());
-                    rvUtensilios.setAdapter(adapter);
-                    atualizarProgresso();
+                    exibirListaUtensilios();
                 });
             }
         });
+    }
+
+    private void exibirListaUtensilios() {
+        if (!isAdded()) return;
+        adapter = new UtensilioAdapter(listaUtensiliosAtual, this::atualizarProgresso);
+        rvUtensilios.setAdapter(adapter);
+        atualizarProgresso();
     }
 
     private void atualizarProgresso() {
@@ -312,6 +385,12 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     if (finalSucesso) {
+                        if (getContext() != null) {
+                            CacheManager.invalidarChave(
+                                    getContext(),
+                                    CacheManager.CHAVE_CHECKLIST_UTENSILIOS + "_itens_" + receitaSelecionada.getIdReceita()
+                            );
+                        }
                         Toast.makeText(getContext(), "Retirada de utensílios registrada com sucesso!", Toast.LENGTH_LONG).show();
                     } else {
                         Toast.makeText(getContext(), "Erro ao processar a retirada dos utensílios.", Toast.LENGTH_SHORT).show();
@@ -402,6 +481,12 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     if (finalSucesso) {
+                        if (getContext() != null) {
+                            CacheManager.invalidarChave(
+                                    getContext(),
+                                    CacheManager.CHAVE_CHECKLIST_UTENSILIOS + "_itens_" + idFicha
+                            );
+                        }
                         Toast.makeText(getContext(), "Devolução registrada com sucesso!", Toast.LENGTH_LONG).show();
                         limparChecklist();
                     } else {
@@ -410,5 +495,55 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 });
             }
         });
+    }
+
+    // --- MÉTODOS DE CONVERSÃO JSON PARA O CACHE ---
+
+    private String serializarReceitasSpinner(List<ReceitaModelo> lista) {
+        JSONArray array = new JSONArray();
+        for (ReceitaModelo r : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id_ficha", r.getIdReceita());
+                obj.put("nome_ficha", r.getNomeReceita());
+                obj.put("nome_turma", r.getNomeTurma());
+                obj.put("nome_laboratorio", r.getNomeLaboratorio());
+                array.put(obj);
+            } catch (Exception ignored) {}
+        }
+        return array.toString();
+    }
+
+    private List<ReceitaModelo> desserializarReceitasSpinner(String json) {
+        List<ReceitaModelo> lista = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new ReceitaModelo(
+                        obj.getInt("id_ficha"),
+                        obj.getString("nome_ficha"),
+                        obj.getString("nome_turma"),
+                        obj.getString("nome_laboratorio")
+                ));
+            }
+        } catch (Exception ignored) {}
+        return lista;
+    }
+
+    private List<UtensilioModelo> desserializarUtensilios(String json) {
+        List<UtensilioModelo> lista = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new UtensilioModelo(
+                        obj.getInt("id_utensilio"),
+                        obj.getString("nome_utensilio"),
+                        obj.getString("quantidade")
+                ));
+            }
+        } catch (Exception ignored) {}
+        return lista;
     }
 }

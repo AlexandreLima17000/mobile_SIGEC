@@ -22,9 +22,13 @@ import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.model.TurmaModelo;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -77,7 +81,6 @@ public class HomePageFragment extends Fragment {
         if (context != null) {
             SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
             String nomeCompleto = prefs.getString("nome_usuario", "Instrutor");
-
             String nomeFormatado = formatarNomeCurto(nomeCompleto);
 
             if (textSaudacao != null) {
@@ -94,7 +97,7 @@ public class HomePageFragment extends Fragment {
         carregarTurmasNoSpinner(view);
 
         if (cardInsumos != null) {
-            cardInsumos.setOnClickListener(v ->  Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
+            cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
         }
         if (cardUtensilios != null) {
             cardUtensilios.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_utensilios));
@@ -113,11 +116,26 @@ public class HomePageFragment extends Fragment {
 
         SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+        String chaveCacheTurmas = CacheManager.CHAVE_HOME_TURMAS + "_" + idUsuarioLogado;
 
+        // 1. Tenta carregar as turmas direto do cache local
+        String jsonTurmasCache = CacheManager.obterJson(context, chaveCacheTurmas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonTurmasCache != null) {
+            List<TurmaModelo> turmasEmCache = desserializarTurmas(jsonTurmasCache);
+            if (!turmasEmCache.isEmpty()) {
+                configurarAdapterTurmas(turmasEmCache, prefs);
+                return;
+            }
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
         executorService.execute(() -> {
             List<TurmaModelo> listaTurmas = new ArrayList<>();
+            boolean conexaoOk = false;
+
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
+                    conexaoOk = true;
                     String sql;
                     if (idUsuarioLogado != -1) {
                         sql = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
@@ -150,66 +168,74 @@ public class HomePageFragment extends Fragment {
                 Log.e(TAG, "Erro ao carregar turmas", e);
             }
 
+            // Salva no cache se a consulta ao banco funcionou
+            if (conexaoOk && !listaTurmas.isEmpty() && getContext() != null) {
+                CacheManager.salvarJson(getContext(), chaveCacheTurmas, serializarTurmas(listaTurmas));
+            }
+
             mainHandler.post(() -> {
                 if (!isAdded() || getContext() == null) return;
-
-                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
-                        requireContext(),
-                        R.layout.spinner_item_preto,
-                        listaTurmas
-                ) {
-                    @Override
-                    public View getDropDownView(int position, View convertView, ViewGroup parent) {
-                        View view = super.getDropDownView(position, convertView, parent);
-
-                        TextView texto = (TextView) view;
-                        texto.setTextColor(Color.BLACK);
-                        texto.setBackgroundColor(Color.WHITE);
-
-                        return view;
-                    }
-                };
-
-                adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
-                spinnerTurmasHome.setAdapter(adapter);
-
-                if (listaTurmas.isEmpty()) {
-                    prefs.edit().remove("id_turma_selecionada").apply();
-                    return;
-                }
-
-                int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
-                int posicaoInicial = 0;
-                for (int i = 0; i < listaTurmas.size(); i++) {
-                    if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
-                        posicaoInicial = i;
-                        break;
-                    }
-                }
-
-                spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
-                        if (position < 0 || position >= listaTurmas.size()) return;
-                        TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
-                        if (turmaSelecionada != null) {
-                            prefs.edit().putInt("id_turma_selecionada", turmaSelecionada.getIdTurma()).apply();
-                            carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
-                        }
-                    }
-
-                    @Override
-                    public void onNothingSelected(android.widget.AdapterView<?> parent) {}
-                });
-
-                spinnerTurmasHome.setSelection(posicaoInicial, false);
-                TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
-                if (idTurmaSalva != turmaInicial.getIdTurma()) {
-                    prefs.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
-                }
-                carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio());
+                configurarAdapterTurmas(listaTurmas, prefs);
             });
         });
+    }
+
+    private void configurarAdapterTurmas(List<TurmaModelo> listaTurmas, SharedPreferences prefs) {
+        if (!isAdded() || getContext() == null || spinnerTurmasHome == null) return;
+
+        ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
+                requireContext(),
+                R.layout.spinner_item_preto,
+                listaTurmas
+        ) {
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                View view = super.getDropDownView(position, convertView, parent);
+                TextView texto = (TextView) view;
+                texto.setTextColor(Color.BLACK);
+                texto.setBackgroundColor(Color.WHITE);
+                return view;
+            }
+        };
+
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
+        spinnerTurmasHome.setAdapter(adapter);
+
+        if (listaTurmas.isEmpty()) {
+            prefs.edit().remove("id_turma_selecionada").apply();
+            return;
+        }
+
+        int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
+        int posicaoInicial = 0;
+        for (int i = 0; i < listaTurmas.size(); i++) {
+            if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
+                posicaoInicial = i;
+                break;
+            }
+        }
+
+        spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
+                if (position < 0 || position >= listaTurmas.size()) return;
+                TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
+                if (turmaSelecionada != null) {
+                    prefs.edit().putInt("id_turma_selecionada", turmaSelecionada.getIdTurma()).apply();
+                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
+                }
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
+
+        spinnerTurmasHome.setSelection(posicaoInicial, false);
+        TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
+        if (idTurmaSalva != turmaInicial.getIdTurma()) {
+            prefs.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
+        }
+        carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio());
     }
 
     @Override
@@ -218,6 +244,7 @@ public class HomePageFragment extends Fragment {
         if (getContext() != null && spinnerTurmasHome != null && spinnerTurmasHome.getAdapter() != null) {
             SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
             int idSalvo = prefs.getInt("id_turma_selecionada", -1);
+            @SuppressWarnings("unchecked")
             ArrayAdapter<TurmaModelo> adapter = (ArrayAdapter<TurmaModelo>) spinnerTurmasHome.getAdapter();
             for (int i = 0; i < adapter.getCount(); i++) {
                 TurmaModelo t = adapter.getItem(i);
@@ -233,221 +260,327 @@ public class HomePageFragment extends Fragment {
 
     private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
         View view = getView();
-        if (view == null) return;
+        Context context = getContext();
+        if (view == null || context == null) return;
 
         LinearLayout containerReceitas = view.findViewById(R.id.container_receitas);
         if (containerReceitas == null) return;
 
         containerReceitas.removeAllViews();
 
+        String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + idTurma;
+
+        // 1. Tenta recuperar as receitas da semana desta turma no cache
+        String jsonReceitasCache = CacheManager.obterJson(context, chaveCacheReceitas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonReceitasCache != null) {
+            Map<Integer, List<ItemReceitaData>> mapCache = desserializarMapaDias(jsonReceitasCache);
+            renderizarCardsSemana(mapCache, nomeLaboratorio);
+            return;
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
         executorService.execute(() -> {
             Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
             for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
                 mapDias.put(dayIndex, new ArrayList<>());
             }
 
-            try {
-                Connection con = ConexaoMySQL.conectar();
+            boolean conexaoOk = false;
+
+            try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
+                    conexaoOk = true;
                     String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.* " +
                             "FROM ficha f " +
                             "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
                             "WHERE f.id_turma = ?";
 
-                    PreparedStatement stmt = con.prepareStatement(sql);
-                    stmt.setInt(1, idTurma);
-                    ResultSet rs = stmt.executeQuery();
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
+                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                        stmt.setInt(1, idTurma);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            ResultSetMetaData metaData = rs.getMetaData();
+                            int columnCount = metaData.getColumnCount();
 
-                    Calendar calNow = Calendar.getInstance();
-                    calNow.set(Calendar.HOUR_OF_DAY, 0);
-                    calNow.set(Calendar.MINUTE, 0);
-                    calNow.set(Calendar.SECOND, 0);
-                    calNow.set(Calendar.MILLISECOND, 0);
+                            Calendar calNow = Calendar.getInstance();
+                            calNow.set(Calendar.HOUR_OF_DAY, 0);
+                            calNow.set(Calendar.MINUTE, 0);
+                            calNow.set(Calendar.SECOND, 0);
+                            calNow.set(Calendar.MILLISECOND, 0);
 
-                    int dow = calNow.get(Calendar.DAY_OF_WEEK);
-                    int daysToMonday = (dow == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dow);
+                            int dow = calNow.get(Calendar.DAY_OF_WEEK);
+                            int daysToMonday = (dow == Calendar.SUNDAY) ? -6 : (Calendar.MONDAY - dow);
 
-                    Calendar startOfWeek = (Calendar) calNow.clone();
-                    startOfWeek.add(Calendar.DAY_OF_MONTH, daysToMonday);
+                            Calendar startOfWeek = (Calendar) calNow.clone();
+                            startOfWeek.add(Calendar.DAY_OF_MONTH, daysToMonday);
 
-                    Calendar endOfWeek = (Calendar) startOfWeek.clone();
-                    endOfWeek.add(Calendar.DAY_OF_MONTH, 6);
-                    endOfWeek.set(Calendar.HOUR_OF_DAY, 23);
-                    endOfWeek.set(Calendar.MINUTE, 59);
-                    endOfWeek.set(Calendar.SECOND, 59);
-                    endOfWeek.set(Calendar.MILLISECOND, 999);
+                            Calendar endOfWeek = (Calendar) startOfWeek.clone();
+                            endOfWeek.add(Calendar.DAY_OF_MONTH, 6);
+                            endOfWeek.set(Calendar.HOUR_OF_DAY, 23);
+                            endOfWeek.set(Calendar.MINUTE, 59);
+                            endOfWeek.set(Calendar.SECOND, 59);
+                            endOfWeek.set(Calendar.MILLISECOND, 999);
 
-                    long startMillis = startOfWeek.getTimeInMillis();
-                    long endMillis = endOfWeek.getTimeInMillis();
+                            long startMillis = startOfWeek.getTimeInMillis();
+                            long endMillis = endOfWeek.getTimeInMillis();
 
-                    while (rs.next()) {
-                        int idFicha = rs.getInt("id_ficha");
-                        String nomeFicha = rs.getString("nome_ficha");
-                        String concluido = rs.getString("concluido");
+                            while (rs.next()) {
+                                int idFicha = rs.getInt("id_ficha");
+                                String nomeFicha = rs.getString("nome_ficha");
+                                String concluido = rs.getString("concluido");
 
-                        int dayOfWeek = -1;
-                        boolean temData = false;
-                        boolean pertenceASemanaAtual = false;
+                                int dayOfWeek = -1;
+                                boolean temData = false;
+                                boolean pertenceASemanaAtual = false;
 
-                        for (int i = 1; i <= columnCount; i++) {
-                            String colName = metaData.getColumnLabel(i).toLowerCase();
-                            int colType = metaData.getColumnType(i);
+                                for (int i = 1; i <= columnCount; i++) {
+                                    String colName = metaData.getColumnLabel(i).toLowerCase();
+                                    int colType = metaData.getColumnType(i);
 
-                            if (!colName.startsWith("id_") && (colType == java.sql.Types.DATE || colType == java.sql.Types.TIMESTAMP || colName.contains("data") || colName.contains("date"))) {
-                                try {
-                                    java.util.Date dateVal = rs.getTimestamp(i);
-                                    if (dateVal == null) {
-                                        dateVal = rs.getDate(i);
+                                    if (!colName.startsWith("id_") && (colType == java.sql.Types.DATE || colType == java.sql.Types.TIMESTAMP || colName.contains("data") || colName.contains("date"))) {
+                                        try {
+                                            java.util.Date dateVal = rs.getTimestamp(i);
+                                            if (dateVal == null) {
+                                                dateVal = rs.getDate(i);
+                                            }
+                                            if (dateVal != null) {
+                                                temData = true;
+                                                long t = dateVal.getTime();
+                                                if (t >= startMillis && t <= endMillis) {
+                                                    pertenceASemanaAtual = true;
+                                                    Calendar itemCal = Calendar.getInstance();
+                                                    itemCal.setTime(dateVal);
+                                                    dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
+                                                }
+                                                break;
+                                            }
+                                        } catch (Exception ignored) {}
+                                    } else if (colName.equals("dia_semana") || colName.equals("dia")) {
+                                        try {
+                                            int val = rs.getInt(i);
+                                            if (val >= 1 && val <= 7) {
+                                                dayOfWeek = val;
+                                                temData = true;
+                                                pertenceASemanaAtual = true;
+                                                break;
+                                            }
+                                        } catch (Exception ignored) {}
                                     }
-                                    if (dateVal != null) {
-                                        temData = true;
-                                        long t = dateVal.getTime();
-                                        if (t >= startMillis && t <= endMillis) {
-                                            pertenceASemanaAtual = true;
-                                            Calendar itemCal = Calendar.getInstance();
-                                            itemCal.setTime(dateVal);
-                                            dayOfWeek = itemCal.get(Calendar.DAY_OF_WEEK);
-                                        }
-                                        break;
-                                    }
-                                } catch (Exception ignored) {}
-                            } else if (colName.equals("dia_semana") || colName.equals("dia")) {
-                                try {
-                                    int val = rs.getInt(i);
-                                    if (val >= 1 && val <= 7) {
-                                        dayOfWeek = val;
-                                        temData = true;
-                                        pertenceASemanaAtual = true;
-                                        break;
-                                    }
-                                } catch (Exception ignored) {}
+                                }
+
+                                if (!temData || !pertenceASemanaAtual) {
+                                    continue;
+                                }
+
+                                ItemReceitaData item = new ItemReceitaData(idFicha, nomeFicha, concluido);
+                                List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
+                                if (targetList != null) {
+                                    targetList.add(item);
+                                }
                             }
                         }
-
-                        if (!temData || !pertenceASemanaAtual) {
-                            continue;
-                        }
-
-                        ItemReceitaData item = new ItemReceitaData(idFicha, nomeFicha, concluido);
-                        List<ItemReceitaData> targetList = mapDias.get(dayOfWeek);
-                        if (targetList != null) {
-                            targetList.add(item);
-                        }
                     }
-                    rs.close();
-                    stmt.close();
-                    con.close();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Erro ao carregar receitas da turma", e);
             }
 
+            if (conexaoOk && getContext() != null) {
+                CacheManager.salvarJson(getContext(), chaveCacheReceitas, serializarMapaDias(mapDias));
+            }
+
             mainHandler.post(() -> {
                 if (!isAdded() || getContext() == null) return;
-                View currentView = getView();
-                if (currentView == null) return;
-
-                LinearLayout currentContainer = currentView.findViewById(R.id.container_receitas);
-                if (currentContainer == null) return;
-
-                currentContainer.removeAllViews();
-                LayoutInflater inflater = LayoutInflater.from(getContext());
-
-                Calendar now = Calendar.getInstance();
-                int hojeDiaSemana = now.get(Calendar.DAY_OF_WEEK);
-
-                int[] diasSemana = new int[]{
-                        Calendar.MONDAY,
-                        Calendar.TUESDAY,
-                        Calendar.WEDNESDAY,
-                        Calendar.THURSDAY,
-                        Calendar.FRIDAY
-                };
-
-                String[] nomesDias = new String[]{
-                        "Segunda-feira",
-                        "Terça-feira",
-                        "Quarta-feira",
-                        "Quinta-feira",
-                        "Sexta-feira"
-                };
-
-                for (int i = 0; i < diasSemana.length; i++) {
-                    int diaNum = diasSemana[i];
-                    String nomeDiaBase = nomesDias[i];
-                    boolean ehHoje = (diaNum == hojeDiaSemana);
-
-                    String tituloDia = ehHoje ? nomeDiaBase + " (Hoje)" : nomeDiaBase;
-
-                    View cardDia = inflater.inflate(R.layout.item_dia_semana, currentContainer, false);
-
-                    TextView tvNomeDia = cardDia.findViewById(R.id.tv_nome_dia);
-                    ImageView ivChevron = cardDia.findViewById(R.id.iv_chevron);
-                    LinearLayout containerReceitasDia = cardDia.findViewById(R.id.container_receitas_dia);
-                    TextView tvSemReceitas = cardDia.findViewById(R.id.tv_sem_receitas);
-                    View headerDiaSemana = cardDia.findViewById(R.id.header_dia_semana);
-
-                    if (tvNomeDia != null) {
-                        tvNomeDia.setText(tituloDia);
-                    }
-
-                    List<ItemReceitaData> receitasDoDia = mapDias.get(diaNum);
-
-                    if (receitasDoDia == null || receitasDoDia.isEmpty()) {
-                        if (tvSemReceitas != null) {
-                            tvSemReceitas.setVisibility(View.VISIBLE);
-                        }
-                    } else {
-                        if (tvSemReceitas != null) {
-                            tvSemReceitas.setVisibility(View.GONE);
-                        }
-                        for (ItemReceitaData itemData : receitasDoDia) {
-                            View itemReceitaView = inflater.inflate(R.layout.item_receita_semana, containerReceitasDia, false);
-                            TextView tvNome = itemReceitaView.findViewById(R.id.tv_nome_receita);
-                            TextView tvDetalhes = itemReceitaView.findViewById(R.id.tv_detalhes_receita);
-
-                            if (tvNome != null) {
-                                tvNome.setText(itemData.nomeFicha);
-                            }
-                            if (tvDetalhes != null) {
-                                tvDetalhes.setText(nomeLaboratorio);
-                            }
-                            itemReceitaView.setOnClickListener(v -> {
-                                Bundle bundle = new Bundle();
-                                bundle.putInt("id_ficha", itemData.idFicha);
-                                Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
-                            });
-                            containerReceitasDia.addView(itemReceitaView);
-                        }
-                    }
-
-                    if (ehHoje) {
-                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
-                        if (ivChevron != null) ivChevron.setRotation(180f);
-                    } else {
-                        if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.GONE);
-                        if (ivChevron != null) ivChevron.setRotation(0f);
-                    }
-
-                    if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
-                        headerDiaSemana.setOnClickListener(v -> {
-                            boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
-                            if (estaVisivel) {
-                                containerReceitasDia.setVisibility(View.GONE);
-                                ivChevron.animate().rotation(0f).setDuration(200).start();
-                            } else {
-                                containerReceitasDia.setVisibility(View.VISIBLE);
-                                ivChevron.animate().rotation(180f).setDuration(200).start();
-                            }
-                        });
-                    }
-
-                    currentContainer.addView(cardDia);
-                }
+                renderizarCardsSemana(mapDias, nomeLaboratorio);
             });
         });
+    }
+
+    private void renderizarCardsSemana(Map<Integer, List<ItemReceitaData>> mapDias, String nomeLaboratorio) {
+        if (!isAdded() || getContext() == null) return;
+        View currentView = getView();
+        if (currentView == null) return;
+
+        LinearLayout currentContainer = currentView.findViewById(R.id.container_receitas);
+        if (currentContainer == null) return;
+
+        currentContainer.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(getContext());
+
+        Calendar now = Calendar.getInstance();
+        int hojeDiaSemana = now.get(Calendar.DAY_OF_WEEK);
+
+        int[] diasSemana = new int[]{
+                Calendar.MONDAY,
+                Calendar.TUESDAY,
+                Calendar.WEDNESDAY,
+                Calendar.THURSDAY,
+                Calendar.FRIDAY
+        };
+
+        String[] nomesDias = new String[]{
+                "Segunda-feira",
+                "Terça-feira",
+                "Quarta-feira",
+                "Quinta-feira",
+                "Sexta-feira"
+        };
+
+        for (int i = 0; i < diasSemana.length; i++) {
+            int diaNum = diasSemana[i];
+            String nomeDiaBase = nomesDias[i];
+            boolean ehHoje = (diaNum == hojeDiaSemana);
+
+            String tituloDia = ehHoje ? nomeDiaBase + " (Hoje)" : nomeDiaBase;
+
+            View cardDia = inflater.inflate(R.layout.item_dia_semana, currentContainer, false);
+
+            TextView tvNomeDia = cardDia.findViewById(R.id.tv_nome_dia);
+            ImageView ivChevron = cardDia.findViewById(R.id.iv_chevron);
+            LinearLayout containerReceitasDia = cardDia.findViewById(R.id.container_receitas_dia);
+            TextView tvSemReceitas = cardDia.findViewById(R.id.tv_sem_receitas);
+            View headerDiaSemana = cardDia.findViewById(R.id.header_dia_semana);
+
+            if (tvNomeDia != null) {
+                tvNomeDia.setText(tituloDia);
+            }
+
+            List<ItemReceitaData> receitasDoDia = mapDias.get(diaNum);
+
+            if (receitasDoDia == null || receitasDoDia.isEmpty()) {
+                if (tvSemReceitas != null) {
+                    tvSemReceitas.setVisibility(View.VISIBLE);
+                }
+            } else {
+                if (tvSemReceitas != null) {
+                    tvSemReceitas.setVisibility(View.GONE);
+                }
+                for (ItemReceitaData itemData : receitasDoDia) {
+                    View itemReceitaView = inflater.inflate(R.layout.item_receita_semana, containerReceitasDia, false);
+                    TextView tvNome = itemReceitaView.findViewById(R.id.tv_nome_receita);
+                    TextView tvDetalhes = itemReceitaView.findViewById(R.id.tv_detalhes_receita);
+
+                    if (tvNome != null) {
+                        tvNome.setText(itemData.nomeFicha);
+                    }
+                    if (tvDetalhes != null) {
+                        tvDetalhes.setText(nomeLaboratorio);
+                    }
+                    itemReceitaView.setOnClickListener(v -> {
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("id_ficha", itemData.idFicha);
+                        Navigation.findNavController(v).navigate(R.id.nav_detalhes_receita, bundle);
+                    });
+                    containerReceitasDia.addView(itemReceitaView);
+                }
+            }
+
+            if (ehHoje) {
+                if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.VISIBLE);
+                if (ivChevron != null) ivChevron.setRotation(180f);
+            } else {
+                if (containerReceitasDia != null) containerReceitasDia.setVisibility(View.GONE);
+                if (ivChevron != null) ivChevron.setRotation(0f);
+            }
+
+            if (headerDiaSemana != null && containerReceitasDia != null && ivChevron != null) {
+                headerDiaSemana.setOnClickListener(v -> {
+                    boolean estaVisivel = (containerReceitasDia.getVisibility() == View.VISIBLE);
+                    if (estaVisivel) {
+                        containerReceitasDia.setVisibility(View.GONE);
+                        ivChevron.animate().rotation(0f).setDuration(200).start();
+                    } else {
+                        containerReceitasDia.setVisibility(View.VISIBLE);
+                        ivChevron.animate().rotation(180f).setDuration(200).start();
+                    }
+                });
+            }
+
+            currentContainer.addView(cardDia);
+        }
+    }
+
+    // --- MÉTODOS DE CONVERSÃO JSON PARA O CACHE ---
+
+    private String serializarTurmas(List<TurmaModelo> lista) {
+        JSONArray array = new JSONArray();
+        for (TurmaModelo t : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id_turma", t.getIdTurma());
+                obj.put("nome_turma", t.getNomeTurma());
+                obj.put("nome_laboratorio", t.getNomeLaboratorio());
+                array.put(obj);
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao serializar turma", e);
+            }
+        }
+        return array.toString();
+    }
+
+    private List<TurmaModelo> desserializarTurmas(String json) {
+        List<TurmaModelo> lista = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new TurmaModelo(
+                        obj.getInt("id_turma"),
+                        obj.getString("nome_turma"),
+                        obj.getString("nome_laboratorio")
+                ));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao desserializar turmas", e);
+        }
+        return lista;
+    }
+
+    private String serializarMapaDias(Map<Integer, List<ItemReceitaData>> mapDias) {
+        JSONObject root = new JSONObject();
+        try {
+            for (Map.Entry<Integer, List<ItemReceitaData>> entry : mapDias.entrySet()) {
+                JSONArray diaArray = new JSONArray();
+                for (ItemReceitaData item : entry.getValue()) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("id_ficha", item.idFicha);
+                    obj.put("nome_ficha", item.nomeFicha);
+                    obj.put("concluido", item.concluido);
+                    diaArray.put(obj);
+                }
+                root.put(String.valueOf(entry.getKey()), diaArray);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao serializar receitas da semana", e);
+        }
+        return root.toString();
+    }
+
+    private Map<Integer, List<ItemReceitaData>> desserializarMapaDias(String json) {
+        Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
+        for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
+            mapDias.put(dayIndex, new ArrayList<>());
+        }
+        try {
+            JSONObject root = new JSONObject(json);
+            for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
+                String key = String.valueOf(dayIndex);
+                if (root.has(key)) {
+                    JSONArray diaArray = root.getJSONArray(key);
+                    List<ItemReceitaData> lista = mapDias.get(dayIndex);
+                    for (int i = 0; i < diaArray.length(); i++) {
+                        JSONObject obj = diaArray.getJSONObject(i);
+                        lista.add(new ItemReceitaData(
+                                obj.getInt("id_ficha"),
+                                obj.getString("nome_ficha"),
+                                obj.optString("concluido", "N")
+                        ));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao desserializar receitas da semana", e);
+        }
+        return mapDias;
     }
 
     private static class ItemReceitaData {

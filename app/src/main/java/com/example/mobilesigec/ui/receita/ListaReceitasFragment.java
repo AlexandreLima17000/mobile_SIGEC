@@ -1,5 +1,8 @@
 package com.example.mobilesigec.ui.receita;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
@@ -7,7 +10,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Filter;
 import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,15 +24,13 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.widget.AutoCompleteTextView;
-import android.widget.ArrayAdapter;
-import android.widget.Filter;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -120,14 +123,29 @@ public class ListaReceitasFragment extends Fragment {
         }
 
         final int idUsuario = idUsuarioLogado;
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario;
 
+        // 1. Tenta carregar a lista de receitas direto do cache local
+        String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonCache != null) {
+            List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
+            listaReceitas.clear();
+            listaReceitas.addAll(receitasEmCache);
+            atualizarSugestoesAutocomplete();
+            aplicarFiltrosCombinados();
+            return;
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
             Connection conexao = null;
+            boolean conexaoOk = false;
 
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
+                    conexaoOk = true;
                     Set<Integer> fichasDatadas = new HashSet<>();
                     String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
                     try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
@@ -175,6 +193,10 @@ public class ListaReceitasFragment extends Fragment {
                     }
                 }
 
+                if (conexaoOk && getContext() != null) {
+                    CacheManager.salvarJson(getContext(), chaveCache, serializarReceitas(resultado));
+                }
+
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         listaReceitas.clear();
@@ -197,6 +219,40 @@ public class ListaReceitasFragment extends Fragment {
                 } catch (Exception ignored) {}
             }
         }).start();
+    }
+
+    private String serializarReceitas(List<Receita> lista) {
+        JSONArray array = new JSONArray();
+        for (Receita r : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id", r.getId());
+                obj.put("nome", r.getNome());
+                obj.put("preparo", r.getPreparo() != null ? r.getPreparo() : "");
+                obj.put("categoria", r.getCategoria());
+                obj.put("status", r.getStatus());
+                array.put(obj);
+            } catch (Exception ignored) {}
+        }
+        return array.toString();
+    }
+
+    private List<Receita> desserializarReceitas(String json) {
+        List<Receita> lista = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new Receita(
+                        obj.getInt("id"),
+                        obj.getString("nome"),
+                        obj.optString("preparo", ""),
+                        obj.optString("categoria", "RECEITA GERAL"),
+                        obj.optString("status", "DISPONÍVEL")
+                ));
+            }
+        } catch (Exception ignored) {}
+        return lista;
     }
 
     private String removerAcentos(String text) {

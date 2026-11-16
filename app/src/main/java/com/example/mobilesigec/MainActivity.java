@@ -3,26 +3,23 @@ package com.example.mobilesigec;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.MenuItem;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.navigation.NavigationView;
-
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.mobilesigec.ui.auth.LoginActivity;
 import com.example.mobilesigec.databinding.ActivityMainBinding;
-
-import java.sql.Connection;
+import com.example.mobilesigec.ui.auth.LoginActivity;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -115,7 +112,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         boolean result = super.onCreateOptionsMenu(menu);
@@ -150,6 +146,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void efetuarLogout() {
+        CacheManager.limparTodoCache(this);
+
         SharedPreferences prefs = getSharedPreferences("SessaoApp", MODE_PRIVATE);
         prefs.edit().clear().apply();
 
