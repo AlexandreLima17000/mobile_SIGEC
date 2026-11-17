@@ -22,14 +22,14 @@ public class GerenciadorBloqueioRecuperacao {
     // 1 minuto e 30 segundos (90 segundos) de espera para reenviar o código
     public static final long TEMPO_ESPERA_REENVIO_MS = 90 * 1000L;
 
-    // Máximo de 3 reenvios permitidos antes de bloquear
-    public static final int MAX_REENVIOS = 3;
+    // Máximo de 30 reenvios permitidos antes de bloquear
+    public static final int MAX_REENVIOS = 30;
 
-    // 15 minutos de bloqueio para login (e-mail e IP)
-    public static final long TEMPO_BLOQUEIO_LOGIN_MS = 15 * 60 * 1000L;
+    // 10 minutos de bloqueio para login (e-mail e IP)
+    public static final long TEMPO_BLOQUEIO_LOGIN_MS = 10 * 60 * 1000L;
 
-    // Janela de expiração de uma sessão de recuperação (15 minutos)
-    private static final long JANELA_SESSAO_RECUPERACAO_MS = 15 * 60 * 1000L;
+    // Janela de expiração de uma sessão de recuperação (60 minutos após o último envio)
+    private static final long JANELA_SESSAO_RECUPERACAO_MS = 60 * 60 * 1000L;
 
     private static String normalizarEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);

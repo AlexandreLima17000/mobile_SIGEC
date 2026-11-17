@@ -76,13 +76,13 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Verifica se o e-mail ou IP estão bloqueados localmente (15 minutos)
+                // Verifica se o e-mail ou IP estão bloqueados localmente (10 minutos)
                 long bloqueioLocalMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
                         LoginActivity.this, null, email);
                 if (bloqueioLocalMs > 0) {
                     String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioLocalMs);
                     Toast.makeText(LoginActivity.this,
-                            "Login (e-mail) ou IP bloqueado por 15 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
+                            "Login (e-mail) ou IP bloqueado por 10 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
                             Toast.LENGTH_LONG).show();
                     return;
                 }
@@ -169,7 +169,7 @@ public class LoginActivity extends AppCompatActivity {
                         if (finalBloqueioMs > 0) {
                             String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(finalBloqueioMs);
                             Toast.makeText(LoginActivity.this,
-                                    "Login (e-mail) ou IP bloqueado por 15 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
+                                    "Login (e-mail) ou IP bloqueado por 10 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
                                     Toast.LENGTH_LONG).show();
                             restaurarBotaoLogin();
                         } else if (finalLoginEfetuado) {

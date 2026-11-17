@@ -100,7 +100,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             if (bloqueioMs > 0) {
                 String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioMs);
                 Toast.makeText(ConfirmacaoCodigoActivity.this,
-                        "Login (e-mail) e IP bloqueados por 15 minutos. Aguarde " + tempoFmt + ".",
+                        "Login (e-mail) e IP bloqueados por 10 minutos. Aguarde " + tempoFmt + ".",
                         Toast.LENGTH_LONG).show();
                 voltarParaLogin();
                 return;
@@ -175,7 +175,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             return;
         }
 
-        // 2. Verifica se já atingiu o limite de 3 reenvios antes de pedir mais um
+        // 2. Verifica se já atingiu o limite de 30 reenvios antes de pedir mais um
         int reenviosAtuais = GerenciadorBloqueioRecuperacao.obterQuantidadeReenvios(this, emailUsuario);
         if (reenviosAtuais >= GerenciadorBloqueioRecuperacao.MAX_REENVIOS) {
             bloquearUsuarioEVoltarAoLogin();
@@ -248,7 +248,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
 
             runOnUiThread(() -> {
                 Toast.makeText(ConfirmacaoCodigoActivity.this,
-                        "Limite de 3 reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 15 minutos.",
+                        "Limite de " + GerenciadorBloqueioRecuperacao.MAX_REENVIOS + " reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 10 minutos.",
                         Toast.LENGTH_LONG).show();
                 voltarParaLogin();
             });

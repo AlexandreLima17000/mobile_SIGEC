@@ -145,7 +145,7 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                                             RecuperarSenhaEmailActivity.this, con, email);
                                     runOnUiThread(() -> {
                                         Toast.makeText(RecuperarSenhaEmailActivity.this,
-                                                "Limite de 3 reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 15 minutos.",
+                                                "Limite de " + GerenciadorBloqueioRecuperacao.MAX_REENVIOS + " reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 10 minutos.",
                                                 Toast.LENGTH_LONG).show();
                                         finish();
                                     });
