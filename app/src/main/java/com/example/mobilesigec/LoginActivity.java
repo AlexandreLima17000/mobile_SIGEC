@@ -1,7 +1,6 @@
 package com.example.mobilesigec;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
@@ -76,17 +75,6 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Verifica se o e-mail ou IP estão bloqueados localmente (10 minutos)
-                long bloqueioLocalMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
-                        LoginActivity.this, null, email);
-                if (bloqueioLocalMs > 0) {
-                    String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioLocalMs);
-                    Toast.makeText(LoginActivity.this,
-                            "Login (e-mail) ou IP bloqueado por 10 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
-                            Toast.LENGTH_LONG).show();
-                    return;
-                }
-
                 // Ativa o estado de Carregamento (Cor Laranja e Texto correspondente)
                 btnEntrar.setEnabled(false);
                 btnEntrar.setText("Carregando...");
@@ -99,59 +87,53 @@ public class LoginActivity extends AppCompatActivity {
                     String querySql = "SELECT id_usuario, senha, nome_usuario FROM usuario WHERE email = ?";
                     boolean loginEfetuado = false;
                     boolean conexaoOk = false;
-                    long tempoBloqueioBancoMs = 0L;
 
                     try (Connection conexao = ConexaoMySQL.conectar()) {
                         if (conexao != null) {
                             conexaoOk = true;
-                            tempoBloqueioBancoMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
-                                    LoginActivity.this, conexao, email);
+                            try (PreparedStatement stmtLocal = conexao.prepareStatement(querySql)) {
+                                stmtLocal.setString(1, email);
+                                try (ResultSet rsLocal = stmtLocal.executeQuery()) {
+                                    if (rsLocal.next()) {
+                                        String hashBanco = rsLocal.getString("senha");
+                                        int idUsuario = rsLocal.getInt("id_usuario");
+                                        String nomeUsuario = rsLocal.getString("nome_usuario");
 
-                            if (tempoBloqueioBancoMs <= 0) {
-                                try (PreparedStatement stmtLocal = conexao.prepareStatement(querySql)) {
-                                    stmtLocal.setString(1, email);
-                                    try (ResultSet rsLocal = stmtLocal.executeQuery()) {
-                                        if (rsLocal.next()) {
-                                            String hashBanco = rsLocal.getString("senha");
-                                            int idUsuario = rsLocal.getInt("id_usuario");
-                                            String nomeUsuario = rsLocal.getString("nome_usuario");
-
-                                            boolean senhaValida = false;
-                                            if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
-                                                try {
-                                                    String hashTratado = hashBanco.trim();
-                                                    if (hashTratado.startsWith("$2y$")) {
-                                                        hashTratado = "$2a$" + hashTratado.substring(4);
-                                                    }
-                                                    senhaValida = BCrypt.checkpw(senha, hashTratado);
-                                                } catch (IllegalArgumentException ex) {
-                                                    android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                        boolean senhaValida = false;
+                                        if (hashBanco != null && hashBanco.trim().startsWith("$2")) {
+                                            try {
+                                                String hashTratado = hashBanco.trim();
+                                                if (hashTratado.startsWith("$2y$")) {
+                                                    hashTratado = "$2a$" + hashTratado.substring(4);
                                                 }
+                                                senhaValida = BCrypt.checkpw(senha, hashTratado);
+                                            } catch (IllegalArgumentException ex) {
+                                                android.util.Log.e("AuthError", "Hash malformado no banco: " + hashBanco, ex);
+                                            }
+                                        }
+
+                                        if (!senhaValida && hashBanco != null) {
+                                            senhaValida = senha.equals(hashBanco.trim());
+                                        }
+
+                                        if (senhaValida) {
+                                            loginEfetuado = true;
+
+                                            if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
+                                                nomeUsuario = email.contains("@") ? email.split("@")[0] : email;
                                             }
 
-                                            if (!senhaValida && hashBanco != null) {
-                                                senhaValida = senha.equals(hashBanco.trim());
-                                            }
-
-                                            if (senhaValida) {
-                                                loginEfetuado = true;
-
-                                                if (nomeUsuario == null || nomeUsuario.trim().isEmpty()) {
-                                                    nomeUsuario = email.contains("@") ? email.split("@")[0] : email;
-                                                }
-
-                                                getSharedPreferences("SessaoApp", MODE_PRIVATE)
-                                                        .edit()
-                                                        .clear()
-                                                        .putBoolean("logado", true)
-                                                        .putInt("id_usuario", idUsuario)
-                                                        .putInt("ID_USUARIO", idUsuario)
-                                                        .putString("nome_usuario", nomeUsuario)
-                                                        .putString("NOME_USUARIO", nomeUsuario)
-                                                        .putString("EMAIL_USUARIO", email)
-                                                        .putString("email", email)
-                                                        .apply();
-                                            }
+                                            getSharedPreferences("SessaoApp", MODE_PRIVATE)
+                                                    .edit()
+                                                    .clear()
+                                                    .putBoolean("logado", true)
+                                                    .putInt("id_usuario", idUsuario)
+                                                    .putInt("ID_USUARIO", idUsuario)
+                                                    .putString("nome_usuario", nomeUsuario)
+                                                    .putString("NOME_USUARIO", nomeUsuario)
+                                                    .putString("EMAIL_USUARIO", email)
+                                                    .putString("email", email)
+                                                    .apply();
                                         }
                                     }
                                 }
@@ -163,16 +145,9 @@ public class LoginActivity extends AppCompatActivity {
 
                     final boolean finalLoginEfetuado = loginEfetuado;
                     final boolean finalConexaoOk = conexaoOk;
-                    final long finalBloqueioMs = tempoBloqueioBancoMs;
 
                     runOnUiThread(() -> {
-                        if (finalBloqueioMs > 0) {
-                            String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(finalBloqueioMs);
-                            Toast.makeText(LoginActivity.this,
-                                    "Login (e-mail) ou IP bloqueado por 10 minutos devido ao excesso de reenvios de código. Aguarde " + tempoFmt + ".",
-                                    Toast.LENGTH_LONG).show();
-                            restaurarBotaoLogin();
-                        } else if (finalLoginEfetuado) {
+                        if (finalLoginEfetuado) {
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
                         } else if (!finalConexaoOk) {

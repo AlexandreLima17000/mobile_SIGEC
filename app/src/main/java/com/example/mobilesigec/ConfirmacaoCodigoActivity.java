@@ -18,7 +18,6 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
 
-import java.sql.Connection;
 import java.util.Locale;
 import java.util.Random;
 
@@ -95,17 +94,6 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
 
         // Botão de Confirmação
         btnConfirmarCodigo.setOnClickListener(v -> {
-            long bloqueioMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
-                    ConfirmacaoCodigoActivity.this, null, emailUsuario);
-            if (bloqueioMs > 0) {
-                String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioMs);
-                Toast.makeText(ConfirmacaoCodigoActivity.this,
-                        "Login (e-mail) e IP bloqueados por 10 minutos. Aguarde " + tempoFmt + ".",
-                        Toast.LENGTH_LONG).show();
-                voltarParaLogin();
-                return;
-            }
-
             String code = getEnteredCode();
             if (code.length() < 6) {
                 Toast.makeText(ConfirmacaoCodigoActivity.this, "Por favor, digite o código completo de 6 dígitos.", Toast.LENGTH_SHORT).show();
@@ -164,25 +152,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             return;
         }
 
-        // 1. Verifica se o usuário ou IP já estão bloqueados
-        long bloqueioMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(this, null, emailUsuario);
-        if (bloqueioMs > 0) {
-            String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioMs);
-            Toast.makeText(this,
-                    "Login (e-mail) e IP bloqueados. Tente novamente em " + tempoFmt + ".",
-                    Toast.LENGTH_LONG).show();
-            voltarParaLogin();
-            return;
-        }
-
-        // 2. Verifica se já atingiu o limite de 30 reenvios antes de pedir mais um
-        int reenviosAtuais = GerenciadorBloqueioRecuperacao.obterQuantidadeReenvios(this, emailUsuario);
-        if (reenviosAtuais >= GerenciadorBloqueioRecuperacao.MAX_REENVIOS) {
-            bloquearUsuarioEVoltarAoLogin();
-            return;
-        }
-
-        // 3. Verifica se já se passaram 1:30 (90 segundos) desde o último envio
+        // Verifica se já se passaram 1:30 (90 segundos) desde o último envio
         long tempoRestanteMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteReenvioMs(this, emailUsuario);
         if (tempoRestanteMs > 0) {
             String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(tempoRestanteMs);
@@ -192,7 +162,7 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             return;
         }
 
-        // 4. Realiza o reenvio do novo código por e-mail
+        // Realiza o reenvio do novo código por e-mail
         reenviandoEmAndamento = true;
         cancelarTimerReenvio();
         if (btnReenviarCodigo != null) {
@@ -207,13 +177,13 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 reenviandoEmAndamento = false;
                 if (enviado) {
-                    int totalReenvios = GerenciadorBloqueioRecuperacao.registrarReenvio(
+                    GerenciadorBloqueioRecuperacao.registrarReenvio(
                             ConfirmacaoCodigoActivity.this, emailUsuario, novoCodigo);
                     codigoEsperado = novoCodigo;
                     limparCamposCodigo();
 
                     Toast.makeText(ConfirmacaoCodigoActivity.this,
-                            "Novo código enviado para " + emailUsuario + " (Reenvio " + totalReenvios + "/" + GerenciadorBloqueioRecuperacao.MAX_REENVIOS + ")",
+                            "Novo código enviado para " + emailUsuario,
                             Toast.LENGTH_LONG).show();
 
                     iniciarOuAtualizarTimerReenvio();
@@ -224,33 +194,6 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
                             Toast.LENGTH_LONG).show();
                     atualizarBotaoReenvioDisponivel();
                 }
-            });
-        }).start();
-    }
-
-    private void bloquearUsuarioEVoltarAoLogin() {
-        reenviandoEmAndamento = true;
-        cancelarTimerReenvio();
-        if (btnReenviarCodigo != null) {
-            btnReenviarCodigo.setEnabled(false);
-        }
-
-        // Registra o bloqueio localmente imediatamente e também sincroniza no banco
-        GerenciadorBloqueioRecuperacao.registrarBloqueio(ConfirmacaoCodigoActivity.this, null, emailUsuario);
-
-        new Thread(() -> {
-            try (Connection con = ConexaoMySQL.conectar()) {
-                if (con != null) {
-                    GerenciadorBloqueioRecuperacao.registrarBloqueio(ConfirmacaoCodigoActivity.this, con, emailUsuario);
-                }
-            } catch (Exception ignored) {
-            }
-
-            runOnUiThread(() -> {
-                Toast.makeText(ConfirmacaoCodigoActivity.this,
-                        "Limite de " + GerenciadorBloqueioRecuperacao.MAX_REENVIOS + " reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 10 minutos.",
-                        Toast.LENGTH_LONG).show();
-                voltarParaLogin();
             });
         }).start();
     }
@@ -287,10 +230,9 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
 
     private void atualizarBotaoReenvioDisponivel() {
         if (btnReenviarCodigo == null) return;
-        int reenviosUsados = GerenciadorBloqueioRecuperacao.obterQuantidadeReenvios(this, emailUsuario);
         btnReenviarCodigo.setEnabled(true);
         btnReenviarCodigo.setTextColor(ContextCompat.getColor(this, R.color.senac_blue));
-        btnReenviarCodigo.setText(getString(R.string.resend_code_button) + " (" + reenviosUsados + "/" + GerenciadorBloqueioRecuperacao.MAX_REENVIOS + ")");
+        btnReenviarCodigo.setText(R.string.resend_code_button);
     }
 
     private void cancelarTimerReenvio() {
