@@ -12,12 +12,8 @@ import android.widget.Toast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,7 +36,11 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
     private TextInputEditText etEmail;
     private MaterialButton btnEnviar;
     private ProgressBar progressEnviar;
-    private String ultimoErroEmail = "";
+    private static String ultimoErroEmail = "";
+
+    public static String getUltimoErroEmail() {
+        return ultimoErroEmail;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +78,35 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                 return;
             }
 
+            // Verifica se o e-mail ou IP já estão bloqueados localmente
+            long bloqueioLocalMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
+                    RecuperarSenhaEmailActivity.this, null, email);
+            if (bloqueioLocalMs > 0) {
+                String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioLocalMs);
+                Toast.makeText(RecuperarSenhaEmailActivity.this,
+                        "Login (e-mail) e IP bloqueados por excesso de reenvios. Tente novamente em " + tempoFmt + ".",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            // Se já enviou um código há menos de 1:30, redireciona para a tela de confirmação mantendo a contagem
+            long esperaReenvioMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteReenvioMs(
+                    RecuperarSenhaEmailActivity.this, email);
+            String codigoSalvo = GerenciadorBloqueioRecuperacao.obterCodigoAtual(
+                    RecuperarSenhaEmailActivity.this, email);
+            if (esperaReenvioMs > 0 && codigoSalvo != null) {
+                String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(esperaReenvioMs);
+                Toast.makeText(RecuperarSenhaEmailActivity.this,
+                        "Um código já foi enviado. Aguarde " + tempoFmt + " para solicitar o reenvio.",
+                        Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
+                intent.putExtra("email", email);
+                intent.putExtra("codigo", codigoSalvo);
+                startActivity(intent);
+                finish();
+                return;
+            }
+
             // Ativa estado de carregamento
             btnEnviar.setEnabled(false);
             btnEnviar.setText(R.string.forgot_password_checking);
@@ -89,15 +118,54 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                      PreparedStatement stmt = con != null ? con.prepareStatement("SELECT id_usuario FROM usuario WHERE email = ?") : null) {
 
                     if (con != null && stmt != null) {
+                        // Verifica bloqueio também no banco de dados
+                        long bloqueioBancoMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteBloqueioMs(
+                                RecuperarSenhaEmailActivity.this, con, email);
+                        if (bloqueioBancoMs > 0) {
+                            String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(bloqueioBancoMs);
+                            runOnUiThread(() -> {
+                                Toast.makeText(RecuperarSenhaEmailActivity.this,
+                                        "Login (e-mail) e IP bloqueados por excesso de reenvios. Tente novamente em " + tempoFmt + ".",
+                                        Toast.LENGTH_LONG).show();
+                                restaurarBotao();
+                            });
+                            return;
+                        }
+
                         stmt.setString(1, email);
                         try (ResultSet rs = stmt.executeQuery()) {
                             if (rs.next()) {
+                                boolean sessaoAtiva = GerenciadorBloqueioRecuperacao.possuiSessaoAtiva(
+                                        RecuperarSenhaEmailActivity.this, email);
+                                int reenviosAtuais = GerenciadorBloqueioRecuperacao.obterQuantidadeReenvios(
+                                        RecuperarSenhaEmailActivity.this, email);
+
+                                if (sessaoAtiva && reenviosAtuais >= GerenciadorBloqueioRecuperacao.MAX_REENVIOS) {
+                                    GerenciadorBloqueioRecuperacao.registrarBloqueio(
+                                            RecuperarSenhaEmailActivity.this, con, email);
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(RecuperarSenhaEmailActivity.this,
+                                                "Limite de 3 reenvios excedido! Seu login (e-mail) e IP foram bloqueados por 15 minutos.",
+                                                Toast.LENGTH_LONG).show();
+                                        finish();
+                                    });
+                                    return;
+                                }
+
                                 // E-mail existe -> Gera código e envia e-mail
                                 String codigo = String.format(Locale.getDefault(), "%06d", new Random().nextInt(1000000));
-                                
+
                                 boolean enviado = enviarEmailRecuperacao(email, codigo);
 
                                 if (enviado) {
+                                    if (sessaoAtiva) {
+                                        GerenciadorBloqueioRecuperacao.registrarReenvio(
+                                                RecuperarSenhaEmailActivity.this, email, codigo);
+                                    } else {
+                                        GerenciadorBloqueioRecuperacao.registrarEnvioInicial(
+                                                RecuperarSenhaEmailActivity.this, email, codigo);
+                                    }
+
                                     runOnUiThread(() -> {
                                         Toast.makeText(RecuperarSenhaEmailActivity.this, "Código enviado com sucesso para " + email, Toast.LENGTH_LONG).show();
                                         Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
@@ -137,7 +205,7 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
         });
     }
 
-    private boolean enviarEmailRecuperacao(String destinatario, String codigo) {
+    public static boolean enviarEmailRecuperacao(String destinatario, String codigo) {
         final String remetente = BuildConfig.MAIL_NAME;
         final String senhaApp = BuildConfig.MAIL_PASS;
         final String host = BuildConfig.MAIL_HOST != null ? BuildConfig.MAIL_HOST : "smtp.gmail.com";
@@ -165,7 +233,7 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(destinatario));
             message.setSubject("Código de Recuperação - SIGEC");
             message.setText("Olá,\n\nSeu código de recuperação de senha do Sistema de Gerenciamento de Estoque da Cozinha (SIGEC) é: " + codigo + "\n\nUtilize este código para redefinir sua senha.\n\nAtenciosamente,\nEquipe SIGEC");
-            
+
             Transport.send(message);
             return true;
         } catch (Exception e) {

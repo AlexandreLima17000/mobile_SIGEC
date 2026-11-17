@@ -96,6 +96,8 @@ public class RedefinirSenhaActivity extends AppCompatActivity {
                         int rowsUpdated = stmt.executeUpdate();
 
                         if (rowsUpdated > 0) {
+                            GerenciadorBloqueioRecuperacao.limparEstadoRecuperacao(
+                                    RedefinirSenhaActivity.this, emailUsuario);
                             runOnUiThread(() -> {
                                 Toast.makeText(RedefinirSenhaActivity.this, "Senha redefinida com sucesso!", Toast.LENGTH_LONG).show();
                                 Intent intent = new Intent(RedefinirSenhaActivity.this, LoginActivity.class);
