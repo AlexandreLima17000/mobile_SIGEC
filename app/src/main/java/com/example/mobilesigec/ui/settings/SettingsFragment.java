@@ -16,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
@@ -37,6 +38,7 @@ public class SettingsFragment extends Fragment {
     private static final String TAG = "SettingsFragment";
     private static final String CHAVE_CACHE_PERFIL = "cache_perfil_instrutor";
 
+    private SwipeRefreshLayout swipeRefreshSettings;
     private TextView tvNomeInstrutor;
     private TextView tvEmailInstitucional;
     private TextView tvUnidade;
@@ -44,9 +46,7 @@ public class SettingsFragment extends Fragment {
     private LinearLayout containerTurmas;
     private ProgressBar progressLoadingPerfil;
 
-    public SettingsFragment() {
-        // Construtor público necessário
-    }
+    public SettingsFragment() {}
 
     private static class TurmaPerfilInfo {
         int idTurma;
@@ -72,6 +72,7 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        swipeRefreshSettings = view.findViewById(R.id.swipe_refresh_settings);
         tvNomeInstrutor = view.findViewById(R.id.tvNomeInstrutor);
         tvEmailInstitucional = view.findViewById(R.id.tvEmailInstitucional);
         tvUnidade = view.findViewById(R.id.tvUnidade);
@@ -79,12 +80,29 @@ public class SettingsFragment extends Fragment {
         containerTurmas = view.findViewById(R.id.container_turmas);
         progressLoadingPerfil = view.findViewById(R.id.progress_loading_perfil);
 
-        carregarDadosPerfilEPerfilBanco();
+        if (swipeRefreshSettings != null) {
+            swipeRefreshSettings.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshSettings.setOnRefreshListener(() -> carregarDadosPerfilEPerfilBanco(true));
+        }
+
+        carregarDadosPerfilEPerfilBanco(false);
     }
 
-    private void carregarDadosPerfilEPerfilBanco() {
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshSettings != null && swipeRefreshSettings.isRefreshing()) {
+            swipeRefreshSettings.setRefreshing(false);
+        }
+    }
+
+    private void carregarDadosPerfilEPerfilBanco(boolean forcarAtualizacao) {
         FragmentActivity activity = getActivity();
-        if (activity == null) return;
+        if (activity == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
 
         SharedPreferences prefs = activity.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("ID_USUARIO", prefs.getInt("id_usuario", -1));
@@ -102,24 +120,27 @@ public class SettingsFragment extends Fragment {
         String identificadorCache = (idUsuarioLogado != -1) ? String.valueOf(idUsuarioLogado) : prefEmail;
         final String chaveCache = CHAVE_CACHE_PERFIL + "_" + identificadorCache;
 
-        // 1. Tenta carregar os dados do perfil e turmas direto do cache local
-        String jsonCache = CacheManager.obterJson(activity, chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonCache != null) {
-            try {
-                JSONObject root = new JSONObject(jsonCache);
-                String cacheNome = root.optString("nome", prefNome);
-                String cacheEmail = root.optString("email", prefEmail);
-                List<TurmaPerfilInfo> turmasCache = desserializarTurmasPerfil(root.optJSONArray("turmas"));
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(activity, chaveCache);
+        } else {
+            String jsonCache = CacheManager.obterJson(activity, chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonCache != null) {
+                try {
+                    JSONObject root = new JSONObject(jsonCache);
+                    String cacheNome = root.optString("nome", prefNome);
+                    String cacheEmail = root.optString("email", prefEmail);
+                    List<TurmaPerfilInfo> turmasCache = desserializarTurmasPerfil(root.optJSONArray("turmas"));
 
-                atualizarUIPerfil(cacheNome, cacheEmail, turmasCache);
-                return;
-            } catch (Exception e) {
-                Log.e(TAG, "Erro ao ler cache do perfil", e);
+                    atualizarUIPerfil(cacheNome, cacheEmail, turmasCache);
+                    encerrarAnimacaoRefresh();
+                    return;
+                } catch (Exception e) {
+                    Log.e(TAG, "Erro ao ler cache do perfil", e);
+                }
             }
         }
 
-        // 2. Se não houver cache válido, consulta o MySQL
-        if (progressLoadingPerfil != null) {
+        if (!forcarAtualizacao && progressLoadingPerfil != null) {
             progressLoadingPerfil.setVisibility(View.VISIBLE);
         }
 
@@ -245,6 +266,7 @@ public class SettingsFragment extends Fragment {
                         progressLoadingPerfil.setVisibility(View.GONE);
                     }
                     atualizarUIPerfil(finalNome, finalEmail, listaTurmas);
+                    encerrarAnimacaoRefresh();
                 });
             }
         }).start();

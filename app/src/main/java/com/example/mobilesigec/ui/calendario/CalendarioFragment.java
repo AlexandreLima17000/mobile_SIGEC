@@ -26,6 +26,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
@@ -58,6 +59,7 @@ public class CalendarioFragment extends Fragment {
     private Calendar currentCalendar;
     private int selectedDay = 1;
 
+    private SwipeRefreshLayout swipeRefreshCalendario;
     private GridLayout calendarGrid;
     private TextView textMonthYear;
     private TextView textCurrentDate;
@@ -81,9 +83,7 @@ public class CalendarioFragment extends Fragment {
     private View lastSelectedDayView = null;
     private TextView lastSelectedTextView = null;
 
-    public CalendarioFragment() {
-        // Required empty public constructor
-    }
+    public CalendarioFragment() {}
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -98,6 +98,7 @@ public class CalendarioFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_calendario, container, false);
         this.currentInflater = inflater;
 
+        swipeRefreshCalendario = view.findViewById(R.id.swipe_refresh_calendario);
         calendarGrid = view.findViewById(R.id.calendar_grid);
         textMonthYear = view.findViewById(R.id.text_month_year);
         textCurrentDate = view.findViewById(R.id.text_current_date);
@@ -108,6 +109,28 @@ public class CalendarioFragment extends Fragment {
         btnNextMonth = view.findViewById(R.id.btn_next_month);
         spinnerTurmasCalendario = view.findViewById(R.id.spinnerTurmasCalendario);
         etPesquisa = view.findViewById(R.id.et_pesquisa_calendario);
+
+        if (swipeRefreshCalendario != null) {
+            swipeRefreshCalendario.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshCalendario.setOnRefreshListener(() -> {
+                if (getContext() != null) {
+                    SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+                    int idUsuario = prefs.getInt("id_usuario", -1);
+                    int idTurma = prefs.getInt("id_turma_selecionada", -1);
+                    int mes = currentCalendar.get(Calendar.MONTH) + 1;
+                    int ano = currentCalendar.get(Calendar.YEAR);
+
+                    CacheManager.invalidarChave(getContext(), CacheManager.CHAVE_HOME_TURMAS + "_" + idUsuario);
+                    CacheManager.invalidarChave(getContext(), CacheManager.CHAVE_CALENDARIO + "_" + idTurma + "_" + ano + "_" + mes);
+                    CacheManager.invalidarChave(getContext(), CacheManager.CHAVE_CALENDARIO + "_sugestoes_" + idTurma);
+                }
+                ultimaTurmaCarregada = Integer.MIN_VALUE;
+                carregarTurmasNoSpinner(true);
+            });
+        }
 
         if (etPesquisa != null) {
             etPesquisa.addTextChangedListener(new TextWatcher() {
@@ -145,7 +168,7 @@ public class CalendarioFragment extends Fragment {
             btnPrevMonth.setOnClickListener(v -> {
                 currentCalendar.add(Calendar.MONTH, -1);
                 selectedDay = 1;
-                carregarCalendarioEEventos(inflater);
+                carregarCalendarioEEventos(inflater, false);
             });
         }
 
@@ -153,13 +176,19 @@ public class CalendarioFragment extends Fragment {
             btnNextMonth.setOnClickListener(v -> {
                 currentCalendar.add(Calendar.MONTH, 1);
                 selectedDay = 1;
-                carregarCalendarioEEventos(inflater);
+                carregarCalendarioEEventos(inflater, false);
             });
         }
 
-        carregarTurmasNoSpinner();
+        carregarTurmasNoSpinner(false);
 
         return view;
+    }
+
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshCalendario != null && swipeRefreshCalendario.isRefreshing()) {
+            swipeRefreshCalendario.setRefreshing(false);
+        }
     }
 
     private String removerAcentos(String text) {
@@ -250,8 +279,9 @@ public class CalendarioFragment extends Fragment {
         atualizarDetalhesDiaSelecionado();
     }
 
-    private void carregarTurmasNoSpinner() {
+    private void carregarTurmasNoSpinner(boolean forcarAtualizacao) {
         if (spinnerTurmasCalendario == null || getContext() == null) {
+            encerrarAnimacaoRefresh();
             return;
         }
 
@@ -260,17 +290,17 @@ public class CalendarioFragment extends Fragment {
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         String chaveCacheTurmas = CacheManager.CHAVE_HOME_TURMAS + "_" + idUsuarioLogado;
 
-        // 1. Tenta carregar turmas do cache compartilhado
-        String jsonTurmasCache = CacheManager.obterJson(context, chaveCacheTurmas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonTurmasCache != null) {
-            List<TurmaModelo> turmasEmCache = desserializarTurmas(jsonTurmasCache);
-            if (!turmasEmCache.isEmpty()) {
-                configurarAdapterTurmasCalendario(turmasEmCache);
-                return;
+        if (!forcarAtualizacao) {
+            String jsonTurmasCache = CacheManager.obterJson(context, chaveCacheTurmas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonTurmasCache != null) {
+                List<TurmaModelo> turmasEmCache = desserializarTurmas(jsonTurmasCache);
+                if (!turmasEmCache.isEmpty()) {
+                    configurarAdapterTurmasCalendario(turmasEmCache, false);
+                    return;
+                }
             }
         }
 
-        // 2. Se não houver cache, busca no MySQL
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
@@ -281,6 +311,7 @@ public class CalendarioFragment extends Fragment {
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con == null) {
                     Log.e(TAG, "Não foi possível conectar ao MySQL.");
+                    mainHandler.post(this::encerrarAnimacaoRefresh);
                     return;
                 }
                 conexaoOk = true;
@@ -317,6 +348,7 @@ public class CalendarioFragment extends Fragment {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Erro ao carregar turmas do calendário", e);
+                mainHandler.post(this::encerrarAnimacaoRefresh);
                 return;
             }
 
@@ -326,15 +358,17 @@ public class CalendarioFragment extends Fragment {
 
             mainHandler.post(() -> {
                 if (!isAdded() || getContext() == null || getView() == null || spinnerTurmasCalendario == null) {
+                    encerrarAnimacaoRefresh();
                     return;
                 }
-                configurarAdapterTurmasCalendario(listaTurmas);
+                configurarAdapterTurmasCalendario(listaTurmas, forcarAtualizacao);
             });
         });
     }
 
-    private void configurarAdapterTurmasCalendario(List<TurmaModelo> listaTurmas) {
+    private void configurarAdapterTurmasCalendario(List<TurmaModelo> listaTurmas, boolean forcarAtualizacao) {
         if (!isAdded() || getContext() == null || getView() == null || spinnerTurmasCalendario == null) {
+            encerrarAnimacaoRefresh();
             return;
         }
 
@@ -365,6 +399,7 @@ public class CalendarioFragment extends Fragment {
             populateCalendar(calendarGrid, LayoutInflater.from(contextoAtual));
             atualizarDetalhesDiaSelecionado();
             Toast.makeText(contextoAtual, "Nenhuma turma ativa encontrada.", Toast.LENGTH_SHORT).show();
+            encerrarAnimacaoRefresh();
             return;
         }
 
@@ -391,7 +426,7 @@ public class CalendarioFragment extends Fragment {
                 prefsAtuais.edit().putInt("id_turma_selecionada", novoIdTurma).apply();
 
                 if (novoIdTurma != ultimaTurmaCarregada) {
-                    carregarCalendarioEEventos(LayoutInflater.from(requireContext()));
+                    carregarCalendarioEEventos(LayoutInflater.from(requireContext()), false);
                 }
             }
 
@@ -403,7 +438,7 @@ public class CalendarioFragment extends Fragment {
         TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
         preferencias.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
 
-        carregarCalendarioEEventos(LayoutInflater.from(contextoAtual));
+        carregarCalendarioEEventos(LayoutInflater.from(contextoAtual), forcarAtualizacao);
     }
 
     private void garantirExecutorAtivo() {
@@ -421,14 +456,14 @@ public class CalendarioFragment extends Fragment {
         int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
 
         if (idTurmaAtual != ultimaTurmaCarregada) {
-            carregarCalendarioEEventos(LayoutInflater.from(requireContext()));
+            carregarCalendarioEEventos(LayoutInflater.from(requireContext()), false);
         }
     }
 
-    private void carregarCalendarioEEventos(LayoutInflater inflater) {
+    private void carregarCalendarioEEventos(LayoutInflater inflater, boolean forcarAtualizacao) {
         atualizarTituloMesAno();
         atualizarDataSelecionada();
-        buscarEventosEAtualizarGrid(inflater);
+        buscarEventosEAtualizarGrid(inflater, forcarAtualizacao);
     }
 
     private void atualizarTituloMesAno() {
@@ -465,14 +500,17 @@ public class CalendarioFragment extends Fragment {
         return null;
     }
 
-    private void buscarEventosEAtualizarGrid(LayoutInflater inflater) {
+    private void buscarEventosEAtualizarGrid(LayoutInflater inflater, boolean forcarAtualizacao) {
         eventosDoMes.clear();
 
         final int mes = currentCalendar.get(Calendar.MONTH) + 1;
         final int ano = currentCalendar.get(Calendar.YEAR);
 
         Context context = getContext();
-        if (context == null) return;
+        if (context == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
 
         SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
@@ -480,21 +518,22 @@ public class CalendarioFragment extends Fragment {
 
         String chaveCacheEventos = CacheManager.CHAVE_CALENDARIO + "_" + idTurmaSelecionada + "_" + ano + "_" + mes;
 
-        // 1. Tenta carregar eventos do mês direto do cache
-        String jsonEventosCache = CacheManager.obterJson(context, chaveCacheEventos, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonEventosCache != null) {
-            Map<Integer, List<AulaAgenda>> mapaCache = desserializarEventosMes(jsonEventosCache);
-            eventosDoMes.putAll(mapaCache);
-            if (calendarGrid != null && getView() != null) {
-                populateCalendar(calendarGrid, inflater);
-                atualizarDataSelecionada();
-                atualizarDetalhesDiaSelecionado();
-                atualizarSugestoesPesquisa();
+        if (!forcarAtualizacao) {
+            String jsonEventosCache = CacheManager.obterJson(context, chaveCacheEventos, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonEventosCache != null) {
+                Map<Integer, List<AulaAgenda>> mapaCache = desserializarEventosMes(jsonEventosCache);
+                eventosDoMes.putAll(mapaCache);
+                if (calendarGrid != null && getView() != null) {
+                    populateCalendar(calendarGrid, inflater);
+                    atualizarDataSelecionada();
+                    atualizarDetalhesDiaSelecionado();
+                    atualizarSugestoesPesquisa(false);
+                }
+                encerrarAnimacaoRefresh();
+                return;
             }
-            return;
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
@@ -588,13 +627,14 @@ public class CalendarioFragment extends Fragment {
                     populateCalendar(calendarGrid, inflater);
                     atualizarDataSelecionada();
                     atualizarDetalhesDiaSelecionado();
-                    atualizarSugestoesPesquisa();
+                    atualizarSugestoesPesquisa(forcarAtualizacao);
                 }
+                encerrarAnimacaoRefresh();
             });
         });
     }
 
-    private void atualizarSugestoesPesquisa() {
+    private void atualizarSugestoesPesquisa(boolean forcarAtualizacao) {
         if (etPesquisa == null || getContext() == null) return;
 
         Context context = getContext();
@@ -602,13 +642,15 @@ public class CalendarioFragment extends Fragment {
         final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
         String chaveCacheSugestoes = CacheManager.CHAVE_CALENDARIO + "_sugestoes_" + idTurmaSelecionada;
 
-        String jsonSugestoesCache = CacheManager.obterJson(context, chaveCacheSugestoes, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonSugestoesCache != null) {
-            List<String> sugestoesCache = desserializarStrings(jsonSugestoesCache);
-            if (isAdded() && getContext() != null && etPesquisa != null) {
-                etPesquisa.setAdapter(new SugestoesFuzzyAdapter(requireContext(), sugestoesCache));
+        if (!forcarAtualizacao) {
+            String jsonSugestoesCache = CacheManager.obterJson(context, chaveCacheSugestoes, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonSugestoesCache != null) {
+                List<String> sugestoesCache = desserializarStrings(jsonSugestoesCache);
+                if (isAdded() && getContext() != null && etPesquisa != null) {
+                    etPesquisa.setAdapter(new SugestoesFuzzyAdapter(requireContext(), sugestoesCache));
+                }
+                return;
             }
-            return;
         }
 
         garantirExecutorAtivo();
@@ -974,8 +1016,6 @@ public class CalendarioFragment extends Fragment {
             layoutFichasLista.addView(textNoFichas);
         }
     }
-
-    // --- MÉTODOS DE CONVERSÃO JSON PARA O CACHE ---
 
     private String serializarTurmas(List<TurmaModelo> lista) {
         JSONArray array = new JSONArray();

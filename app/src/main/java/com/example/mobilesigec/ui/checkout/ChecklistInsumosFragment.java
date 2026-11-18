@@ -2,6 +2,7 @@ package com.example.mobilesigec.ui.checkout;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
@@ -44,6 +46,7 @@ import java.util.concurrent.Executors;
 
 public class ChecklistInsumosFragment extends Fragment {
 
+    private SwipeRefreshLayout swipeRefreshInsumos;
     private Spinner spinnerReceitas;
     private TextView tvReceitaSelecionada;
     private TextView tvLaboratorioSelecionado;
@@ -51,7 +54,7 @@ public class ChecklistInsumosFragment extends Fragment {
 
     private RecyclerView rvInsumos;
     private InsumoAdapter adapter;
-    private List<InsumoModelo> listaInsumosAtual = new ArrayList<>();
+    private final List<InsumoModelo> listaInsumosAtual = new ArrayList<>();
     private LinearProgressIndicator progressBarInsumos;
     private TextView tvProgressoTexto;
     private TextView tvProgressoPorcentagem;
@@ -59,6 +62,9 @@ public class ChecklistInsumosFragment extends Fragment {
 
     private MaterialButton btnLimparInsumos;
     private MaterialButton btnConfirmarInsumos;
+
+    private int idFichaAtual = -1;
+    private boolean carregandoDados = false;
 
     public ChecklistInsumosFragment() {}
 
@@ -71,6 +77,7 @@ public class ChecklistInsumosFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        swipeRefreshInsumos = view.findViewById(R.id.swipe_refresh_insumos);
         spinnerReceitas = view.findViewById(R.id.spinner_receitas_insumos);
         tvReceitaSelecionada = view.findViewById(R.id.tv_receita_selecionada);
         tvLaboratorioSelecionado = view.findViewById(R.id.tv_laboratorio_selecionado);
@@ -90,11 +97,28 @@ public class ChecklistInsumosFragment extends Fragment {
         btnLimparInsumos.setOnClickListener(v -> limparChecklist());
         btnConfirmarInsumos.setOnClickListener(v -> confirmarSeparacao());
 
-        carregarReceitasNoSpinner();
+        if (swipeRefreshInsumos != null) {
+            swipeRefreshInsumos.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshInsumos.setOnRefreshListener(() -> carregarReceitasNoSpinner(true));
+        }
+
+        carregarReceitasNoSpinner(false);
     }
 
-    private void carregarReceitasNoSpinner() {
-        if (getContext() == null) return;
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshInsumos != null && swipeRefreshInsumos.isRefreshing()) {
+            swipeRefreshInsumos.setRefreshing(false);
+        }
+    }
+
+    private void carregarReceitasNoSpinner(boolean forcarAtualizacao) {
+        if (getContext() == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
@@ -102,24 +126,34 @@ public class ChecklistInsumosFragment extends Fragment {
         }
         int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idTurmaSelecionada == -1) return;
+        if (idTurmaSelecionada == -1) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
 
         String dataHoje = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
         String chaveCacheReceitasDia = CacheManager.CHAVE_CHECKLIST_INSUMOS + "_receitas_dia_"
                 + idUsuarioLogado + "_" + idTurmaSelecionada + "_" + dataHoje;
 
-        // 1. Tenta carregar as receitas do dia direto do cache local
-        String jsonReceitasCache = CacheManager.obterJson(requireContext(), chaveCacheReceitasDia, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonReceitasCache != null) {
-            List<ReceitaModelo> receitasCache = desserializarReceitasSpinner(jsonReceitasCache);
-            if (!receitasCache.isEmpty()) {
-                configurarSpinnerReceitas(receitasCache);
-                return;
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(requireContext(), chaveCacheReceitasDia);
+            if (idFichaAtual != -1) {
+                CacheManager.invalidarChave(requireContext(), CacheManager.CHAVE_CHECKLIST_INSUMOS + "_itens_" + idFichaAtual);
+            }
+        } else {
+            String jsonReceitasCache = CacheManager.obterJson(requireContext(), chaveCacheReceitasDia, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonReceitasCache != null) {
+                List<ReceitaModelo> receitasCache = desserializarReceitasSpinner(jsonReceitasCache);
+                if (!receitasCache.isEmpty()) {
+                    configurarSpinnerReceitas(receitasCache, false);
+                    return;
+                }
             }
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
-        progressLoading.setVisibility(View.VISIBLE);
+        if (!forcarAtualizacao) {
+            progressLoading.setVisibility(View.VISIBLE);
+        }
         spinnerReceitas.setEnabled(false);
 
         final int finalIdUsuario = idUsuarioLogado;
@@ -182,15 +216,30 @@ public class ChecklistInsumosFragment extends Fragment {
                     spinnerReceitas.setEnabled(true);
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
-                        configurarSpinnerReceitas(listaReceitas);
+                        configurarSpinnerReceitas(listaReceitas, forcarAtualizacao);
+                    } else {
+                        encerrarAnimacaoRefresh();
                     }
                 });
             }
         });
     }
 
-    private void configurarSpinnerReceitas(List<ReceitaModelo> listaReceitas) {
-        if (!isAdded() || getContext() == null) return;
+    private void configurarSpinnerReceitas(List<ReceitaModelo> listaReceitas, boolean forcarAtualizacaoItens) {
+        if (!isAdded() || getContext() == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
+
+        int posicaoMantida = 0;
+        if (idFichaAtual != -1) {
+            for (int i = 0; i < listaReceitas.size(); i++) {
+                if (listaReceitas.get(i).getIdReceita() == idFichaAtual) {
+                    posicaoMantida = i;
+                    break;
+                }
+            }
+        }
 
         ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(
                 getContext(),
@@ -200,6 +249,7 @@ public class ChecklistInsumosFragment extends Fragment {
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerReceitas.setAdapter(spinnerAdapter);
 
+        final int posInicial = posicaoMantida;
         spinnerReceitas.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -208,16 +258,29 @@ public class ChecklistInsumosFragment extends Fragment {
                 tvLaboratorioSelecionado.setText(receitaSelecionada.getNomeLaboratorio());
                 tvTurmaSelecionada.setText(receitaSelecionada.getNomeTurma() + " • " + receitaSelecionada.getNomeLaboratorio());
 
-                carregarInsumosDaReceita(receitaSelecionada.getIdReceita());
+                carregarInsumosDaReceita(receitaSelecionada.getIdReceita(), forcarAtualizacaoItens);
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
+
+        spinnerReceitas.setSelection(posInicial, false);
+        ReceitaModelo inicial = listaReceitas.get(posInicial);
+        tvReceitaSelecionada.setText("Receita: " + inicial.getNomeReceita());
+        tvLaboratorioSelecionado.setText(inicial.getNomeLaboratorio());
+        tvTurmaSelecionada.setText(inicial.getNomeTurma() + " • " + inicial.getNomeLaboratorio());
+        carregarInsumosDaReceita(inicial.getIdReceita(), forcarAtualizacaoItens);
     }
 
-    private void carregarInsumosDaReceita(int idFicha) {
-        if (getContext() == null) return;
+    private void carregarInsumosDaReceita(int idFicha, boolean forcarAtualizacao) {
+        if (getContext() == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
+
+        this.idFichaAtual = idFicha;
+        this.carregandoDados = true;
 
         listaInsumosAtual.clear();
         if (adapter != null) {
@@ -226,21 +289,25 @@ public class ChecklistInsumosFragment extends Fragment {
 
         final String chaveCacheItens = CacheManager.CHAVE_CHECKLIST_INSUMOS + "_itens_" + idFicha;
 
-        // 1. Tenta carregar os insumos desta ficha direto do cache local
-        String jsonItensCache = CacheManager.obterJson(requireContext(), chaveCacheItens, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonItensCache != null) {
-            List<InsumoModelo> insumosCache = desserializarInsumos(jsonItensCache);
-            listaInsumosAtual.addAll(insumosCache);
-            exibirListaInsumos();
-            return;
+        if (!forcarAtualizacao) {
+            String jsonItensCache = CacheManager.obterJson(requireContext(), chaveCacheItens, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonItensCache != null) {
+                List<InsumoModelo> insumosCache = desserializarInsumos(jsonItensCache);
+                listaInsumosAtual.addAll(insumosCache);
+                this.carregandoDados = false;
+                exibirListaInsumos();
+                encerrarAnimacaoRefresh();
+                return;
+            }
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
-        progressLoading.setVisibility(View.VISIBLE);
+        if (!forcarAtualizacao) {
+            progressLoading.setVisibility(View.VISIBLE);
+        }
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
-            JSONArray jsonArrayParaCache = new JSONArray();
+            List<InsumoModelo> carregados = new ArrayList<>();
             boolean conexaoOk = false;
 
             try (Connection con = ConexaoMySQL.conectar()) {
@@ -260,14 +327,7 @@ public class ChecklistInsumosFragment extends Fragment {
                                 String qtd = String.valueOf(rs.getInt("quantidade"));
                                 String unidade = rs.getString("unidade");
 
-                                listaInsumosAtual.add(new InsumoModelo(idInsumo, nomeProduto, qtd, unidade));
-
-                                JSONObject obj = new JSONObject();
-                                obj.put("id_insumo", idInsumo);
-                                obj.put("nome_produto", nomeProduto != null ? nomeProduto : "");
-                                obj.put("quantidade", qtd);
-                                obj.put("unidade", unidade != null ? unidade : "");
-                                jsonArrayParaCache.put(obj);
+                                carregados.add(new InsumoModelo(idInsumo, nomeProduto, qtd, unidade));
                             }
                         }
                     }
@@ -276,14 +336,20 @@ public class ChecklistInsumosFragment extends Fragment {
                 e.printStackTrace();
             }
 
-            if (conexaoOk && getContext() != null) {
-                CacheManager.salvarJson(getContext(), chaveCacheItens, jsonArrayParaCache.toString());
-            }
-
+            final boolean finalConexaoOk = conexaoOk;
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
+                    listaInsumosAtual.clear();
+                    listaInsumosAtual.addAll(carregados);
+                    this.carregandoDados = false;
+
+                    if (finalConexaoOk && getContext() != null) {
+                        salvarEstadoChecklistNoCache();
+                    }
+
                     exibirListaInsumos();
+                    encerrarAnimacaoRefresh();
                 });
             }
         });
@@ -314,6 +380,15 @@ public class ChecklistInsumosFragment extends Fragment {
         progressBarInsumos.setProgress(porcentagem);
         tvProgressoTexto.setText(itensMarcados + " de " + totalItens + " itens marcados");
         tvProgressoPorcentagem.setText(porcentagem + "%");
+
+        // Auto-save imediato no cache
+        salvarEstadoChecklistNoCache();
+    }
+
+    private void salvarEstadoChecklistNoCache() {
+        if (carregandoDados || idFichaAtual == -1 || getContext() == null) return;
+        String chaveCacheItens = CacheManager.CHAVE_CHECKLIST_INSUMOS + "_itens_" + idFichaAtual;
+        CacheManager.salvarJson(getContext(), chaveCacheItens, serializarInsumos(listaInsumosAtual));
     }
 
     private void limparChecklist() {
@@ -406,8 +481,6 @@ public class ChecklistInsumosFragment extends Fragment {
         });
     }
 
-    // --- MÉTODOS DE CONVERSÃO JSON PARA O CACHE ---
-
     private String serializarReceitasSpinner(List<ReceitaModelo> lista) {
         JSONArray array = new JSONArray();
         for (ReceitaModelo r : lista) {
@@ -440,18 +513,36 @@ public class ChecklistInsumosFragment extends Fragment {
         return lista;
     }
 
+    private String serializarInsumos(List<InsumoModelo> lista) {
+        JSONArray array = new JSONArray();
+        for (InsumoModelo item : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id_insumo", item.getIdInsumo());
+                obj.put("nome_produto", item.getNomeInsumo() != null ? item.getNomeInsumo() : "");
+                obj.put("quantidade", item.getQuantidade() != null ? item.getQuantidade() : "0");
+                obj.put("unidade", item.getUnidadeMedida() != null ? item.getUnidadeMedida() : "");
+                obj.put("marcado", item.isMarcado());
+                array.put(obj);
+            } catch (Exception ignored) {}
+        }
+        return array.toString();
+    }
+
     private List<InsumoModelo> desserializarInsumos(String json) {
         List<InsumoModelo> lista = new ArrayList<>();
         try {
             JSONArray array = new JSONArray(json);
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
-                lista.add(new InsumoModelo(
+                InsumoModelo insumo = new InsumoModelo(
                         obj.getInt("id_insumo"),
                         obj.getString("nome_produto"),
                         obj.getString("quantidade"),
                         obj.getString("unidade")
-                ));
+                );
+                insumo.setMarcado(obj.optBoolean("marcado", false));
+                lista.add(insumo);
             }
         } catch (Exception ignored) {}
         return lista;

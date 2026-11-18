@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
@@ -51,6 +52,7 @@ public class HomePageFragment extends Fragment {
 
     private TextView textSaudacao, textDataHome;
     private Spinner spinnerTurmasHome;
+    private SwipeRefreshLayout swipeRefreshHome;
 
     private ExecutorService executorService;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -73,9 +75,18 @@ public class HomePageFragment extends Fragment {
 
         textSaudacao = view.findViewById(R.id.textSaudacao);
         textDataHome = view.findViewById(R.id.textDataHome);
+        swipeRefreshHome = view.findViewById(R.id.swipe_refresh_home);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
         View cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
+
+        if (swipeRefreshHome != null) {
+            swipeRefreshHome.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshHome.setOnRefreshListener(() -> carregarTurmasNoSpinner(view, true));
+        }
 
         Context context = getContext();
         if (context != null) {
@@ -94,7 +105,7 @@ public class HomePageFragment extends Fragment {
             textDataHome.setText(dataFormatada);
         }
 
-        carregarTurmasNoSpinner(view);
+        carregarTurmasNoSpinner(view, false);
 
         if (cardInsumos != null) {
             cardInsumos.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.action_home_to_insumos));
@@ -107,28 +118,31 @@ public class HomePageFragment extends Fragment {
         }
     }
 
-    private void carregarTurmasNoSpinner(View view) {
+    private void carregarTurmasNoSpinner(View view, boolean forcarAtualizacao) {
         spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
-        if (spinnerTurmasHome == null) return;
-
         Context context = getContext();
-        if (context == null) return;
+        if (spinnerTurmasHome == null || context == null) {
+            finalizarRefresh();
+            return;
+        }
 
         SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         String chaveCacheTurmas = CacheManager.CHAVE_HOME_TURMAS + "_" + idUsuarioLogado;
 
-        // 1. Tenta carregar as turmas direto do cache local
-        String jsonTurmasCache = CacheManager.obterJson(context, chaveCacheTurmas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonTurmasCache != null) {
-            List<TurmaModelo> turmasEmCache = desserializarTurmas(jsonTurmasCache);
-            if (!turmasEmCache.isEmpty()) {
-                configurarAdapterTurmas(turmasEmCache, prefs);
-                return;
+        // 1. Tenta carregar as turmas direto do cache local (se não for atualização forçada)
+        if (!forcarAtualizacao) {
+            String jsonTurmasCache = CacheManager.obterJson(context, chaveCacheTurmas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonTurmasCache != null) {
+                List<TurmaModelo> turmasEmCache = desserializarTurmas(jsonTurmasCache);
+                if (!turmasEmCache.isEmpty()) {
+                    configurarAdapterTurmas(turmasEmCache, prefs, false);
+                    return;
+                }
             }
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
+        // 2. Busca no MySQL
         executorService.execute(() -> {
             List<TurmaModelo> listaTurmas = new ArrayList<>();
             boolean conexaoOk = false;
@@ -175,13 +189,16 @@ public class HomePageFragment extends Fragment {
 
             mainHandler.post(() -> {
                 if (!isAdded() || getContext() == null) return;
-                configurarAdapterTurmas(listaTurmas, prefs);
+                configurarAdapterTurmas(listaTurmas, prefs, forcarAtualizacao);
             });
         });
     }
 
-    private void configurarAdapterTurmas(List<TurmaModelo> listaTurmas, SharedPreferences prefs) {
-        if (!isAdded() || getContext() == null || spinnerTurmasHome == null) return;
+    private void configurarAdapterTurmas(List<TurmaModelo> listaTurmas, SharedPreferences prefs, boolean forcarAtualizacao) {
+        if (!isAdded() || getContext() == null || spinnerTurmasHome == null) {
+            finalizarRefresh();
+            return;
+        }
 
         ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
                 requireContext(),
@@ -203,6 +220,12 @@ public class HomePageFragment extends Fragment {
 
         if (listaTurmas.isEmpty()) {
             prefs.edit().remove("id_turma_selecionada").apply();
+            View v = getView();
+            if (v != null) {
+                LinearLayout containerReceitas = v.findViewById(R.id.container_receitas);
+                if (containerReceitas != null) containerReceitas.removeAllViews();
+            }
+            finalizarRefresh();
             return;
         }
 
@@ -215,14 +238,22 @@ public class HomePageFragment extends Fragment {
             }
         }
 
+        final int posInicialFinal = posicaoInicial;
+        final boolean[] primeiraChamada = {true};
+
+        spinnerTurmasHome.setSelection(posicaoInicial, false);
         spinnerTurmasHome.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View selectedView, int position, long id) {
+                if (primeiraChamada[0]) {
+                    primeiraChamada[0] = false;
+                    if (position == posInicialFinal) return;
+                }
                 if (position < 0 || position >= listaTurmas.size()) return;
                 TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
                 if (turmaSelecionada != null) {
                     prefs.edit().putInt("id_turma_selecionada", turmaSelecionada.getIdTurma()).apply();
-                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio());
+                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio(), false);
                 }
             }
 
@@ -230,12 +261,11 @@ public class HomePageFragment extends Fragment {
             public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
 
-        spinnerTurmasHome.setSelection(posicaoInicial, false);
         TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
         if (idTurmaSalva != turmaInicial.getIdTurma()) {
             prefs.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
         }
-        carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio());
+        carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio(), forcarAtualizacao);
     }
 
     @Override
@@ -258,27 +288,36 @@ public class HomePageFragment extends Fragment {
         }
     }
 
-    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio) {
+    private void carregarReceitasDaTurma(int idTurma, String nomeLaboratorio, boolean forcarAtualizacao) {
         View view = getView();
         Context context = getContext();
-        if (view == null || context == null) return;
+        if (view == null || context == null) {
+            finalizarRefresh();
+            return;
+        }
 
         LinearLayout containerReceitas = view.findViewById(R.id.container_receitas);
-        if (containerReceitas == null) return;
+        if (containerReceitas == null) {
+            finalizarRefresh();
+            return;
+        }
 
         containerReceitas.removeAllViews();
 
         String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + idTurma;
 
-        // 1. Tenta recuperar as receitas da semana desta turma no cache
-        String jsonReceitasCache = CacheManager.obterJson(context, chaveCacheReceitas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonReceitasCache != null) {
-            Map<Integer, List<ItemReceitaData>> mapCache = desserializarMapaDias(jsonReceitasCache);
-            renderizarCardsSemana(mapCache, nomeLaboratorio);
-            return;
+        // 1. Tenta recuperar as receitas da semana desta turma no cache (se não for atualização forçada)
+        if (!forcarAtualizacao) {
+            String jsonReceitasCache = CacheManager.obterJson(context, chaveCacheReceitas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonReceitasCache != null) {
+                Map<Integer, List<ItemReceitaData>> mapCache = desserializarMapaDias(jsonReceitasCache);
+                renderizarCardsSemana(mapCache, nomeLaboratorio);
+                finalizarRefresh();
+                return;
+            }
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
+        // 2. Busca no MySQL
         executorService.execute(() -> {
             Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
             for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
@@ -391,8 +430,15 @@ public class HomePageFragment extends Fragment {
             mainHandler.post(() -> {
                 if (!isAdded() || getContext() == null) return;
                 renderizarCardsSemana(mapDias, nomeLaboratorio);
+                finalizarRefresh();
             });
         });
+    }
+
+    private void finalizarRefresh() {
+        if (swipeRefreshHome != null && swipeRefreshHome.isRefreshing()) {
+            swipeRefreshHome.setRefreshing(false);
+        }
     }
 
     private void renderizarCardsSemana(Map<Integer, List<ItemReceitaData>> mapDias, String nomeLaboratorio) {
@@ -610,6 +656,7 @@ public class HomePageFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        swipeRefreshHome = null;
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
         }

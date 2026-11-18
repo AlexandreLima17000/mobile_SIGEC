@@ -23,6 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
@@ -41,6 +42,7 @@ import java.util.Set;
 
 public class ListaReceitasFragment extends Fragment {
 
+    private SwipeRefreshLayout swipeRefreshReceitas;
     private GridLayout gridReceitas;
     private AutoCompleteTextView edtPesquisaReceita;
     private TextView txtQuantidadeReceitas;
@@ -69,6 +71,7 @@ public class ListaReceitasFragment extends Fragment {
             }
         }
 
+        swipeRefreshReceitas = view.findViewById(R.id.swipe_refresh_receitas);
         gridReceitas = view.findViewById(R.id.gridReceitas);
         edtPesquisaReceita = view.findViewById(R.id.edtPesquisaReceita);
         txtQuantidadeReceitas = view.findViewById(R.id.txtQuantidadeReceitas);
@@ -87,7 +90,15 @@ public class ListaReceitasFragment extends Fragment {
             filtroDatadas.setOnClickListener(v -> selecionarFiltroStatus("DATADA"));
         }
 
-        carregarReceitas();
+        if (swipeRefreshReceitas != null) {
+            swipeRefreshReceitas.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshReceitas.setOnRefreshListener(() -> carregarReceitas(true));
+        }
+
+        carregarReceitas(false);
 
         edtPesquisaReceita.addTextChangedListener(new TextWatcher() {
             @Override
@@ -114,8 +125,17 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
-    private void carregarReceitas() {
-        if (getContext() == null) return;
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshReceitas != null && swipeRefreshReceitas.isRefreshing()) {
+            swipeRefreshReceitas.setRefreshing(false);
+        }
+    }
+
+    private void carregarReceitas(boolean forcarAtualizacao) {
+        if (getContext() == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
@@ -125,18 +145,21 @@ public class ListaReceitasFragment extends Fragment {
         final int idUsuario = idUsuarioLogado;
         final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario;
 
-        // 1. Tenta carregar a lista de receitas direto do cache local
-        String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-        if (jsonCache != null) {
-            List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
-            listaReceitas.clear();
-            listaReceitas.addAll(receitasEmCache);
-            atualizarSugestoesAutocomplete();
-            aplicarFiltrosCombinados();
-            return;
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(requireContext(), chaveCache);
+        } else {
+            String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonCache != null) {
+                List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
+                listaReceitas.clear();
+                listaReceitas.addAll(receitasEmCache);
+                atualizarSugestoesAutocomplete();
+                aplicarFiltrosCombinados();
+                encerrarAnimacaoRefresh();
+                return;
+            }
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
             Connection conexao = null;
@@ -203,6 +226,7 @@ public class ListaReceitasFragment extends Fragment {
                         listaReceitas.addAll(resultado);
                         atualizarSugestoesAutocomplete();
                         aplicarFiltrosCombinados();
+                        encerrarAnimacaoRefresh();
                     });
                 }
 
@@ -210,6 +234,7 @@ public class ListaReceitasFragment extends Fragment {
                 e.printStackTrace();
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
+                        encerrarAnimacaoRefresh();
                         Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
                 }
