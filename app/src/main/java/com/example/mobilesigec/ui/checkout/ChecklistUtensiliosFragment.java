@@ -91,7 +91,29 @@ public class ChecklistUtensiliosFragment extends Fragment {
 
         carregarReceitasNoSpinner();
     }
+    private void mostrarNenhumaReceitaDisponivel() {
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_spinner_item,
+                new String[]{"Nenhuma receita disponível"}
+        );
 
+        spinnerAdapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item
+        );
+
+        spinnerReceitas.setAdapter(spinnerAdapter);
+        spinnerReceitas.setEnabled(false);
+
+        tvReceitaSelecionada.setText("Nenhuma receita disponível");
+        tvLaboratorioSelecionado.setText("");
+        tvTurmaSelecionada.setText("");
+
+        listaUtensiliosAtual.clear();
+        rvUtensilios.setAdapter(null);
+
+        atualizarProgresso();
+    }
     private void carregarReceitasNoSpinner() {
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
@@ -100,7 +122,10 @@ public class ChecklistUtensiliosFragment extends Fragment {
         }
         int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idTurmaSelecionada == -1) return;
+        if (idTurmaSelecionada == -1) {
+            mostrarNenhumaReceitaDisponivel();
+            return;
+        }
 
         progressLoading.setVisibility(View.VISIBLE);
         spinnerReceitas.setEnabled(false);
@@ -156,6 +181,12 @@ public class ChecklistUtensiliosFragment extends Fragment {
                 getActivity().runOnUiThread(() -> {
                     progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
+                    if (getContext() == null) return;
+
+                    if (listaReceitas.isEmpty()) {
+                        mostrarNenhumaReceitaDisponivel();
+                        return;
+                    }
 
                     if (!listaReceitas.isEmpty() && getContext() != null) {
                         ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
@@ -260,7 +291,14 @@ public class ChecklistUtensiliosFragment extends Fragment {
     }
 
     private void confirmarUtensilios() {
-        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        Object itemSelecionado = spinnerReceitas.getSelectedItem();
+
+        if (!(itemSelecionado instanceof ReceitaModelo)) {
+            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) itemSelecionado;
         if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
             Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
             return;
@@ -320,9 +358,15 @@ public class ChecklistUtensiliosFragment extends Fragment {
             }
         });
     }
-
     private void abrirDialogDevolucao() {
-        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
+        Object itemSelecionado = spinnerReceitas.getSelectedItem();
+
+        if (!(itemSelecionado instanceof ReceitaModelo)) {
+            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) itemSelecionado;
         if (receitaSelecionada == null || listaUtensiliosAtual.isEmpty()) {
             Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
             return;

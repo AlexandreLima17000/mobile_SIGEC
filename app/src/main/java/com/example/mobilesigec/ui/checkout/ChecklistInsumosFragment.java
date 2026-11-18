@@ -94,7 +94,29 @@ public class ChecklistInsumosFragment extends Fragment {
         }
         int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idTurmaSelecionada == -1) return;
+        if (idTurmaSelecionada == -1) {
+            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+                    requireContext(),
+                    android.R.layout.simple_spinner_item,
+                    new String[]{"Nenhuma receita disponível"}
+            );
+
+            spinnerAdapter.setDropDownViewResource(
+                    android.R.layout.simple_spinner_dropdown_item
+            );
+
+            spinnerReceitas.setAdapter(spinnerAdapter);
+            spinnerReceitas.setEnabled(false);
+
+            tvReceitaSelecionada.setText("Nenhuma receita disponível");
+            rvInsumos.setAdapter(null);
+            listaInsumosAtual.clear();
+            tvLaboratorioSelecionado.setText("");
+            tvTurmaSelecionada.setText("");
+            atualizarProgresso();
+
+            return;
+        }
 
         progressLoading.setVisibility(View.VISIBLE);
         spinnerReceitas.setEnabled(false);
@@ -151,7 +173,31 @@ public class ChecklistInsumosFragment extends Fragment {
                     progressLoading.setVisibility(View.GONE);
                     spinnerReceitas.setEnabled(true);
 
-                    if (!listaReceitas.isEmpty() && getContext() != null) {
+                    if (getContext() != null) {
+                        if (listaReceitas.isEmpty()) {
+                            ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(
+                                    requireContext(),
+                                    android.R.layout.simple_spinner_item,
+                                    new String[]{"Nenhuma receita disponível"}
+                            );
+
+                            spinnerAdapter.setDropDownViewResource(
+                                    android.R.layout.simple_spinner_dropdown_item
+                            );
+
+                            spinnerReceitas.setAdapter(spinnerAdapter);
+                            spinnerReceitas.setEnabled(false);
+
+                            tvReceitaSelecionada.setText("Nenhuma receita disponível");
+                            tvLaboratorioSelecionado.setText("");
+                            tvTurmaSelecionada.setText("");
+                            rvInsumos.setAdapter(null);
+
+                            listaInsumosAtual.clear();
+                            atualizarProgresso();
+
+                            return;
+                        }
                         ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
                         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                         spinnerReceitas.setAdapter(spinnerAdapter);
@@ -253,13 +299,30 @@ public class ChecklistInsumosFragment extends Fragment {
     }
 
     private void confirmarSeparacao() {
-        ReceitaModelo receitaSelecionada = (ReceitaModelo) spinnerReceitas.getSelectedItem();
-        if (receitaSelecionada == null || listaInsumosAtual.isEmpty()) {
-            Toast.makeText(getContext(), "Nenhuma receita disponível.", Toast.LENGTH_SHORT).show();
+        Object itemSelecionado = spinnerReceitas.getSelectedItem();
+
+        if (!(itemSelecionado instanceof ReceitaModelo)) {
+            Toast.makeText(
+                    getContext(),
+                    "Nenhuma receita disponível.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        ReceitaModelo receitaSelecionada = (ReceitaModelo) itemSelecionado;
+
+        if (listaInsumosAtual.isEmpty()) {
+            Toast.makeText(
+                    getContext(),
+                    "Nenhuma receita disponível.",
+                    Toast.LENGTH_SHORT
+            ).show();
             return;
         }
 
         List<InsumoModelo> insumosUtilizados = new ArrayList<>();
+
         for (InsumoModelo insumo : listaInsumosAtual) {
             if (insumo.isMarcado()) {
                 insumosUtilizados.add(insumo);
@@ -267,7 +330,11 @@ public class ChecklistInsumosFragment extends Fragment {
         }
 
         if (insumosUtilizados.isEmpty()) {
-            Toast.makeText(getContext(), "Marque pelo menos um insumo utilizado antes de confirmar!", Toast.LENGTH_LONG).show();
+            Toast.makeText(
+                    getContext(),
+                    "Marque pelo menos um insumo utilizado antes de confirmar!",
+                    Toast.LENGTH_LONG
+            ).show();
             return;
         }
 
