@@ -10,17 +10,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.mobilesigec.BuildConfig;
+import com.example.mobilesigec.GerenciadorBloqueioRecuperacao;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -43,7 +40,11 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
     private TextInputEditText etEmail;
     private MaterialButton btnEnviar;
     private ProgressBar progressEnviar;
-    private String ultimoErroEmail = "";
+    private static String ultimoErroEmail = "";
+
+    public static String getUltimoErroEmail() {
+        return ultimoErroEmail;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +82,24 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                 return;
             }
 
+            // Se já enviou um código há menos de 1:30, redireciona para a tela de confirmação mantendo a contagem
+            long esperaReenvioMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteReenvioMs(
+                    RecuperarSenhaEmailActivity.this, email);
+            String codigoSalvo = GerenciadorBloqueioRecuperacao.obterCodigoAtual(
+                    RecuperarSenhaEmailActivity.this, email);
+            if (esperaReenvioMs > 0 && codigoSalvo != null) {
+                String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(esperaReenvioMs);
+                Toast.makeText(RecuperarSenhaEmailActivity.this,
+                        "Um código já foi enviado. Aguarde " + tempoFmt + " para solicitar o reenvio.",
+                        Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
+                intent.putExtra("email", email);
+                intent.putExtra("codigo", codigoSalvo);
+                startActivity(intent);
+                finish();
+                return;
+            }
+
             btnEnviar.setEnabled(false);
             btnEnviar.setText(R.string.forgot_password_checking);
             progressEnviar.setVisibility(View.VISIBLE);
@@ -99,6 +118,9 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                                 boolean enviado = enviarEmailRecuperacao(email, codigo);
 
                                 if (enviado) {
+                                    GerenciadorBloqueioRecuperacao.registrarEnvioInicial(
+                                            RecuperarSenhaEmailActivity.this, email, codigo);
+
                                     runOnUiThread(() -> {
                                         Toast.makeText(RecuperarSenhaEmailActivity.this, "Código enviado com sucesso para " + email, Toast.LENGTH_LONG).show();
                                         Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
@@ -138,7 +160,7 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
         });
     }
 
-    private boolean enviarEmailRecuperacao(String destinatario, String codigo) {
+    public static boolean enviarEmailRecuperacao(String destinatario, String codigo) {
         final String remetente = BuildConfig.MAIL_NAME;
         final String senhaApp = BuildConfig.MAIL_PASS;
         final String host = BuildConfig.MAIL_HOST != null ? BuildConfig.MAIL_HOST : "smtp.gmail.com";
