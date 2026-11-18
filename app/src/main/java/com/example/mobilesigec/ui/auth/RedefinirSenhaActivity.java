@@ -14,6 +14,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.mobilesigec.GerenciadorBloqueioRecuperacao;
 import com.example.mobilesigec.R;
 import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.button.MaterialButton;
