@@ -156,6 +156,16 @@
                             android:backgroundTint="#002747"
                             android:popupBackground="#FFFFFF"
                             android:theme="@style/SpinnerTextoPreto" />
+                        <TextView
+                            android:id="@+id/textNenhumaTurma"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Nenhuma turma selecionada para hoje."
+                            android:textColor="#964900"
+                            android:textSize="13sp"
+                            android:visibility="gone"
+                            android:paddingTop="6dp" />
+
                     </LinearLayout>
 
                 </LinearLayout>

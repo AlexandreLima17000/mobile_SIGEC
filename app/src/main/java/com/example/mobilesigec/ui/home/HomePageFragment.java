@@ -51,6 +51,9 @@ public class HomePageFragment extends Fragment {
     private ExecutorService executorService;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    private TextView textNenhumaTurma;
+
+
     public HomePageFragment() {
         // Required empty public constructor
     }
@@ -69,6 +72,7 @@ public class HomePageFragment extends Fragment {
 
         textSaudacao = view.findViewById(R.id.textSaudacao);
         textDataHome = view.findViewById(R.id.textDataHome);
+        textNenhumaTurma= view.findViewById(R.id.textNenhumaTurma);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
         View cardReceitasHoje = view.findViewById(R.id.card_receitas_hoje);
@@ -173,10 +177,20 @@ public class HomePageFragment extends Fragment {
                 adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
                 spinnerTurmasHome.setAdapter(adapter);
 
-                if (listaTurmas.isEmpty()) {
+                if (listaTurmas.isEmpty()){
                     prefs.edit().remove("id_turma_selecionada").apply();
+                    if (textNenhumaTurma!=null){
+                        textNenhumaTurma.setText("Nenhuma turma selecionada para hoje.");
+                        textNenhumaTurma.setVisibility(View.VISIBLE);
+                    }
+                    spinnerTurmasHome.setEnabled(false);
                     return;
                 }
+
+                if (textNenhumaTurma!=null) {
+                    textNenhumaTurma.setVisibility(View.GONE);
+                }
+                spinnerTurmasHome.setEnabled(true);
 
                 int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
                 int posicaoInicial = 0;
