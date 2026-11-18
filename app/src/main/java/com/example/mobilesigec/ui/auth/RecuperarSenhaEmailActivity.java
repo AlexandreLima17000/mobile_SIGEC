@@ -82,24 +82,6 @@ public class RecuperarSenhaEmailActivity extends AppCompatActivity {
                 return;
             }
 
-            // Se já enviou um código há menos de 1:30, redireciona para a tela de confirmação mantendo a contagem
-            long esperaReenvioMs = GerenciadorBloqueioRecuperacao.obterTempoRestanteReenvioMs(
-                    RecuperarSenhaEmailActivity.this, email);
-            String codigoSalvo = GerenciadorBloqueioRecuperacao.obterCodigoAtual(
-                    RecuperarSenhaEmailActivity.this, email);
-            if (esperaReenvioMs > 0 && codigoSalvo != null) {
-                String tempoFmt = GerenciadorBloqueioRecuperacao.formatarTempoMinutosSegundos(esperaReenvioMs);
-                Toast.makeText(RecuperarSenhaEmailActivity.this,
-                        "Um código já foi enviado. Aguarde " + tempoFmt + " para solicitar o reenvio.",
-                        Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(RecuperarSenhaEmailActivity.this, ConfirmacaoCodigoActivity.class);
-                intent.putExtra("email", email);
-                intent.putExtra("codigo", codigoSalvo);
-                startActivity(intent);
-                finish();
-                return;
-            }
-
             btnEnviar.setEnabled(false);
             btnEnviar.setText(R.string.forgot_password_checking);
             progressEnviar.setVisibility(View.VISIBLE);

@@ -32,26 +32,31 @@ public class GerenciadorBloqueioRecuperacao {
     }
 
     /**
-     * Registra o envio inicial de código de uma sessão de recuperação.
+     * Registra o envio inicial de código de uma sessão de recuperação (sem iniciar o timer de reenvio).
      */
     public static void registrarEnvioInicial(Context context, String email, String codigo) {
-        registrarEnvio(context, email, codigo);
-    }
-
-    /**
-     * Registra um reenvio de código e atualiza o timestamp de último envio (reiniciando o timer de 1:30).
-     */
-    public static void registrarReenvio(Context context, String email, String novoCodigo) {
-        registrarEnvio(context, email, novoCodigo);
-    }
-
-    private static void registrarEnvio(Context context, String email, String codigo) {
         if (context == null) return;
         String emailNorm = normalizarEmail(email);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit()
                 .putLong("ultimo_envio_" + emailNorm, System.currentTimeMillis())
                 .putString("codigo_atual_" + emailNorm, codigo)
+                .remove("ultimo_reenvio_" + emailNorm)
+                .apply();
+    }
+
+    /**
+     * Registra um reenvio de código e atualiza o timestamp de último reenvio (iniciando o timer de 1:30).
+     */
+    public static void registrarReenvio(Context context, String email, String novoCodigo) {
+        if (context == null) return;
+        String emailNorm = normalizarEmail(email);
+        long agora = System.currentTimeMillis();
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit()
+                .putLong("ultimo_envio_" + emailNorm, agora)
+                .putLong("ultimo_reenvio_" + emailNorm, agora)
+                .putString("codigo_atual_" + emailNorm, novoCodigo)
                 .apply();
     }
 
@@ -66,16 +71,16 @@ public class GerenciadorBloqueioRecuperacao {
     }
 
     /**
-     * Retorna o tempo restante (em ms) para poder reenviar o código (1:30 após o último envio).
+     * Retorna o tempo restante (em ms) para poder reenviar o código (1:30 após o último clique em reenviar).
      */
     public static long obterTempoRestanteReenvioMs(Context context, String email) {
         if (context == null) return 0L;
         String emailNorm = normalizarEmail(email);
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        long ultimoEnvio = prefs.getLong("ultimo_envio_" + emailNorm, 0L);
-        if (ultimoEnvio <= 0L) return 0L;
+        long ultimoReenvio = prefs.getLong("ultimo_reenvio_" + emailNorm, 0L);
+        if (ultimoReenvio <= 0L) return 0L;
 
-        long decorrido = System.currentTimeMillis() - ultimoEnvio;
+        long decorrido = System.currentTimeMillis() - ultimoReenvio;
         if (decorrido >= TEMPO_ESPERA_REENVIO_MS) {
             return 0L;
         }
@@ -91,6 +96,7 @@ public class GerenciadorBloqueioRecuperacao {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         prefs.edit()
                 .remove("ultimo_envio_" + emailNorm)
+                .remove("ultimo_reenvio_" + emailNorm)
                 .remove("reenvios_" + emailNorm)
                 .remove("codigo_atual_" + emailNorm)
                 .apply();

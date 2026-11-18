@@ -54,14 +54,12 @@ public class ConfirmacaoCodigoActivity extends AppCompatActivity {
             codigoEsperado = intentOriginal.getStringExtra("codigo");
         }
 
-        if (emailUsuario != null && !emailUsuario.isEmpty()) {
-            if (!GerenciadorBloqueioRecuperacao.possuiSessaoAtiva(this, emailUsuario)) {
-                GerenciadorBloqueioRecuperacao.registrarEnvioInicial(this, emailUsuario, codigoEsperado);
-            } else {
-                String codigoSalvo = GerenciadorBloqueioRecuperacao.obterCodigoAtual(this, emailUsuario);
-                if (codigoSalvo != null && !codigoSalvo.isEmpty()) {
-                    codigoEsperado = codigoSalvo;
-                }
+        if (emailUsuario != null && !emailUsuario.isEmpty() && savedInstanceState == null) {
+            GerenciadorBloqueioRecuperacao.registrarEnvioInicial(this, emailUsuario, codigoEsperado);
+        } else if (emailUsuario != null && !emailUsuario.isEmpty()) {
+            String codigoSalvo = GerenciadorBloqueioRecuperacao.obterCodigoAtual(this, emailUsuario);
+            if (codigoSalvo != null && !codigoSalvo.isEmpty()) {
+                codigoEsperado = codigoSalvo;
             }
         }
 
