@@ -1,41 +1,29 @@
-# Reorganize UI Packages Under `ui`
+# Implement Asynchronous Thread Control in `CalendarioFragment`
 
-Refactor the package structure to move UI packages (`auth`, `calendario`, `checkout`, `home`, `receita`, `settings`) under a new parent package `ui` (`com.example.mobilesigec.ui.*`), keeping `adapter`, `database`, `model`, `MainActivity`, and `SplashActivity` at the root level.
+Optimize calendar loading in `CalendarioFragment` by introducing dedicated thread control (`ExecutorService`, `Handler`, `AtomicInteger`) to handle database queries asynchronously, prevent ANRs, and protect against rapid selection race conditions.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Moving UI packages under `ui` requires updating package declarations and imports across all moved files, updating `AndroidManifest.xml` for activities, and updating `mobile_navigation.xml` for fragment fully qualified names.
+> This optimization ensures thread safety and responsiveness when switching classes in the calendar spinner, using an `AtomicInteger` request ID counter to discard outdated background queries.
 
 ## Open Questions
 
-- None. The target structure matches the requested architecture.
+- None. The implementation follows the provided blueprint.
 
 ## Proposed Changes
 
-### UI Package Restructuring
+### CalendarioFragment Optimization
 
-#### [NEW / MODIFY] Package Move & Updates
-- Move files in `auth`, `calendario`, `checkout`, `home`, `receita`, `settings` to `ui/auth`, `ui/calendario`, `ui/checkout`, `ui/home`, `ui/receita`, `ui/settings`.
-- Update package declarations to `package com.example.mobilesigec.ui.<package_name>;`.
-- Update imports in these files to reference root packages (`database.ConexaoMySQL`, `model.*`, `adapter.*`, etc.) and each other correctly.
-
-#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/carlos57656326/AndroidStudioProjects/mobileSIGEC/app/src/main/AndroidManifest.xml)
-- Update activity references to include `.ui.auth.` prefix:
-  - `.auth.LoginActivity` -> `.ui.auth.LoginActivity`
-  - `.auth.RecuperarSenhaEmailActivity` -> `.ui.auth.RecuperarSenhaEmailActivity`
-  - `.auth.ConfirmacaoCodigoActivity` -> `.ui.auth.ConfirmacaoCodigoActivity`
-  - `.auth.RedefinirSenhaActivity` -> `.ui.auth.RedefinirSenhaActivity`
-
-#### [MODIFY] [mobile_navigation.xml](file:///C:/Users/carlos57656326/AndroidStudioProjects/mobileSIGEC/app/src/main/res/navigation/mobile_navigation.xml)
-- Update fragment references to include `ui.` package prefix:
-  - `com.example.mobilesigec.checkout.*` -> `com.example.mobilesigec.ui.checkout.*`
-  - `com.example.mobilesigec.receita.*` -> `com.example.mobilesigec.ui.receita.*`
-  - `com.example.mobilesigec.home.*` -> `com.example.mobilesigec.ui.home.*`
-  - `com.example.mobilesigec.calendario.*` -> `com.example.mobilesigec.ui.calendario.*`
-  - `com.example.mobilesigec.settings.*` -> `com.example.mobilesigec.ui.settings.*`
+#### [MODIFY] [CalendarioFragment.java](file:///C:/Users/carlos57656326/AndroidStudioProjects/mobileSIGEC/app/src/main/java/com/example/mobilesigec/ui/calendario/CalendarioFragment.java)
+- Add thread control fields:
+  - `private final ExecutorService executorCalendario = Executors.newSingleThreadExecutor();`
+  - `private final Handler mainHandler = new Handler(Looper.getMainLooper());`
+  - `private final AtomicInteger idRequisicaoAtual = new AtomicInteger(0);`
+- Update spinner selection listener to trigger `carregarCalendarioPorTurmaAsync` (or integrate async loading logic with request ID validation).
+- Implement `onDestroyView()` to shutdown `executorCalendario` and invalidate active requests (`idRequisicaoAtual.incrementAndGet()`).
 
 ## Verification Plan
 
 ### Automated Tests
-- Run Gradle build (`gradle_build("app:assembleDebug")`) to verify successful compilation and package resolution.
+- Run Gradle build (`gradle_build("app:assembleDebug")`) to verify syntax correctness and successful compilation.

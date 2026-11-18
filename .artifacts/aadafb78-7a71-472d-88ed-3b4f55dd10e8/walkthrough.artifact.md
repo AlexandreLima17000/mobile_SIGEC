@@ -1,30 +1,18 @@
-# Walkthrough - Reorganização da Arquitetura UI
+# Walkthrough - Otimização Assíncrona e Controle de Concorrência no Calendário
 
-Refatoração estrutural avançada para agrupar todos os pacotes de interface de usuário (`auth`, `calendario`, `checkout`, `home`, `receita`, `settings`) sob o novo pacote pai `ui` (`com.example.mobilesigec.ui.*`), mantendo os pacotes de infraestrutura (`database`, `model`, `adapter`) e as activities principais (`MainActivity`, `SplashActivity`) na raiz.
+Implementação de carregamento assíncrono e controle avançado de concorrência (`ExecutorService` + `AtomicInteger`) no `CalendarioFragment` para evitar travamentos (ANRs) ao alternar entre turmas e proteger contra respostas fora de ordem em cliques rápidos.
 
 ## Alterações Realizadas
 
-### 1. Reestruturação de Pacotes (`ui/`)
-- **`com.example.mobilesigec.ui.auth`**:
-  - `LoginActivity.java`, `ConfirmacaoCodigoActivity.java`, `RecuperarSenhaEmailActivity.java`, `RedefinirSenhaActivity.java`.
-- **`com.example.mobilesigec.ui.calendario`**:
-  - `CalendarioBlankFragment.java`, `CalendarioFragment.java`.
-- **`com.example.mobilesigec.ui.checkout`**:
-  - `ChecklistInsumosFragment.java`, `ChecklistUtensiliosFragment.java`.
-- **`com.example.mobilesigec.ui.home`**:
-  - `HomePageFragment.java`.
-- **`com.example.mobilesigec.ui.receita`**:
-  - `DetalhesReceitaFragment.java`, `ListaReceitasFragment.java`, `ReceitasFragment.java`.
-- **`com.example.mobilesigec.ui.settings`**:
-  - `SettingsFragment.java`.
-
-### 2. Atualizações de Arquivos de Configuração e Imports
-- **`AndroidManifest.xml`**:
-  - Atualizadas as atividades de autenticação para o caminho `.ui.auth.*`.
-- **`mobile_navigation.xml`**:
-  - Atualizados os caminhos dos fragmentos para incluírem o pacote `ui.*`.
-- **`MainActivity.java` & `SplashActivity.java`**:
-  - Atualizado o import de `LoginActivity` para `com.example.mobilesigec.ui.auth.LoginActivity`.
+### `CalendarioFragment.java`
+- **Atributos de Thread & Concorrência**:
+  - Adicionado `executorCalendario` (`ExecutorService`) para execuções em segundo plano.
+  - Adicionado `idRequisicaoAtual` (`AtomicInteger`) para controle de versões de requisição.
+- **Carregamento Assíncrono (`carregarCalendarioPorTurmaAsync`)**:
+  - Consulta ao banco de dados MySQL realizada de forma assíncrona com feedback visual imediato ("Carregando calendário da turma...").
+  - Verificação de validade da requisição atual (`requisicaoId == idRequisicaoAtual.get()`) para ignorar respostas obsoletas causadas por cliques rápidos em diferentes turmas.
+- **Gerenciamento de Ciclo de Vida (`onDestroyView`)**:
+  - Invalidação automática de requisições pendentes e encerramento seguro do executor (`executorCalendario.shutdownNow()`) para evitar vazamentos de memória (memory leaks).
 
 ## Verificação e Testes
 

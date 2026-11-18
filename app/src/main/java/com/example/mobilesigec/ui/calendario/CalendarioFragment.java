@@ -51,6 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CalendarioFragment extends Fragment {
 
@@ -79,11 +80,14 @@ public class CalendarioFragment extends Fragment {
 
     private int ultimaTurmaCarregada = Integer.MIN_VALUE;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger idRequisicaoAtual = new AtomicInteger(0);
 
     private View lastSelectedDayView = null;
     private TextView lastSelectedTextView = null;
 
-    public CalendarioFragment() {}
+    public CalendarioFragment() {
+        // Required empty public constructor
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -180,6 +184,8 @@ public class CalendarioFragment extends Fragment {
             });
         }
 
+        atualizarTituloMesAno();
+        atualizarDataSelecionada();
         carregarTurmasNoSpinner(false);
 
         return view;
@@ -188,6 +194,12 @@ public class CalendarioFragment extends Fragment {
     private void encerrarAnimacaoRefresh() {
         if (swipeRefreshCalendario != null && swipeRefreshCalendario.isRefreshing()) {
             swipeRefreshCalendario.setRefreshing(false);
+        }
+    }
+
+    private void garantirExecutorAtivo() {
+        if (executorService == null || executorService.isShutdown() || executorService.isTerminated()) {
+            executorService = Executors.newSingleThreadExecutor();
         }
     }
 
@@ -259,7 +271,7 @@ public class CalendarioFragment extends Fragment {
         if (currentInflater == null && getView() != null && getContext() != null) {
             currentInflater = LayoutInflater.from(requireContext());
         }
-        if (currentInflater == null) return;
+        if (currentInflater == null || calendarGrid == null) return;
 
         if (!termoFiltro.isEmpty()) {
             boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
@@ -416,7 +428,7 @@ public class CalendarioFragment extends Fragment {
         spinnerTurmasCalendario.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View selectedView, int position, long id) {
-                if (position < 0 || position >= listaTurmas.size()) return;
+                if (!isAdded() || getContext() == null || position < 0 || position >= listaTurmas.size()) return;
 
                 TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
                 if (turmaSelecionada == null) return;
@@ -441,22 +453,22 @@ public class CalendarioFragment extends Fragment {
         carregarCalendarioEEventos(LayoutInflater.from(contextoAtual), forcarAtualizacao);
     }
 
-    private void garantirExecutorAtivo() {
-        if (executorService == null || executorService.isShutdown()) {
-            executorService = Executors.newSingleThreadExecutor();
-        }
-    }
-
     @Override
     public void onResume() {
         super.onResume();
         if (getView() == null || getContext() == null) return;
 
+        if (spinnerTurmasCalendario != null &&
+                (spinnerTurmasCalendario.getAdapter() == null || spinnerTurmasCalendario.getAdapter().getCount() == 0)) {
+            carregarTurmasNoSpinner(false);
+            return;
+        }
+
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idTurmaAtual != ultimaTurmaCarregada) {
-            carregarCalendarioEEventos(LayoutInflater.from(requireContext()), false);
+        if (idTurmaAtual != -1 && idTurmaAtual != ultimaTurmaCarregada) {
+            carregarTurmasNoSpinner(false);
         }
     }
 
@@ -501,7 +513,7 @@ public class CalendarioFragment extends Fragment {
     }
 
     private void buscarEventosEAtualizarGrid(LayoutInflater inflater, boolean forcarAtualizacao) {
-        eventosDoMes.clear();
+        final int requisicaoId = idRequisicaoAtual.incrementAndGet();
 
         final int mes = currentCalendar.get(Calendar.MONTH) + 1;
         final int ano = currentCalendar.get(Calendar.YEAR);
@@ -522,6 +534,7 @@ public class CalendarioFragment extends Fragment {
             String jsonEventosCache = CacheManager.obterJson(context, chaveCacheEventos, CacheManager.TEMPO_EXPIRACAO_PADRAO);
             if (jsonEventosCache != null) {
                 Map<Integer, List<AulaAgenda>> mapaCache = desserializarEventosMes(jsonEventosCache);
+                eventosDoMes.clear();
                 eventosDoMes.putAll(mapaCache);
                 if (calendarGrid != null && getView() != null) {
                     populateCalendar(calendarGrid, inflater);
@@ -534,9 +547,15 @@ public class CalendarioFragment extends Fragment {
             }
         }
 
+        if (textNoFichas != null) {
+            textNoFichas.setVisibility(View.VISIBLE);
+            textNoFichas.setText("Carregando calendário da turma...");
+        }
+
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
+            Map<Integer, List<AulaAgenda>> novosEventos = new HashMap<>();
             boolean conexaoOk = false;
 
             try (Connection con = ConexaoMySQL.conectar()) {
@@ -592,10 +611,10 @@ public class CalendarioFragment extends Fragment {
                                 cal.setTime(dataAgendada);
                                 int dia = cal.get(Calendar.DAY_OF_MONTH);
 
-                                List<AulaAgenda> listaDia = eventosDoMes.get(dia);
+                                List<AulaAgenda> listaDia = novosEventos.get(dia);
                                 if (listaDia == null) {
                                     listaDia = new ArrayList<>();
-                                    eventosDoMes.put(dia, listaDia);
+                                    novosEventos.put(dia, listaDia);
                                 }
 
                                 boolean jaExiste = false;
@@ -619,16 +638,22 @@ public class CalendarioFragment extends Fragment {
             }
 
             if (conexaoOk && getContext() != null) {
-                CacheManager.salvarJson(getContext(), chaveCacheEventos, serializarEventosMes(eventosDoMes));
+                CacheManager.salvarJson(getContext(), chaveCacheEventos, serializarEventosMes(novosEventos));
             }
 
             mainHandler.post(() -> {
-                if (isAdded() && calendarGrid != null && getView() != null) {
-                    populateCalendar(calendarGrid, inflater);
-                    atualizarDataSelecionada();
-                    atualizarDetalhesDiaSelecionado();
-                    atualizarSugestoesPesquisa(forcarAtualizacao);
+                if (!isAdded() || requisicaoId != idRequisicaoAtual.get() || calendarGrid == null || getView() == null) {
+                    encerrarAnimacaoRefresh();
+                    return;
                 }
+
+                eventosDoMes.clear();
+                eventosDoMes.putAll(novosEventos);
+
+                populateCalendar(calendarGrid, inflater);
+                atualizarDataSelecionada();
+                atualizarDetalhesDiaSelecionado();
+                atualizarSugestoesPesquisa(forcarAtualizacao);
                 encerrarAnimacaoRefresh();
             });
         });
@@ -763,6 +788,8 @@ public class CalendarioFragment extends Fragment {
     }
 
     private void populateCalendar(GridLayout grid, LayoutInflater inflater) {
+        if (grid == null || getContext() == null) return;
+
         grid.removeAllViews();
         lastSelectedDayView = null;
         lastSelectedTextView = null;
@@ -901,7 +928,7 @@ public class CalendarioFragment extends Fragment {
     }
 
     private void atualizarDetalhesDiaSelecionado() {
-        if (layoutFichasLista == null) return;
+        if (layoutFichasLista == null || getContext() == null) return;
 
         layoutFichasLista.removeAllViews();
 
@@ -933,12 +960,13 @@ public class CalendarioFragment extends Fragment {
         }
 
         List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
+        float density = getResources().getDisplayMetrics().density;
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
                 com.google.android.material.card.MaterialCardView card = new com.google.android.material.card.MaterialCardView(requireContext());
-                card.setRadius(12 * getResources().getDisplayMetrics().density);
-                card.setCardElevation(2 * getResources().getDisplayMetrics().density);
+                card.setRadius(12 * density);
+                card.setCardElevation(2 * density);
                 card.setCardBackgroundColor(Color.parseColor("#F8FAFC"));
                 card.setStrokeWidth(0);
 
@@ -953,7 +981,7 @@ public class CalendarioFragment extends Fragment {
 
                 View accentBar = new View(getContext());
                 LinearLayout.LayoutParams accentParams = new LinearLayout.LayoutParams(
-                        (int) (6 * getResources().getDisplayMetrics().density), ViewGroup.LayoutParams.MATCH_PARENT);
+                        (int) (6 * density), ViewGroup.LayoutParams.MATCH_PARENT);
                 accentBar.setLayoutParams(accentParams);
                 accentBar.setBackgroundColor(Color.parseColor("#F7941D"));
                 innerLayout.addView(accentBar);
@@ -1135,6 +1163,17 @@ public class CalendarioFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        executorService.shutdown();
+        idRequisicaoAtual.incrementAndGet();
+        ultimaTurmaCarregada = Integer.MIN_VALUE;
+        currentInflater = null;
+        swipeRefreshCalendario = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
     }
 }

@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
+import androidx.navigation.NavOptions;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -72,22 +73,20 @@ public class MainActivity extends AppCompatActivity {
                     .build();
             NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
 
+            // Opções que mantêm o estado das abas salvo em memória para troca instantânea
+            NavOptions navOptionsAbas = new NavOptions.Builder()
+                    .setLaunchSingleTop(true)
+                    .setRestoreState(true)
+                    .setPopUpTo(navController.getGraph().getStartDestinationId(), false, true)
+                    .build();
+
             bottomNavigationView.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
                 if (navController.getCurrentDestination() != null && itemId == navController.getCurrentDestination().getId()) {
                     return true;
                 }
-                if (itemId == R.id.nav_home) {
-                    boolean popped = navController.popBackStack(R.id.nav_home, false);
-                    if (!popped) {
-                        navController.navigate(R.id.nav_home);
-                    }
-                    return true;
-                } else if (itemId == R.id.nav_calendario) {
-                    navController.navigate(R.id.nav_calendario);
-                    return true;
-                } else if (itemId == R.id.nav_receita) {
-                    navController.navigate(R.id.nav_receita);
+                if (itemId == R.id.nav_home || itemId == R.id.nav_calendario || itemId == R.id.nav_receita) {
+                    navController.navigate(itemId, null, navOptionsAbas);
                     return true;
                 }
                 return NavigationUI.onNavDestinationSelected(item, navController);

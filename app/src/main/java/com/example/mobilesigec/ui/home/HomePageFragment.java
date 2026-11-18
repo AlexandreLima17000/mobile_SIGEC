@@ -45,6 +45,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HomePageFragment extends Fragment {
 
@@ -56,9 +57,17 @@ public class HomePageFragment extends Fragment {
 
     private ExecutorService executorService;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger idRequisicaoHome = new AtomicInteger(0);
+    private int ultimaTurmaRenderizada = Integer.MIN_VALUE;
 
     public HomePageFragment() {
         // Required empty public constructor
+    }
+
+    private void garantirExecutorAtivo() {
+        if (executorService == null || executorService.isShutdown() || executorService.isTerminated()) {
+            executorService = Executors.newSingleThreadExecutor();
+        }
     }
 
     @Override
@@ -71,10 +80,11 @@ public class HomePageFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        executorService = Executors.newSingleThreadExecutor();
+        garantirExecutorAtivo();
 
         textSaudacao = view.findViewById(R.id.textSaudacao);
         textDataHome = view.findViewById(R.id.textDataHome);
+        spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
         swipeRefreshHome = view.findViewById(R.id.swipe_refresh_home);
         CardView cardInsumos = view.findViewById(R.id.card_checklist_insumos);
         CardView cardUtensilios = view.findViewById(R.id.card_checklist_utensilios);
@@ -96,6 +106,37 @@ public class HomePageFragment extends Fragment {
 
             if (textSaudacao != null) {
                 textSaudacao.setText("Bom dia, " + nomeFormatado + "!");
+            }
+
+            // Renderização imediata antes mesmo do primeiro frame se o cache já estiver pronto
+            int idUsuarioLogado = prefs.getInt("id_usuario", -1);
+            int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
+            String jsonTurmasCache = CacheManager.obterJson(
+                    context,
+                    CacheManager.CHAVE_HOME_TURMAS + "_" + idUsuarioLogado,
+                    CacheManager.TEMPO_EXPIRACAO_PADRAO
+            );
+            if (jsonTurmasCache != null) {
+                List<TurmaModelo> turmasCache = desserializarTurmas(jsonTurmasCache);
+                if (!turmasCache.isEmpty()) {
+                    TurmaModelo turmaAlvo = turmasCache.get(0);
+                    for (TurmaModelo t : turmasCache) {
+                        if (t.getIdTurma() == idTurmaSalva) {
+                            turmaAlvo = t;
+                            break;
+                        }
+                    }
+                    String jsonSemanaCache = CacheManager.obterJson(
+                            context,
+                            CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + turmaAlvo.getIdTurma(),
+                            CacheManager.TEMPO_EXPIRACAO_PADRAO
+                    );
+                    if (jsonSemanaCache != null) {
+                        Map<Integer, List<ItemReceitaData>> semanaCache = desserializarMapaDias(jsonSemanaCache);
+                        ultimaTurmaRenderizada = turmaAlvo.getIdTurma();
+                        renderizarCardsSemana(view, semanaCache, turmaAlvo.getNomeLaboratorio());
+                    }
+                }
             }
         }
 
@@ -119,7 +160,9 @@ public class HomePageFragment extends Fragment {
     }
 
     private void carregarTurmasNoSpinner(View view, boolean forcarAtualizacao) {
-        spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
+        if (spinnerTurmasHome == null && view != null) {
+            spinnerTurmasHome = view.findViewById(R.id.spinnerTurmasHome);
+        }
         Context context = getContext();
         if (spinnerTurmasHome == null || context == null) {
             finalizarRefresh();
@@ -141,6 +184,8 @@ public class HomePageFragment extends Fragment {
                 }
             }
         }
+
+        garantirExecutorAtivo();
 
         // 2. Busca no MySQL
         executorService.execute(() -> {
@@ -188,7 +233,10 @@ public class HomePageFragment extends Fragment {
             }
 
             mainHandler.post(() -> {
-                if (!isAdded() || getContext() == null) return;
+                if (!isAdded() || getContext() == null) {
+                    finalizarRefresh();
+                    return;
+                }
                 configurarAdapterTurmas(listaTurmas, prefs, forcarAtualizacao);
             });
         });
@@ -200,18 +248,18 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<>(
+        ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<TurmaModelo>(
                 requireContext(),
                 R.layout.spinner_item_preto,
                 listaTurmas
         ) {
             @Override
             public View getDropDownView(int position, View convertView, ViewGroup parent) {
-                View view = super.getDropDownView(position, convertView, parent);
-                TextView texto = (TextView) view;
+                View dropView = super.getDropDownView(position, convertView, parent);
+                TextView texto = (TextView) dropView;
                 texto.setTextColor(Color.BLACK);
                 texto.setBackgroundColor(Color.WHITE);
-                return view;
+                return dropView;
             }
         };
 
@@ -252,8 +300,11 @@ public class HomePageFragment extends Fragment {
                 if (position < 0 || position >= listaTurmas.size()) return;
                 TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
                 if (turmaSelecionada != null) {
-                    prefs.edit().putInt("id_turma_selecionada", turmaSelecionada.getIdTurma()).apply();
-                    carregarReceitasDaTurma(turmaSelecionada.getIdTurma(), turmaSelecionada.getNomeLaboratorio(), false);
+                    int idTurma = turmaSelecionada.getIdTurma();
+                    prefs.edit().putInt("id_turma_selecionada", idTurma).apply();
+                    if (idTurma != ultimaTurmaRenderizada) {
+                        carregarReceitasDaTurma(idTurma, turmaSelecionada.getNomeLaboratorio(), false);
+                    }
                 }
             }
 
@@ -262,28 +313,37 @@ public class HomePageFragment extends Fragment {
         });
 
         TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
-        if (idTurmaSalva != turmaInicial.getIdTurma()) {
-            prefs.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
+        int idInicial = turmaInicial.getIdTurma();
+        if (idTurmaSalva != idInicial) {
+            prefs.edit().putInt("id_turma_selecionada", idInicial).apply();
         }
-        carregarReceitasDaTurma(turmaInicial.getIdTurma(), turmaInicial.getNomeLaboratorio(), forcarAtualizacao);
+        carregarReceitasDaTurma(idInicial, turmaInicial.getNomeLaboratorio(), forcarAtualizacao);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if (getContext() != null && spinnerTurmasHome != null && spinnerTurmasHome.getAdapter() != null) {
-            SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-            int idSalvo = prefs.getInt("id_turma_selecionada", -1);
-            @SuppressWarnings("unchecked")
-            ArrayAdapter<TurmaModelo> adapter = (ArrayAdapter<TurmaModelo>) spinnerTurmasHome.getAdapter();
-            for (int i = 0; i < adapter.getCount(); i++) {
-                TurmaModelo t = adapter.getItem(i);
-                if (t != null && t.getIdTurma() == idSalvo) {
-                    if (spinnerTurmasHome.getSelectedItemPosition() != i) {
-                        spinnerTurmasHome.setSelection(i, false);
-                    }
-                    break;
+        if (getContext() == null) return;
+
+        if (spinnerTurmasHome == null || spinnerTurmasHome.getAdapter() == null || spinnerTurmasHome.getAdapter().getCount() == 0) {
+            carregarTurmasNoSpinner(getView(), false);
+            return;
+        }
+
+        SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        int idSalvo = prefs.getInt("id_turma_selecionada", -1);
+        @SuppressWarnings("unchecked")
+        ArrayAdapter<TurmaModelo> adapter = (ArrayAdapter<TurmaModelo>) spinnerTurmasHome.getAdapter();
+        for (int i = 0; i < adapter.getCount(); i++) {
+            TurmaModelo t = adapter.getItem(i);
+            if (t != null && t.getIdTurma() == idSalvo) {
+                if (spinnerTurmasHome.getSelectedItemPosition() != i) {
+                    spinnerTurmasHome.setSelection(i, false);
                 }
+                if (idSalvo != ultimaTurmaRenderizada) {
+                    carregarReceitasDaTurma(t.getIdTurma(), t.getNomeLaboratorio(), false);
+                }
+                break;
             }
         }
     }
@@ -302,8 +362,6 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        containerReceitas.removeAllViews();
-
         String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + idTurma;
 
         // 1. Tenta recuperar as receitas da semana desta turma no cache (se não for atualização forçada)
@@ -311,11 +369,16 @@ public class HomePageFragment extends Fragment {
             String jsonReceitasCache = CacheManager.obterJson(context, chaveCacheReceitas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
             if (jsonReceitasCache != null) {
                 Map<Integer, List<ItemReceitaData>> mapCache = desserializarMapaDias(jsonReceitasCache);
-                renderizarCardsSemana(mapCache, nomeLaboratorio);
+                ultimaTurmaRenderizada = idTurma;
+                renderizarCardsSemana(view, mapCache, nomeLaboratorio);
                 finalizarRefresh();
                 return;
             }
         }
+
+        containerReceitas.removeAllViews();
+        final int reqId = idRequisicaoHome.incrementAndGet();
+        garantirExecutorAtivo();
 
         // 2. Busca no MySQL
         executorService.execute(() -> {
@@ -428,8 +491,12 @@ public class HomePageFragment extends Fragment {
             }
 
             mainHandler.post(() -> {
-                if (!isAdded() || getContext() == null) return;
-                renderizarCardsSemana(mapDias, nomeLaboratorio);
+                if (!isAdded() || getContext() == null || reqId != idRequisicaoHome.get()) {
+                    finalizarRefresh();
+                    return;
+                }
+                ultimaTurmaRenderizada = idTurma;
+                renderizarCardsSemana(getView(), mapDias, nomeLaboratorio);
                 finalizarRefresh();
             });
         });
@@ -441,12 +508,10 @@ public class HomePageFragment extends Fragment {
         }
     }
 
-    private void renderizarCardsSemana(Map<Integer, List<ItemReceitaData>> mapDias, String nomeLaboratorio) {
-        if (!isAdded() || getContext() == null) return;
-        View currentView = getView();
-        if (currentView == null) return;
+    private void renderizarCardsSemana(View rootView, Map<Integer, List<ItemReceitaData>> mapDias, String nomeLaboratorio) {
+        if (!isAdded() || rootView == null || getContext() == null) return;
 
-        LinearLayout currentContainer = currentView.findViewById(R.id.container_receitas);
+        LinearLayout currentContainer = rootView.findViewById(R.id.container_receitas);
         if (currentContainer == null) return;
 
         currentContainer.removeAllViews();
@@ -656,9 +721,16 @@ public class HomePageFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        idRequisicaoHome.incrementAndGet();
+        ultimaTurmaRenderizada = Integer.MIN_VALUE;
         swipeRefreshHome = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
         if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
+            executorService.shutdownNow();
         }
     }
 }
