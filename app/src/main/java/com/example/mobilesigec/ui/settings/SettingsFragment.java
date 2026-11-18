@@ -1,4 +1,4 @@
-package com.example.mobilesigec.settings;
+package com.example.mobilesigec.ui.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 
-import com.example.mobilesigec.ConexaoMySQL;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
 import com.google.android.material.card.MaterialCardView;
 
@@ -86,7 +86,6 @@ public class SettingsFragment extends Fragment {
         String prefNome = prefs.getString("NOME_USUARIO", prefs.getString("nome_usuario", "Instrutor Gastronomia"));
         String prefEmail = prefs.getString("EMAIL_USUARIO", prefs.getString("email", ""));
 
-        // Preenche com os dados salvos da sessão imediatamente
         if (tvNomeInstrutor != null) {
             tvNomeInstrutor.setText(prefNome);
         }
@@ -106,7 +105,6 @@ public class SettingsFragment extends Fragment {
 
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
-                    // 1. Busca dados atualizados do usuário se ID for válido
                     if (idUsuarioLogado != -1) {
                         String sqlUser = "SELECT * FROM usuario WHERE id_usuario = ?";
                         try (PreparedStatement stmtUser = con.prepareStatement(sqlUser)) {
@@ -168,7 +166,6 @@ public class SettingsFragment extends Fragment {
 
                     int targetId = prefs.getInt("ID_USUARIO", idUsuarioLogado);
 
-                    // 2. Busca turmas e laboratórios vinculados ao instrutor
                     if (targetId != -1) {
                         String sqlTurmas = "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
                                 "FROM turma t " +
@@ -257,7 +254,6 @@ public class SettingsFragment extends Fragment {
             mainLayout.setOrientation(LinearLayout.VERTICAL);
             mainLayout.setPadding((int) (16 * density), (int) (16 * density), (int) (16 * density), (int) (16 * density));
 
-            // Header azul do card da turma com pontas arredondadas
             LinearLayout headerLayout = new LinearLayout(getContext());
             headerLayout.setOrientation(LinearLayout.HORIZONTAL);
             android.graphics.drawable.GradientDrawable headerBg = new android.graphics.drawable.GradientDrawable();
@@ -285,7 +281,6 @@ public class SettingsFragment extends Fragment {
 
             mainLayout.addView(headerLayout);
 
-            // Nome da Turma e Laboratorio
             TextView tvTurmaNome = new TextView(getContext());
             LinearLayout.LayoutParams nomeParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -297,7 +292,6 @@ public class SettingsFragment extends Fragment {
             tvTurmaNome.setTypeface(null, android.graphics.Typeface.BOLD);
             mainLayout.addView(tvTurmaNome);
 
-            // Laboratório Centralizado
             LinearLayout statsLayout = new LinearLayout(getContext());
             statsLayout.setOrientation(LinearLayout.VERTICAL);
             statsLayout.setGravity(android.view.Gravity.CENTER);

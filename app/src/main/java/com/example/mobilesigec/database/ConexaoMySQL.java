@@ -1,7 +1,9 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.database;
 
 import android.os.StrictMode;
 import android.util.Log;
+
+import com.example.mobilesigec.BuildConfig;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -72,7 +74,7 @@ public class ConexaoMySQL {
             return null;
         }
     }
-    //
+    
     public static void fecharConexao(Connection conexao) {
         try {
             if (conexao != null && !conexao.isClosed()) {

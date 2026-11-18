@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.ui.auth;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -9,6 +9,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.mobilesigec.MainActivity;
+import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.button.MaterialButton;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -30,17 +33,14 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Removemos o EdgeToEdge.enable(this); que causava a transparência na barra
         setContentView(R.layout.activity_login);
 
-        // Garante que a StatusBar fique Azul Escura com ícones brancos (igual à Home)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.senac_blue));
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             View decor = getWindow().getDecorView();
-            // Desativa o modo "Light Status Bar" para que os ícones (bateria, relógio) fiquem brancos
             decor.setSystemUiVisibility(decor.getSystemUiVisibility() & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         }
 
@@ -75,7 +75,6 @@ public class LoginActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Ativa o estado de Carregamento (Cor Laranja e Texto correspondente)
                 btnEntrar.setEnabled(false);
                 btnEntrar.setText("Carregando...");
                 btnEntrar.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(LoginActivity.this, R.color.senac_orange)));
@@ -165,7 +164,6 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    // Método auxiliar para restaurar o estado original do botão em caso de falhas
     private void restaurarBotaoLogin() {
         btnEntrar.setEnabled(true);
         btnEntrar.setText(R.string.login_button_enter);

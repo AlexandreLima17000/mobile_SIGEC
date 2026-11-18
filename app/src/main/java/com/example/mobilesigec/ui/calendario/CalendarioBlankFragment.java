@@ -1,4 +1,4 @@
-package com.example.mobilesigec;
+package com.example.mobilesigec.ui.calendario;
 
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -16,6 +16,8 @@ import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
+import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.model.AulaAgenda;
 
 import android.text.Editable;
@@ -307,7 +309,6 @@ public class CalendarioBlankFragment extends Fragment {
                 lastSelectedDayView = dayContainer;
             }
 
-            // Exibir indicadores dinamicos das aulas/eventos vindos do Aiven (filtradas)
             List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(day));
             if (aulas != null && !aulas.isEmpty()) {
                 dot1.setVisibility(View.VISIBLE);
@@ -454,16 +455,15 @@ public class CalendarioBlankFragment extends Fragment {
         }
         int dia = cal.get(Calendar.DAY_OF_MONTH);
         int mes = cal.get(Calendar.MONTH);
-        // Feriados Nacionais Fixos (Dia, Mês)
-        if (mes == Calendar.JANUARY && dia == 1) return true;   // Confraternização Universal
-        if (mes == Calendar.APRIL && dia == 21) return true;   // Tiradentes
-        if (mes == Calendar.MAY && dia == 1) return true;      // Dia do Trabalho
-        if (mes == Calendar.SEPTEMBER && dia == 7) return true;// Independência
-        if (mes == Calendar.OCTOBER && dia == 12) return true; // Nossa Sra. Aparecida
-        if (mes == Calendar.NOVEMBER && dia == 2) return true; // Finados
-        if (mes == Calendar.NOVEMBER && dia == 15) return true;// Proclamação da República
-        if (mes == Calendar.NOVEMBER && dia == 20) return true;// Consciência Negra
-        if (mes == Calendar.DECEMBER && dia == 25) return true;// Natal
+        if (mes == Calendar.JANUARY && dia == 1) return true;
+        if (mes == Calendar.APRIL && dia == 21) return true;
+        if (mes == Calendar.MAY && dia == 1) return true;
+        if (mes == Calendar.SEPTEMBER && dia == 7) return true;
+        if (mes == Calendar.OCTOBER && dia == 12) return true;
+        if (mes == Calendar.NOVEMBER && dia == 2) return true;
+        if (mes == Calendar.NOVEMBER && dia == 15) return true;
+        if (mes == Calendar.NOVEMBER && dia == 20) return true;
+        if (mes == Calendar.DECEMBER && dia == 25) return true;
 
         return false;
     }
