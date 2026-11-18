@@ -7,23 +7,31 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Filter;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.CalendarioCache;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.example.mobilesigec.model.AulaAgenda;
+import com.example.mobilesigec.model.TurmaModelo;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -32,23 +40,13 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
-import android.widget.Filter;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
-
-import com.example.mobilesigec.model.TurmaModelo;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CalendarioFragment extends Fragment {
 
@@ -72,11 +70,11 @@ public class CalendarioFragment extends Fragment {
     private LayoutInflater currentInflater;
 
     private final Map<Integer, List<AulaAgenda>> eventosDoMes = new HashMap<>();
-    private ExecutorService executorService =
-            Executors.newSingleThreadExecutor();
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private int ultimaTurmaCarregada = Integer.MIN_VALUE;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicInteger idRequisicaoAtual = new AtomicInteger(0);
 
     private View lastSelectedDayView = null;
     private TextView lastSelectedTextView = null;
@@ -157,9 +155,17 @@ public class CalendarioFragment extends Fragment {
             });
         }
 
+        atualizarTituloMesAno();
+        atualizarDataSelecionada();
         carregarTurmasNoSpinner();
 
         return view;
+    }
+
+    private void garantirExecutorAtivo() {
+        if (executorService == null || executorService.isShutdown() || executorService.isTerminated()) {
+            executorService = Executors.newSingleThreadExecutor();
+        }
     }
 
     private String removerAcentos(String text) {
@@ -230,7 +236,7 @@ public class CalendarioFragment extends Fragment {
         if (currentInflater == null && getView() != null && getContext() != null) {
             currentInflater = LayoutInflater.from(requireContext());
         }
-        if (currentInflater == null) return;
+        if (currentInflater == null || calendarGrid == null) return;
 
         if (!termoFiltro.isEmpty()) {
             boolean diaAtualTemMatch = !filtrarAulas(eventosDoMes.get(selectedDay)).isEmpty();
@@ -251,41 +257,35 @@ public class CalendarioFragment extends Fragment {
     }
 
     private void carregarTurmasNoSpinner() {
-
         if (spinnerTurmasCalendario == null || getContext() == null) {
             return;
         }
 
-        Context context = getContext();
-
-        if (context == null) {
+        // 1. Verifica primeiro se a Home já carregou a lista de turmas em cache
+        List<TurmaModelo> turmasEmCache = CalendarioCache.obterTurmasCache();
+        if (!turmasEmCache.isEmpty()) {
+            configurarSpinnerTurmas(turmasEmCache);
             return;
         }
 
-        SharedPreferences prefs = context.getSharedPreferences(
-                "SessaoApp",
-                Context.MODE_PRIVATE
-        );
-
+        // 2. Se o cache estiver vazio, busca no MySQL em background
+        Context context = getContext();
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
 
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
-
             List<TurmaModelo> listaTurmas = new ArrayList<>();
-
             String sql;
 
             try (Connection con = ConexaoMySQL.conectar()) {
-
                 if (con == null) {
                     Log.e(TAG, "Não foi possível conectar ao MySQL.");
                     return;
                 }
 
                 if (idUsuarioLogado != -1) {
-
                     sql =
                             "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
                                     "FROM turma t " +
@@ -296,9 +296,7 @@ public class CalendarioFragment extends Fragment {
                                     "WHERE ut.id_usuario = ? " +
                                     "AND t.situacao = 'A' " +
                                     "ORDER BY t.nome_turma";
-
                 } else {
-
                     sql =
                             "SELECT t.id_turma, t.nome_turma, l.nome_laboratorio " +
                                     "FROM turma t " +
@@ -309,15 +307,12 @@ public class CalendarioFragment extends Fragment {
                 }
 
                 try (PreparedStatement stmt = con.prepareStatement(sql)) {
-
                     if (idUsuarioLogado != -1) {
                         stmt.setInt(1, idUsuarioLogado);
                     }
 
                     try (ResultSet rs = stmt.executeQuery()) {
-
                         while (rs.next()) {
-
                             listaTurmas.add(
                                     new TurmaModelo(
                                             rs.getInt("id_turma"),
@@ -328,202 +323,178 @@ public class CalendarioFragment extends Fragment {
                         }
                     }
                 }
-
             } catch (Exception e) {
-
                 Log.e(TAG, "Erro ao carregar turmas do calendário", e);
                 return;
             }
 
-            mainHandler.post(() -> {
+            if (!listaTurmas.isEmpty()) {
+                CalendarioCache.salvarTurmasCache(listaTurmas);
+            }
 
-                if (!isAdded()
-                        || getContext() == null
-                        || getView() == null
-                        || spinnerTurmasCalendario == null) {
-                    return;
-                }
-
-                Context contextoAtual = getContext();
-
-                if (contextoAtual == null) {
-                    return;
-                }
-
-                SharedPreferences preferencias =
-                        contextoAtual.getSharedPreferences(
-                                "SessaoApp",
-                                Context.MODE_PRIVATE
-                        );
-
-                ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<TurmaModelo>(
-                        requireContext(),
-                        R.layout.spinner_item_preto,
-                        listaTurmas
-                ) {
-                    @Override
-                    public View getDropDownView(int position, View convertView, ViewGroup parent) {
-                        View view = super.getDropDownView(position, convertView, parent);
-
-                        TextView texto = (TextView) view;
-                        texto.setTextColor(Color.BLACK);
-                        texto.setBackgroundColor(Color.WHITE);
-
-                        return view;
-                    }
-                };
-
-                adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
-
-                spinnerTurmasCalendario.setAdapter(adapter);
-
-                if (listaTurmas.isEmpty()) {
-
-                    preferencias.edit()
-                            .remove("id_turma_selecionada")
-                            .apply();
-
-                    eventosDoMes.clear();
-
-                    populateCalendar(
-                            calendarGrid,
-                            LayoutInflater.from(contextoAtual)
-                    );
-
-                    atualizarDetalhesDiaSelecionado();
-
-                    Toast.makeText(
-                            contextoAtual,
-                            "Nenhuma turma ativa encontrada.",
-                            Toast.LENGTH_SHORT
-                    ).show();
-
-                    return;
-                }
-
-                int idTurmaSalva = preferencias.getInt(
-                        "id_turma_selecionada",
-                        -1
-                );
-
-                int posicaoInicial = 0;
-
-                for (int i = 0; i < listaTurmas.size(); i++) {
-
-                    if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
-                        posicaoInicial = i;
-                        break;
-                    }
-                }
-
-                spinnerTurmasCalendario.setOnItemSelectedListener(
-                        new AdapterView.OnItemSelectedListener() {
-
-                            @Override
-                            public void onItemSelected(
-                                    AdapterView<?> parent,
-                                    View selectedView,
-                                    int position,
-                                    long id
-                            ) {
-
-                                if (position < 0 || position >= listaTurmas.size()) {
-                                    return;
-                                }
-
-                                TurmaModelo turmaSelecionada =
-                                        (TurmaModelo) parent.getItemAtPosition(position);
-
-                                if (turmaSelecionada == null) {
-                                    return;
-                                }
-
-                                int novoIdTurma = turmaSelecionada.getIdTurma();
-
-                                SharedPreferences prefsAtuais =
-                                        requireContext().getSharedPreferences(
-                                                "SessaoApp",
-                                                Context.MODE_PRIVATE
-                                        );
-
-                                int idSalvo = prefsAtuais.getInt(
-                                        "id_turma_selecionada",
-                                        -1
-                                );
-
-                                prefsAtuais.edit()
-                                        .putInt(
-                                                "id_turma_selecionada",
-                                                novoIdTurma
-                                        )
-                                        .apply();
-
-                                if (novoIdTurma != ultimaTurmaCarregada) {
-
-                                    carregarCalendarioEEventos(
-                                            LayoutInflater.from(requireContext())
-                                    );
-                                }
-                            }
-
-                            @Override
-                            public void onNothingSelected(
-                                    AdapterView<?> parent
-                            ) {
-                            }
-                        });
-
-                spinnerTurmasCalendario.setSelection(
-                        posicaoInicial,
-                        false
-                );
-
-                TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
-
-                preferencias.edit()
-                        .putInt(
-                                "id_turma_selecionada",
-                                turmaInicial.getIdTurma()
-                        )
-                        .apply();
-
-                carregarCalendarioEEventos(
-                        LayoutInflater.from(contextoAtual)
-                );
-            });
+            mainHandler.post(() -> configurarSpinnerTurmas(listaTurmas));
         });
     }
 
-    private void garantirExecutorAtivo() {
-        if (executorService == null || executorService.isShutdown()) {
-            executorService = Executors.newSingleThreadExecutor();
+    private void configurarSpinnerTurmas(List<TurmaModelo> listaTurmas) {
+        if (!isAdded() || getContext() == null || getView() == null || spinnerTurmasCalendario == null) {
+            return;
         }
-    }
 
+        Context contextoAtual = getContext();
+        SharedPreferences preferencias = contextoAtual.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+
+        ArrayAdapter<TurmaModelo> adapter = new ArrayAdapter<TurmaModelo>(
+                requireContext(),
+                R.layout.spinner_item_preto,
+                listaTurmas
+        ) {
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                View view = super.getDropDownView(position, convertView, parent);
+                TextView texto = (TextView) view;
+                texto.setTextColor(Color.BLACK);
+                texto.setBackgroundColor(Color.WHITE);
+                return view;
+            }
+        };
+
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_preto);
+        spinnerTurmasCalendario.setAdapter(adapter);
+
+        if (listaTurmas.isEmpty()) {
+            preferencias.edit().remove("id_turma_selecionada").apply();
+            eventosDoMes.clear();
+            populateCalendar(calendarGrid, LayoutInflater.from(contextoAtual));
+            atualizarDetalhesDiaSelecionado();
+            Toast.makeText(contextoAtual, "Nenhuma turma ativa encontrada.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int idTurmaSalva = preferencias.getInt("id_turma_selecionada", -1);
+        int posicaoInicial = 0;
+
+        for (int i = 0; i < listaTurmas.size(); i++) {
+            if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
+                posicaoInicial = i;
+                break;
+            }
+        }
+
+        spinnerTurmasCalendario.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View selectedView, int position, long id) {
+                if (!isAdded() || getContext() == null || position < 0 || position >= listaTurmas.size()) {
+                    return;
+                }
+
+                TurmaModelo turmaSelecionada = (TurmaModelo) parent.getItemAtPosition(position);
+                if (turmaSelecionada == null) {
+                    return;
+                }
+
+                int novoIdTurma = turmaSelecionada.getIdTurma();
+                SharedPreferences prefsAtuais = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+                prefsAtuais.edit().putInt("id_turma_selecionada", novoIdTurma).apply();
+
+                if (novoIdTurma != ultimaTurmaCarregada) {
+                    carregarCalendarioPorTurmaAsync(turmaSelecionada);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        spinnerTurmasCalendario.setSelection(posicaoInicial, false);
+
+        TurmaModelo turmaInicial = listaTurmas.get(posicaoInicial);
+        preferencias.edit().putInt("id_turma_selecionada", turmaInicial.getIdTurma()).apply();
+        carregarCalendarioPorTurmaAsync(turmaInicial);
+    }
 
     @Override
     public void onResume() {
         super.onResume();
-
         if (getView() == null || getContext() == null) {
             return;
         }
 
-        SharedPreferences prefs = requireContext()
-                .getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        // 1. Se o Spinner ainda estiver vazio, força o carregamento das turmas (do cache ou do banco)
+        if (spinnerTurmasCalendario != null &&
+                (spinnerTurmasCalendario.getAdapter() == null || spinnerTurmasCalendario.getAdapter().getCount() == 0)) {
+            carregarTurmasNoSpinner();
+            return;
+        }
 
+        // 2. Sincroniza caso o usuário tenha mudado de turma na Home
+        SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
 
-        if (idTurmaAtual != ultimaTurmaCarregada) {
-            carregarCalendarioEEventos(
-                    LayoutInflater.from(requireContext())
-            );
+        if (idTurmaAtual != -1 && idTurmaAtual != ultimaTurmaCarregada) {
+            carregarTurmasNoSpinner();
         }
     }
+
     private void carregarCalendarioEEventos(LayoutInflater inflater) {
         atualizarTituloMesAno();
         atualizarDataSelecionada();
         buscarEventosEAtualizarGrid(inflater);
+    }
+
+    private void carregarCalendarioPorTurmaAsync(TurmaModelo turmaSelecionada) {
+        final int requisicaoId = idRequisicaoAtual.incrementAndGet();
+        final int mes = currentCalendar.get(Calendar.MONTH) + 1;
+        final int ano = currentCalendar.get(Calendar.YEAR);
+        final int idTurmaSelecionada = turmaSelecionada.getIdTurma();
+
+        ultimaTurmaCarregada = idTurmaSelecionada;
+
+        // 1. Verifica se a Home já pré-carregou os eventos dessa turma no cache
+        Map<Integer, List<AulaAgenda>> eventosEmCache =
+                CalendarioCache.obterEventosSeDisponivel(idTurmaSelecionada, mes, ano);
+
+        if (eventosEmCache != null) {
+            eventosDoMes.clear();
+            eventosDoMes.putAll(eventosEmCache);
+            atualizarTituloMesAno();
+            atualizarDataSelecionada();
+            populateCalendar(calendarGrid, currentInflater != null ? currentInflater : LayoutInflater.from(requireContext()));
+            atualizarDetalhesDiaSelecionado();
+            atualizarSugestoesPesquisa();
+            return;
+        }
+
+        // 2. Se não estiver em cache, busca no MySQL em background
+        if (textNoFichas != null) {
+            textNoFichas.setVisibility(View.VISIBLE);
+            textNoFichas.setText("Carregando calendário da turma...");
+        }
+
+        garantirExecutorAtivo();
+
+        executorService.execute(() -> {
+            Map<Integer, List<AulaAgenda>> novosEventos =
+                    CalendarioCache.buscarEventosNoBanco(idTurmaSelecionada, mes, ano);
+
+            CalendarioCache.salvarNoCache(idTurmaSelecionada, mes, ano, novosEventos);
+
+            mainHandler.post(() -> {
+                if (!isAdded() || requisicaoId != idRequisicaoAtual.get() || calendarGrid == null || getView() == null) {
+                    return;
+                }
+
+                eventosDoMes.clear();
+                eventosDoMes.putAll(novosEventos);
+
+                atualizarTituloMesAno();
+                atualizarDataSelecionada();
+                populateCalendar(calendarGrid, currentInflater != null ? currentInflater : LayoutInflater.from(requireContext()));
+                atualizarDetalhesDiaSelecionado();
+                atualizarSugestoesPesquisa();
+            });
+        });
     }
 
     private void atualizarTituloMesAno() {
@@ -560,148 +531,41 @@ public class CalendarioFragment extends Fragment {
         return null;
     }
 
-
     private void buscarEventosEAtualizarGrid(LayoutInflater inflater) {
-        eventosDoMes.clear();
+        final int requisicaoId = idRequisicaoAtual.incrementAndGet();
 
         final int mes = currentCalendar.get(Calendar.MONTH) + 1;
         final int ano = currentCalendar.get(Calendar.YEAR);
 
         Context context = getContext();
-
         if (context == null) {
             return;
         }
 
-        SharedPreferences prefs = context.getSharedPreferences(
-                "SessaoApp",
-                Context.MODE_PRIVATE
-        );
-
-        final int idTurmaSelecionada = prefs.getInt(
-                "id_turma_selecionada",
-                -1
-        );
-
+        SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
         ultimaTurmaCarregada = idTurmaSelecionada;
 
         garantirExecutorAtivo();
 
         executorService.execute(() -> {
-            try (Connection con = ConexaoMySQL.conectar()) {
+            Map<Integer, List<AulaAgenda>> novosEventos =
+                    CalendarioCache.buscarEventosNoBanco(idTurmaSelecionada, mes, ano);
 
-                if (con != null) {
-
-                    String sql =
-                            "SELECT " +
-                                    "a.id_agendamento, " +
-                                    "a.data AS data_agendada, " +
-                                    "a.situacao AS situacao_agendamento, " +
-                                    "a.concluido, " +
-                                    "f.id_ficha, " +
-                                    "f.nome_ficha, " +
-                                    "f.preparo, " +
-                                    "t.nome_turma " +
-                                    "FROM agendamento a " +
-                                    "INNER JOIN ficha f " +
-                                    "ON f.id_ficha = a.id_ficha " +
-                                    "LEFT JOIN turma t " +
-                                    "ON t.id_turma = f.id_turma " +
-                                    "WHERE MONTH(a.data) = ? " +
-                                    "AND YEAR(a.data) = ? " +
-                                    "AND a.situacao = 'A' " +
-                                    "AND f.situacao = 'A' " +
-                                    "AND (f.id_turma = ? OR ? = -1) " +
-                                    "ORDER BY a.data, f.nome_ficha";
-
-                    try (PreparedStatement stmt = con.prepareStatement(sql)) {
-
-                        stmt.setInt(1, mes);
-                        stmt.setInt(2, ano);
-                        stmt.setInt(3, idTurmaSelecionada);
-                        stmt.setInt(4, idTurmaSelecionada);
-
-                        try (ResultSet rs = stmt.executeQuery()) {
-
-                            while (rs.next()) {
-
-                                int idFicha =
-                                        rs.getInt("id_ficha");
-
-                                java.sql.Date dataAgendada =
-                                        rs.getDate("data_agendada");
-
-                                String nomeFicha =
-                                        rs.getString("nome_ficha");
-
-                                String preparo =
-                                        rs.getString("preparo");
-
-                                String nomeTurma =
-                                        rs.getString("nome_turma");
-
-                                String situacao =
-                                        rs.getString("situacao_agendamento");
-
-                                AulaAgenda aula = new AulaAgenda(
-                                        idFicha,
-                                        0,
-                                        dataAgendada,
-                                        nomeFicha,
-                                        preparo,
-                                        nomeTurma,
-                                        situacao,
-                                        "#F7941D"
-                                );
-
-                                Calendar cal = Calendar.getInstance();
-                                cal.setTime(dataAgendada);
-
-                                int dia = cal.get(Calendar.DAY_OF_MONTH);
-
-                                List<AulaAgenda> listaDia =
-                                        eventosDoMes.get(dia);
-
-                                if (listaDia == null) {
-                                    listaDia = new ArrayList<>();
-                                    eventosDoMes.put(dia, listaDia);
-                                }
-
-                                boolean jaExiste = false;
-                                for (AulaAgenda existente : listaDia) {
-                                    if (existente.getIdAgenda() == idFicha ||
-                                       (existente.getTitulo() != null && existente.getTitulo().equalsIgnoreCase(nomeFicha))) {
-                                        jaExiste = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!jaExiste) {
-                                    listaDia.add(aula);
-                                }
-                            }
-                        }
-                    }
-                }
-
-            } catch (SQLException e) {
-                Log.e(
-                        TAG,
-                        "Erro ao consultar fichas da turma selecionada",
-                        e
-                );
-            }
+            CalendarioCache.salvarNoCache(idTurmaSelecionada, mes, ano, novosEventos);
 
             mainHandler.post(() -> {
-                if (isAdded()
-                        && calendarGrid != null
-                        && getView() != null) {
-
-                    populateCalendar(calendarGrid, inflater);
-                    atualizarDataSelecionada();
-                    atualizarDetalhesDiaSelecionado();
-                    atualizarSugestoesPesquisa();
+                if (!isAdded() || requisicaoId != idRequisicaoAtual.get() || calendarGrid == null || getView() == null) {
+                    return;
                 }
+
+                eventosDoMes.clear();
+                eventosDoMes.putAll(novosEventos);
+
+                populateCalendar(calendarGrid, inflater);
+                atualizarDataSelecionada();
+                atualizarDetalhesDiaSelecionado();
+                atualizarSugestoesPesquisa();
             });
         });
     }
@@ -710,8 +574,6 @@ public class CalendarioFragment extends Fragment {
         if (etPesquisa == null || getContext() == null) return;
 
         Context context = getContext();
-        if (context == null) return;
-
         SharedPreferences prefs = context.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
 
@@ -820,8 +682,9 @@ public class CalendarioFragment extends Fragment {
         }
     }
 
-
     private void populateCalendar(GridLayout grid, LayoutInflater inflater) {
+        if (grid == null || getContext() == null) return;
+
         grid.removeAllViews();
         lastSelectedDayView = null;
         lastSelectedTextView = null;
@@ -960,7 +823,7 @@ public class CalendarioFragment extends Fragment {
     }
 
     private void atualizarDetalhesDiaSelecionado() {
-        if (layoutFichasLista == null) return;
+        if (layoutFichasLista == null || getContext() == null) return;
 
         layoutFichasLista.removeAllViews();
 
@@ -992,12 +855,13 @@ public class CalendarioFragment extends Fragment {
         }
 
         List<AulaAgenda> aulas = filtrarAulas(eventosDoMes.get(selectedDay));
+        float density = getResources().getDisplayMetrics().density;
 
         if (aulas != null && !aulas.isEmpty()) {
             for (AulaAgenda aula : aulas) {
                 com.google.android.material.card.MaterialCardView card = new com.google.android.material.card.MaterialCardView(requireContext());
-                card.setRadius(12 * getResources().getDisplayMetrics().density);
-                card.setCardElevation(2 * getResources().getDisplayMetrics().density);
+                card.setRadius(12 * density);
+                card.setCardElevation(2 * density);
                 card.setCardBackgroundColor(Color.parseColor("#F8FAFC"));
                 card.setStrokeWidth(0);
 
@@ -1012,7 +876,7 @@ public class CalendarioFragment extends Fragment {
 
                 View accentBar = new View(getContext());
                 LinearLayout.LayoutParams accentParams = new LinearLayout.LayoutParams(
-                        (int) (6 * getResources().getDisplayMetrics().density), ViewGroup.LayoutParams.MATCH_PARENT);
+                        (int) (6 * density), ViewGroup.LayoutParams.MATCH_PARENT);
                 accentBar.setLayoutParams(accentParams);
                 accentBar.setBackgroundColor(Color.parseColor("#F7941D"));
                 innerLayout.addView(accentBar);
@@ -1079,6 +943,16 @@ public class CalendarioFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        executorService.shutdown();
+        idRequisicaoAtual.incrementAndGet();
+        ultimaTurmaCarregada = Integer.MIN_VALUE;
+        currentInflater = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdownNow();
+        }
     }
 }
