@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ListaReceitasFragment extends Fragment {
 
@@ -50,6 +51,9 @@ public class ListaReceitasFragment extends Fragment {
 
     private String statusFiltroAtual = "TODAS";
     private final List<Receita> listaReceitas = new ArrayList<>();
+
+    private int ultimaTurmaCarregada = Integer.MIN_VALUE;
+    private final AtomicInteger idRequisicaoAtual = new AtomicInteger(0);
 
     @Nullable
     @Override
@@ -125,6 +129,19 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getContext() == null) return;
+
+        SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
+
+        if (idTurmaAtual != ultimaTurmaCarregada) {
+            carregarReceitas(false);
+        }
+    }
+
     private void encerrarAnimacaoRefresh() {
         if (swipeRefreshReceitas != null && swipeRefreshReceitas.isRefreshing()) {
             swipeRefreshReceitas.setRefreshing(false);
@@ -136,6 +153,7 @@ public class ListaReceitasFragment extends Fragment {
             encerrarAnimacaoRefresh();
             return;
         }
+
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
@@ -143,7 +161,11 @@ public class ListaReceitasFragment extends Fragment {
         }
 
         final int idUsuario = idUsuarioLogado;
-        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario;
+        final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
+        ultimaTurmaCarregada = idTurmaSelecionada;
+
+        // Chave isolada por usuário E por turma selecionada
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario + "_" + idTurmaSelecionada;
 
         if (forcarAtualizacao) {
             CacheManager.invalidarChave(requireContext(), chaveCache);
@@ -159,6 +181,8 @@ public class ListaReceitasFragment extends Fragment {
                 return;
             }
         }
+
+        final int requisicaoId = idRequisicaoAtual.incrementAndGet();
 
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
@@ -179,7 +203,20 @@ public class ListaReceitasFragment extends Fragment {
                     } catch (Exception ignored) {}
 
                     String sql;
-                    if (idUsuario != -1) {
+                    if (idUsuario != -1 && idTurmaSelecionada != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                                "FROM ficha f " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
+                                "WHERE ut.id_usuario = ? AND f.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
+                                "ORDER BY f.nome_ficha ASC";
+                    } else if (idTurmaSelecionada != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                                "FROM ficha f " +
+                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                                "WHERE f.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
+                                "ORDER BY f.nome_ficha ASC";
+                    } else if (idUsuario != -1) {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
                                 "FROM ficha f " +
                                 "INNER JOIN turma t ON t.id_turma = f.id_turma " +
@@ -195,9 +232,15 @@ public class ListaReceitasFragment extends Fragment {
                     }
 
                     try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
-                        if (idUsuario != -1) {
+                        if (idUsuario != -1 && idTurmaSelecionada != -1) {
+                            stmt.setInt(1, idUsuario);
+                            stmt.setInt(2, idTurmaSelecionada);
+                        } else if (idTurmaSelecionada != -1) {
+                            stmt.setInt(1, idTurmaSelecionada);
+                        } else if (idUsuario != -1) {
                             stmt.setInt(1, idUsuario);
                         }
+
                         try (ResultSet rs = stmt.executeQuery()) {
                             while (rs.next()) {
                                 int idFicha = rs.getInt("id_ficha");
@@ -222,6 +265,10 @@ public class ListaReceitasFragment extends Fragment {
 
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
+                        if (!isAdded() || getContext() == null || requisicaoId != idRequisicaoAtual.get()) {
+                            encerrarAnimacaoRefresh();
+                            return;
+                        }
                         listaReceitas.clear();
                         listaReceitas.addAll(resultado);
                         atualizarSugestoesAutocomplete();
@@ -235,7 +282,9 @@ public class ListaReceitasFragment extends Fragment {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         encerrarAnimacaoRefresh();
-                        Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        if (isAdded() && getContext() != null) {
+                            Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
                     });
                 }
             } finally {
@@ -456,6 +505,8 @@ public class ListaReceitasFragment extends Fragment {
     }
 
     private void mostrarReceitas(List<Receita> receitas) {
+        if (gridReceitas == null || txtQuantidadeReceitas == null || !isAdded() || getContext() == null) return;
+
         gridReceitas.removeAllViews();
 
         String textoQuantidade = "RESULTADO DOS FILTROS: <font color='#F59E0B'>"
@@ -513,6 +564,14 @@ public class ListaReceitasFragment extends Fragment {
         bundle.putInt("id_ficha", idFicha);
         NavController navController = Navigation.findNavController(requireView());
         navController.navigate(R.id.nav_detalhes_receita, bundle);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        idRequisicaoAtual.incrementAndGet();
+        ultimaTurmaCarregada = Integer.MIN_VALUE;
+        swipeRefreshReceitas = null;
     }
 
     public static class Receita {
