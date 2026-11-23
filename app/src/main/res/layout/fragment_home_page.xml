@@ -168,18 +168,6 @@
                             android:paddingTop="6dp" />
 
                     </LinearLayout>
-                            <Spinner
-                                android:id="@+id/spinnerTurmasHome"
-                                android:layout_width="match_parent"
-                                android:layout_height="44dp"
-                                android:paddingStart="0dp"
-                                android:paddingEnd="4dp"
-                                android:spinnerMode="dropdown"
-                                android:backgroundTint="#002747"
-                                android:popupBackground="#FFFFFF"
-                                android:theme="@style/SpinnerTextoPreto" />
-                        </LinearLayout>
-
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 

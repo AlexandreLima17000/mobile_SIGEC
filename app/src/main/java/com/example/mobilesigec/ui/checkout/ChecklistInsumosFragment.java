@@ -263,13 +263,7 @@ public class ChecklistInsumosFragment extends Fragment {
 
                             return;
                         }
-                        ArrayAdapter<ReceitaModelo> spinnerAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_spinner_item, listaReceitas);
-                        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                        spinnerReceitas.setAdapter(spinnerAdapter);
-                    if (!listaReceitas.isEmpty() && getContext() != null) {
                         configurarSpinnerReceitas(listaReceitas, forcarAtualizacao);
-                    } else {
-                        encerrarAnimacaoRefresh();
                     }
                 });
             }

@@ -134,19 +134,10 @@ public class ChecklistUtensiliosFragment extends Fragment {
         tvReceitaSelecionada.setText("Nenhuma receita disponível");
         tvLaboratorioSelecionado.setText("");
         tvTurmaSelecionada.setText("");
+    }
+
 
     private void carregarReceitasNoSpinner(boolean forcarAtualizacao) {
-        if (getContext() == null) {
-            encerrarAnimacaoRefresh();
-            return;
-        }
-        SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        listaUtensiliosAtual.clear();
-        rvUtensilios.setAdapter(null);
-
-        atualizarProgresso();
-    }
-    private void carregarReceitasNoSpinner() {
         SharedPreferences prefs = requireActivity().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {

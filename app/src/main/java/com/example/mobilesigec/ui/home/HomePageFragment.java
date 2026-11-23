@@ -303,14 +303,6 @@ public class HomePageFragment extends Fragment {
                         break;
                     }
                 }
-        int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
-        int posicaoInicial = 0;
-        for (int i = 0; i < listaTurmas.size(); i++) {
-            if (listaTurmas.get(i).getIdTurma() == idTurmaSalva) {
-                posicaoInicial = i;
-                break;
-            }
-        }
 
         final int posInicialFinal = posicaoInicial;
         final boolean[] primeiraChamada = {true};
