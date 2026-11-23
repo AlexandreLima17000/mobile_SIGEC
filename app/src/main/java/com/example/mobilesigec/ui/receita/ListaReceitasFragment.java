@@ -1,5 +1,8 @@
 package com.example.mobilesigec.ui.receita;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
@@ -7,7 +10,9 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Filter;
 import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,16 +23,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.widget.AutoCompleteTextView;
-import android.widget.ArrayAdapter;
-import android.widget.Filter;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -38,6 +42,7 @@ import java.util.Set;
 
 public class ListaReceitasFragment extends Fragment {
 
+    private SwipeRefreshLayout swipeRefreshReceitas;
     private GridLayout gridReceitas;
     private AutoCompleteTextView edtPesquisaReceita;
     private TextView txtQuantidadeReceitas;
@@ -66,6 +71,7 @@ public class ListaReceitasFragment extends Fragment {
             }
         }
 
+        swipeRefreshReceitas = view.findViewById(R.id.swipe_refresh_receitas);
         gridReceitas = view.findViewById(R.id.gridReceitas);
         edtPesquisaReceita = view.findViewById(R.id.edtPesquisaReceita);
         txtQuantidadeReceitas = view.findViewById(R.id.txtQuantidadeReceitas);
@@ -84,7 +90,15 @@ public class ListaReceitasFragment extends Fragment {
             filtroDatadas.setOnClickListener(v -> selecionarFiltroStatus("DATADA"));
         }
 
-        carregarReceitas();
+        if (swipeRefreshReceitas != null) {
+            swipeRefreshReceitas.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshReceitas.setOnRefreshListener(() -> carregarReceitas(true));
+        }
+
+        carregarReceitas(false);
 
         edtPesquisaReceita.addTextChangedListener(new TextWatcher() {
             @Override
@@ -111,8 +125,17 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
-    private void carregarReceitas() {
-        if (getContext() == null) return;
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshReceitas != null && swipeRefreshReceitas.isRefreshing()) {
+            swipeRefreshReceitas.setRefreshing(false);
+        }
+    }
+
+    private void carregarReceitas(boolean forcarAtualizacao) {
+        if (getContext() == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
@@ -120,14 +143,32 @@ public class ListaReceitasFragment extends Fragment {
         }
 
         final int idUsuario = idUsuarioLogado;
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario;
+
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(requireContext(), chaveCache);
+        } else {
+            String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonCache != null) {
+                List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
+                listaReceitas.clear();
+                listaReceitas.addAll(receitasEmCache);
+                atualizarSugestoesAutocomplete();
+                aplicarFiltrosCombinados();
+                encerrarAnimacaoRefresh();
+                return;
+            }
+        }
 
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
             Connection conexao = null;
+            boolean conexaoOk = false;
 
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
+                    conexaoOk = true;
                     Set<Integer> fichasDatadas = new HashSet<>();
                     String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
                     try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
@@ -175,12 +216,17 @@ public class ListaReceitasFragment extends Fragment {
                     }
                 }
 
+                if (conexaoOk && getContext() != null) {
+                    CacheManager.salvarJson(getContext(), chaveCache, serializarReceitas(resultado));
+                }
+
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         listaReceitas.clear();
                         listaReceitas.addAll(resultado);
                         atualizarSugestoesAutocomplete();
                         aplicarFiltrosCombinados();
+                        encerrarAnimacaoRefresh();
                     });
                 }
 
@@ -188,6 +234,7 @@ public class ListaReceitasFragment extends Fragment {
                 e.printStackTrace();
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
+                        encerrarAnimacaoRefresh();
                         Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     });
                 }
@@ -197,6 +244,40 @@ public class ListaReceitasFragment extends Fragment {
                 } catch (Exception ignored) {}
             }
         }).start();
+    }
+
+    private String serializarReceitas(List<Receita> lista) {
+        JSONArray array = new JSONArray();
+        for (Receita r : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id", r.getId());
+                obj.put("nome", r.getNome());
+                obj.put("preparo", r.getPreparo() != null ? r.getPreparo() : "");
+                obj.put("categoria", r.getCategoria());
+                obj.put("status", r.getStatus());
+                array.put(obj);
+            } catch (Exception ignored) {}
+        }
+        return array.toString();
+    }
+
+    private List<Receita> desserializarReceitas(String json) {
+        List<Receita> lista = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new Receita(
+                        obj.getInt("id"),
+                        obj.getString("nome"),
+                        obj.optString("preparo", ""),
+                        obj.optString("categoria", "RECEITA GERAL"),
+                        obj.optString("status", "DISPONÍVEL")
+                ));
+            }
+        } catch (Exception ignored) {}
+        return lista;
     }
 
     private String removerAcentos(String text) {

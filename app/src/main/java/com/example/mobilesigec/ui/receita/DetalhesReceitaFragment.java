@@ -17,8 +17,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -64,10 +68,45 @@ public class DetalhesReceitaFragment extends Fragment {
     }
 
     private void carregarDetalhesBanco() {
+        if (getContext() == null) return;
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_detalhes_" + idFicha;
+
+        // 1. Tenta carregar os detalhes da receita direto do cache local
+        String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+        if (jsonCache != null) {
+            try {
+                JSONObject obj = new JSONObject(jsonCache);
+                String nome = obj.optString("nome", "");
+                String preparo = obj.optString("preparo", "");
+                String categoria = obj.optString("categoria", "GERAL");
+
+                List<String> ingredientes = new ArrayList<>();
+                JSONArray arrIngr = obj.optJSONArray("ingredientes");
+                if (arrIngr != null) {
+                    for (int i = 0; i < arrIngr.length(); i++) {
+                        ingredientes.add(arrIngr.getString(i));
+                    }
+                }
+
+                List<String> utensilios = new ArrayList<>();
+                JSONArray arrUten = obj.optJSONArray("utensilios");
+                if (arrUten != null) {
+                    for (int i = 0; i < arrUten.length(); i++) {
+                        utensilios.add(arrUten.getString(i));
+                    }
+                }
+
+                exibirDetalhesNaTela(nome, categoria, ingredientes, utensilios, preparo);
+                return;
+            } catch (Exception ignored) {}
+        }
+
+        // 2. Se não houver cache válido, busca no MySQL
         new Thread(() -> {
             Connection conexao = null;
             try {
                 conexao = ConexaoMySQL.conectar();
+                if (conexao == null) return;
 
                 String sqlFicha = "SELECT f.nome_ficha, f.preparo " +
                         "FROM ficha f " +
@@ -119,18 +158,26 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsUten.close();
                 stmtUten.close();
 
+                // Salva os detalhes no cache local
+                if (getContext() != null) {
+                    try {
+                        JSONObject jsonParaSalvar = new JSONObject();
+                        jsonParaSalvar.put("nome", nome != null ? nome : "");
+                        jsonParaSalvar.put("preparo", preparo != null ? preparo : "");
+                        jsonParaSalvar.put("categoria", categoria);
+                        jsonParaSalvar.put("ingredientes", new JSONArray(listaIngredientes));
+                        jsonParaSalvar.put("utensilios", new JSONArray(listaUtensilios));
+                        CacheManager.salvarJson(getContext(), chaveCache, jsonParaSalvar.toString());
+                    } catch (Exception ignored) {}
+                }
+
                 final String fNome = nome;
                 final String fPreparo = preparo;
                 final String fCategoria = categoria;
 
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
-                        txtNomeReceita.setText(fNome);
-                        txtCategoriaReceita.setText(fCategoria.toUpperCase());
-
-                        desenharCaixasAzuis(containerIngredientes, listaIngredientes, "Nenhum ingrediente registrado.");
-                        desenharCaixasAzuis(containerUtensilios, listaUtensilios, "Nenhum utensílio registrado.");
-                        desenharPassos(containerPassos, fPreparo);
+                        exibirDetalhesNaTela(fNome, fCategoria, listaIngredientes, listaUtensilios, fPreparo);
                     });
                 }
 
@@ -143,6 +190,16 @@ public class DetalhesReceitaFragment extends Fragment {
                 try { if (conexao != null) conexao.close(); } catch (Exception ignored) {}
             }
         }).start();
+    }
+
+    private void exibirDetalhesNaTela(String nome, String categoria, List<String> ingredientes, List<String> utensilios, String preparo) {
+        if (!isAdded() || getContext() == null) return;
+        txtNomeReceita.setText(nome);
+        txtCategoriaReceita.setText(categoria.toUpperCase());
+
+        desenharCaixasAzuis(containerIngredientes, new ArrayList<>(ingredientes), "Nenhum ingrediente registrado.");
+        desenharCaixasAzuis(containerUtensilios, new ArrayList<>(utensilios), "Nenhum utensílio registrado.");
+        desenharPassos(containerPassos, preparo);
     }
 
     private void desenharCaixasAzuis(LinearLayout container, List<String> itens, String msgVazio) {

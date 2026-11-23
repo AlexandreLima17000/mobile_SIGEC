@@ -16,10 +16,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.mobilesigec.database.ConexaoMySQL;
+import com.example.mobilesigec.CacheManager;
 import com.example.mobilesigec.R;
+import com.example.mobilesigec.database.ConexaoMySQL;
 import com.google.android.material.card.MaterialCardView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -31,7 +36,9 @@ import java.util.List;
 public class SettingsFragment extends Fragment {
 
     private static final String TAG = "SettingsFragment";
+    private static final String CHAVE_CACHE_PERFIL = "cache_perfil_instrutor";
 
+    private SwipeRefreshLayout swipeRefreshSettings;
     private TextView tvNomeInstrutor;
     private TextView tvEmailInstitucional;
     private TextView tvUnidade;
@@ -39,9 +46,7 @@ public class SettingsFragment extends Fragment {
     private LinearLayout containerTurmas;
     private ProgressBar progressLoadingPerfil;
 
-    public SettingsFragment() {
-        // Construtor público necessário
-    }
+    public SettingsFragment() {}
 
     private static class TurmaPerfilInfo {
         int idTurma;
@@ -67,6 +72,7 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        swipeRefreshSettings = view.findViewById(R.id.swipe_refresh_settings);
         tvNomeInstrutor = view.findViewById(R.id.tvNomeInstrutor);
         tvEmailInstitucional = view.findViewById(R.id.tvEmailInstitucional);
         tvUnidade = view.findViewById(R.id.tvUnidade);
@@ -74,12 +80,29 @@ public class SettingsFragment extends Fragment {
         containerTurmas = view.findViewById(R.id.container_turmas);
         progressLoadingPerfil = view.findViewById(R.id.progress_loading_perfil);
 
-        carregarDadosPerfilEPerfilBanco();
+        if (swipeRefreshSettings != null) {
+            swipeRefreshSettings.setColorSchemeColors(
+                    Color.parseColor("#002747"),
+                    Color.parseColor("#F7941D")
+            );
+            swipeRefreshSettings.setOnRefreshListener(() -> carregarDadosPerfilEPerfilBanco(true));
+        }
+
+        carregarDadosPerfilEPerfilBanco(false);
     }
 
-    private void carregarDadosPerfilEPerfilBanco() {
+    private void encerrarAnimacaoRefresh() {
+        if (swipeRefreshSettings != null && swipeRefreshSettings.isRefreshing()) {
+            swipeRefreshSettings.setRefreshing(false);
+        }
+    }
+
+    private void carregarDadosPerfilEPerfilBanco(boolean forcarAtualizacao) {
         FragmentActivity activity = getActivity();
-        if (activity == null) return;
+        if (activity == null) {
+            encerrarAnimacaoRefresh();
+            return;
+        }
 
         SharedPreferences prefs = activity.getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("ID_USUARIO", prefs.getInt("id_usuario", -1));
@@ -94,7 +117,30 @@ public class SettingsFragment extends Fragment {
             tvEmailInstitucional.setText("E-mail: " + prefEmail);
         }
 
-        if (progressLoadingPerfil != null) {
+        String identificadorCache = (idUsuarioLogado != -1) ? String.valueOf(idUsuarioLogado) : prefEmail;
+        final String chaveCache = CHAVE_CACHE_PERFIL + "_" + identificadorCache;
+
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(activity, chaveCache);
+        } else {
+            String jsonCache = CacheManager.obterJson(activity, chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+            if (jsonCache != null) {
+                try {
+                    JSONObject root = new JSONObject(jsonCache);
+                    String cacheNome = root.optString("nome", prefNome);
+                    String cacheEmail = root.optString("email", prefEmail);
+                    List<TurmaPerfilInfo> turmasCache = desserializarTurmasPerfil(root.optJSONArray("turmas"));
+
+                    atualizarUIPerfil(cacheNome, cacheEmail, turmasCache);
+                    encerrarAnimacaoRefresh();
+                    return;
+                } catch (Exception e) {
+                    Log.e(TAG, "Erro ao ler cache do perfil", e);
+                }
+            }
+        }
+
+        if (!forcarAtualizacao && progressLoadingPerfil != null) {
             progressLoadingPerfil.setVisibility(View.VISIBLE);
         }
 
@@ -102,9 +148,11 @@ public class SettingsFragment extends Fragment {
             String dbNome = prefNome;
             String dbEmail = prefEmail;
             List<TurmaPerfilInfo> listaTurmas = new ArrayList<>();
+            boolean conexaoOk = false;
 
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
+                    conexaoOk = true;
                     if (idUsuarioLogado != -1) {
                         String sqlUser = "SELECT * FROM usuario WHERE id_usuario = ?";
                         try (PreparedStatement stmtUser = con.prepareStatement(sqlUser)) {
@@ -190,6 +238,25 @@ public class SettingsFragment extends Fragment {
                 Log.e(TAG, "Erro ao carregar perfil do banco: " + e.getMessage(), e);
             }
 
+            if (conexaoOk && getContext() != null) {
+                try {
+                    JSONObject root = new JSONObject();
+                    root.put("nome", dbNome);
+                    root.put("email", dbEmail);
+                    root.put("turmas", serializarTurmasPerfil(listaTurmas));
+
+                    String jsonParaSalvar = root.toString();
+                    CacheManager.salvarJson(getContext(), chaveCache, jsonParaSalvar);
+
+                    int targetId = prefs.getInt("ID_USUARIO", idUsuarioLogado);
+                    if (targetId != -1) {
+                        CacheManager.salvarJson(getContext(), CHAVE_CACHE_PERFIL + "_" + targetId, jsonParaSalvar);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Erro ao salvar perfil no cache", e);
+                }
+            }
+
             final String finalNome = dbNome;
             final String finalEmail = dbEmail;
 
@@ -198,27 +265,66 @@ public class SettingsFragment extends Fragment {
                     if (progressLoadingPerfil != null) {
                         progressLoadingPerfil.setVisibility(View.GONE);
                     }
-
-                    if (tvNomeInstrutor != null) {
-                        tvNomeInstrutor.setText(finalNome);
-                    }
-
-                    if (tvEmailInstitucional != null) {
-                        tvEmailInstitucional.setText("E-mail: " + finalEmail);
-                    }
-
-                    if (tvUnidade != null) {
-                        tvUnidade.setText("Unidade: Senac Aclimação");
-                    }
-
-                    if (tvTurmasAtivas != null) {
-                        tvTurmasAtivas.setText(String.valueOf(listaTurmas.size()));
-                    }
-
-                    renderizarCardsTurmas(listaTurmas);
+                    atualizarUIPerfil(finalNome, finalEmail, listaTurmas);
+                    encerrarAnimacaoRefresh();
                 });
             }
         }).start();
+    }
+
+    private void atualizarUIPerfil(String nome, String email, List<TurmaPerfilInfo> turmas) {
+        if (!isAdded()) return;
+
+        if (tvNomeInstrutor != null) {
+            tvNomeInstrutor.setText(nome);
+        }
+
+        if (tvEmailInstitucional != null) {
+            tvEmailInstitucional.setText("E-mail: " + email);
+        }
+
+        if (tvUnidade != null) {
+            tvUnidade.setText("Unidade: Senac Aclimação");
+        }
+
+        if (tvTurmasAtivas != null) {
+            tvTurmasAtivas.setText(String.valueOf(turmas.size()));
+        }
+
+        renderizarCardsTurmas(turmas);
+    }
+
+    private JSONArray serializarTurmasPerfil(List<TurmaPerfilInfo> lista) {
+        JSONArray array = new JSONArray();
+        for (TurmaPerfilInfo t : lista) {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("idTurma", t.idTurma);
+                obj.put("nomeTurma", t.nomeTurma);
+                obj.put("nomeLaboratorio", t.nomeLaboratorio);
+                obj.put("totalAlunos", t.totalAlunos);
+                array.put(obj);
+            } catch (Exception ignored) {}
+        }
+        return array;
+    }
+
+    private List<TurmaPerfilInfo> desserializarTurmasPerfil(JSONArray array) {
+        List<TurmaPerfilInfo> lista = new ArrayList<>();
+        if (array == null) return lista;
+
+        for (int i = 0; i < array.length(); i++) {
+            try {
+                JSONObject obj = array.getJSONObject(i);
+                lista.add(new TurmaPerfilInfo(
+                        obj.getInt("idTurma"),
+                        obj.getString("nomeTurma"),
+                        obj.getString("nomeLaboratorio"),
+                        obj.optInt("totalAlunos", 0)
+                ));
+            } catch (Exception ignored) {}
+        }
+        return lista;
     }
 
     private void renderizarCardsTurmas(List<TurmaPerfilInfo> turmas) {
@@ -252,7 +358,8 @@ public class SettingsFragment extends Fragment {
 
             LinearLayout mainLayout = new LinearLayout(getContext());
             mainLayout.setOrientation(LinearLayout.VERTICAL);
-            mainLayout.setPadding((int) (16 * density), (int) (16 * density), (int) (16 * density), (int) (16 * density));
+            int p16 = (int) (16 * density);
+            mainLayout.setPadding(p16, p16, p16, p16);
 
             LinearLayout headerLayout = new LinearLayout(getContext());
             headerLayout.setOrientation(LinearLayout.HORIZONTAL);
@@ -260,7 +367,9 @@ public class SettingsFragment extends Fragment {
             headerBg.setColor(Color.parseColor("#0B1A30"));
             headerBg.setCornerRadius(10 * density);
             headerLayout.setBackground(headerBg);
-            headerLayout.setPadding((int) (12 * density), (int) (10 * density), (int) (12 * density), (int) (10 * density));
+            int p12 = (int) (12 * density);
+            int p10 = (int) (10 * density);
+            headerLayout.setPadding(p12, p10, p12, p10);
             headerLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
             TextView tvHeaderTitle = new TextView(getContext());
