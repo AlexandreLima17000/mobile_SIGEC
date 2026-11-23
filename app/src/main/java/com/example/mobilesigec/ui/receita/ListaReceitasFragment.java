@@ -164,8 +164,7 @@ public class ListaReceitasFragment extends Fragment {
         final int idTurmaSelecionada = prefs.getInt("id_turma_selecionada", -1);
         ultimaTurmaCarregada = idTurmaSelecionada;
 
-        // Chave isolada por usuário E por turma selecionada
-        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario + "_" + idTurmaSelecionada;
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_v2_" + idUsuario + "_" + idTurmaSelecionada;
 
         if (forcarAtualizacao) {
             CacheManager.invalidarChave(requireContext(), chaveCache);
@@ -193,38 +192,82 @@ public class ListaReceitasFragment extends Fragment {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
                     conexaoOk = true;
+
+                    // 1. Identifica quais fichas estão datadas especificamente para esta turma
                     Set<Integer> fichasDatadas = new HashSet<>();
-                    String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
-                    try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
-                         ResultSet rsAg = stmtAg.executeQuery()) {
-                        while (rsAg.next()) {
-                            fichasDatadas.add(rsAg.getInt("id_ficha"));
+                    String sqlAgendamentos;
+                    if (idTurmaSelecionada != -1) {
+                        sqlAgendamentos = "SELECT DISTINCT COALESCE(a.id_ficha, tf.id_ficha) AS id_ficha " +
+                                "FROM agendamento a " +
+                                "LEFT JOIN turma_ficha tf ON a.id_turma_ficha = tf.id_turma_ficha " +
+                                "WHERE a.situacao = 'A' AND a.data IS NOT NULL " +
+                                "AND COALESCE(a.id_ficha, tf.id_ficha) IS NOT NULL " +
+                                "AND (a.id_turma = ? OR tf.id_turma = ?) " +
+                                "UNION " +
+                                "SELECT DISTINCT tf.id_ficha " +
+                                "FROM turma_ficha tf " +
+                                "WHERE tf.id_turma = ? AND tf.data IS NOT NULL";
+                    } else {
+                        sqlAgendamentos = "SELECT DISTINCT COALESCE(a.id_ficha, tf.id_ficha) AS id_ficha " +
+                                "FROM agendamento a " +
+                                "LEFT JOIN turma_ficha tf ON a.id_turma_ficha = tf.id_turma_ficha " +
+                                "WHERE a.situacao = 'A' AND a.data IS NOT NULL " +
+                                "AND COALESCE(a.id_ficha, tf.id_ficha) IS NOT NULL " +
+                                "UNION " +
+                                "SELECT DISTINCT tf.id_ficha " +
+                                "FROM turma_ficha tf " +
+                                "WHERE tf.data IS NOT NULL";
+                    }
+
+                    try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos)) {
+                        if (idTurmaSelecionada != -1) {
+                            stmtAg.setInt(1, idTurmaSelecionada);
+                            stmtAg.setInt(2, idTurmaSelecionada);
+                            stmtAg.setInt(3, idTurmaSelecionada);
+                        }
+                        try (ResultSet rsAg = stmtAg.executeQuery()) {
+                            while (rsAg.next()) {
+                                fichasDatadas.add(rsAg.getInt("id_ficha"));
+                            }
                         }
                     } catch (Exception ignored) {}
 
+                    // 2. Busca fichas vinculadas à turma via turma_ficha, curso_ficha (id_curso) ou f.id_turma
                     String sql;
                     if (idUsuario != -1 && idTurmaSelecionada != -1) {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
-                                "FROM ficha f " +
-                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
+                                "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
-                                "WHERE ut.id_usuario = ? AND f.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
+                                "INNER JOIN ficha f ON (" +
+                                "    f.id_turma = t.id_turma " +
+                                "    OR EXISTS (SELECT 1 FROM turma_ficha tf WHERE tf.id_turma = t.id_turma AND tf.id_ficha = f.id_ficha) " +
+                                "    OR EXISTS (SELECT 1 FROM curso_ficha cf WHERE cf.id_curso = t.id_curso AND cf.id_ficha = f.id_ficha)" +
+                                ") " +
+                                "WHERE ut.id_usuario = ? AND t.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
                     } else if (idTurmaSelecionada != -1) {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
-                                "FROM ficha f " +
-                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
-                                "WHERE f.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
+                                "FROM turma t " +
+                                "INNER JOIN ficha f ON (" +
+                                "    f.id_turma = t.id_turma " +
+                                "    OR EXISTS (SELECT 1 FROM turma_ficha tf WHERE tf.id_turma = t.id_turma AND tf.id_ficha = f.id_ficha) " +
+                                "    OR EXISTS (SELECT 1 FROM curso_ficha cf WHERE cf.id_curso = t.id_curso AND cf.id_ficha = f.id_ficha)" +
+                                ") " +
+                                "WHERE t.id_turma = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
                     } else if (idUsuario != -1) {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
-                                "FROM ficha f " +
-                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
+                                "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
+                                "INNER JOIN ficha f ON (" +
+                                "    f.id_turma = t.id_turma " +
+                                "    OR EXISTS (SELECT 1 FROM turma_ficha tf WHERE tf.id_turma = t.id_turma AND tf.id_ficha = f.id_ficha) " +
+                                "    OR EXISTS (SELECT 1 FROM curso_ficha cf WHERE cf.id_curso = t.id_curso AND cf.id_ficha = f.id_ficha)" +
+                                ") " +
                                 "WHERE ut.id_usuario = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
                     } else {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
                                 "FROM ficha f " +
                                 "LEFT JOIN turma t ON t.id_turma = f.id_turma " +
                                 "WHERE f.situacao = 'A' " +
@@ -246,14 +289,21 @@ public class ListaReceitasFragment extends Fragment {
                                 int idFicha = rs.getInt("id_ficha");
                                 String nome = rs.getString("nome_ficha");
                                 String preparo = rs.getString("preparo");
+                                String categoriaBanco = rs.getString("categoria");
                                 String turma = rs.getString("nome_turma");
-                                if (turma == null || turma.trim().isEmpty()) {
-                                    turma = "RECEITA GERAL";
+
+                                String subtitulo;
+                                if (categoriaBanco != null && !categoriaBanco.trim().isEmpty()) {
+                                    subtitulo = categoriaBanco.trim();
+                                } else if (turma != null && !turma.trim().isEmpty()) {
+                                    subtitulo = turma.trim();
+                                } else {
+                                    subtitulo = "RECEITA GERAL";
                                 }
 
                                 String status = fichasDatadas.contains(idFicha) ? "DATADA" : "DISPONÍVEL";
 
-                                resultado.add(new Receita(idFicha, nome, preparo, turma, status));
+                                resultado.add(new Receita(idFicha, nome, preparo, subtitulo, status));
                             }
                         }
                     }

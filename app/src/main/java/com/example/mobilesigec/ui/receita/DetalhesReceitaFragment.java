@@ -69,9 +69,8 @@ public class DetalhesReceitaFragment extends Fragment {
 
     private void carregarDetalhesBanco() {
         if (getContext() == null) return;
-        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_detalhes_" + idFicha;
+        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_v2_detalhes_" + idFicha;
 
-        // 1. Tenta carregar os detalhes da receita direto do cache local
         String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
         if (jsonCache != null) {
             try {
@@ -101,14 +100,13 @@ public class DetalhesReceitaFragment extends Fragment {
             } catch (Exception ignored) {}
         }
 
-        // 2. Se não houver cache válido, busca no MySQL
         new Thread(() -> {
             Connection conexao = null;
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao == null) return;
 
-                String sqlFicha = "SELECT f.nome_ficha, f.preparo " +
+                String sqlFicha = "SELECT f.nome_ficha, f.preparo, f.categoria " +
                         "FROM ficha f " +
                         "WHERE f.id_ficha = ?";
                 PreparedStatement stmtFicha = conexao.prepareStatement(sqlFicha);
@@ -119,6 +117,10 @@ public class DetalhesReceitaFragment extends Fragment {
                 if (rsFicha.next()) {
                     nome = rsFicha.getString("nome_ficha");
                     preparo = rsFicha.getString("preparo");
+                    String catBanco = rsFicha.getString("categoria");
+                    if (catBanco != null && !catBanco.trim().isEmpty()) {
+                        categoria = catBanco.trim();
+                    }
                 }
                 rsFicha.close();
                 stmtFicha.close();
@@ -158,7 +160,6 @@ public class DetalhesReceitaFragment extends Fragment {
                 rsUten.close();
                 stmtUten.close();
 
-                // Salva os detalhes no cache local
                 if (getContext() != null) {
                     try {
                         JSONObject jsonParaSalvar = new JSONObject();

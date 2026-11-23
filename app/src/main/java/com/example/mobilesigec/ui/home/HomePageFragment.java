@@ -128,7 +128,7 @@ public class HomePageFragment extends Fragment {
                     }
                     String jsonSemanaCache = CacheManager.obterJson(
                             context,
-                            CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + turmaAlvo.getIdTurma(),
+                            CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v2_" + turmaAlvo.getIdTurma(),
                             CacheManager.TEMPO_EXPIRACAO_PADRAO
                     );
                     if (jsonSemanaCache != null) {
@@ -362,7 +362,7 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_" + idTurma;
+        String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v2_" + idTurma;
 
         // 1. Tenta recuperar as receitas da semana desta turma no cache (se não for atualização forçada)
         if (!forcarAtualizacao) {
@@ -380,7 +380,7 @@ public class HomePageFragment extends Fragment {
         final int reqId = idRequisicaoHome.incrementAndGet();
         garantirExecutorAtivo();
 
-        // 2. Busca no MySQL
+        // 2. Busca no MySQL usando o vínculo atual (turma_ficha e agendamento)
         executorService.execute(() -> {
             Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
             for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
@@ -392,13 +392,23 @@ public class HomePageFragment extends Fragment {
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     conexaoOk = true;
-                    String sql = "SELECT f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.* " +
+                    String sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, " +
+                            "COALESCE(a.data, tf.data, f.data) AS data_agendamento " +
                             "FROM ficha f " +
-                            "LEFT JOIN agendamento a ON f.id_ficha = a.id_ficha " +
-                            "WHERE f.id_turma = ?";
+                            "LEFT JOIN turma_ficha tf ON tf.id_ficha = f.id_ficha AND tf.id_turma = ? " +
+                            "LEFT JOIN agendamento a ON (a.id_turma_ficha = tf.id_turma_ficha OR (a.id_ficha = f.id_ficha AND a.id_turma = ?)) " +
+                            "WHERE COALESCE(f.situacao, 'A') = 'A' " +
+                            "AND (a.id_agendamento IS NULL OR COALESCE(a.situacao, 'A') = 'A') " +
+                            "AND (tf.id_turma = ? OR a.id_turma = ? OR f.id_turma = ?) " +
+                            "AND COALESCE(a.data, tf.data, f.data) IS NOT NULL";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
                         stmt.setInt(1, idTurma);
+                        stmt.setInt(2, idTurma);
+                        stmt.setInt(3, idTurma);
+                        stmt.setInt(4, idTurma);
+                        stmt.setInt(5, idTurma);
+
                         try (ResultSet rs = stmt.executeQuery()) {
                             ResultSetMetaData metaData = rs.getMetaData();
                             int columnCount = metaData.getColumnCount();
