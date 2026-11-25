@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,6 +43,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ListaReceitasFragment extends Fragment {
+
+    private static final String TAG = "ListaReceitasFragment";
 
     private SwipeRefreshLayout swipeRefreshReceitas;
     private GridLayout gridReceitas;
@@ -147,13 +150,8 @@ public class ListaReceitasFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (getContext() == null) return;
-
-        SharedPreferences prefs = getContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
-        int idTurmaAtual = prefs.getInt("id_turma_selecionada", -1);
-
-        if (idTurmaAtual != ultimaTurmaCarregada) {
-            carregarReceitas(false);
-        }
+        // Sempre sincroniza ao voltar para a aba (mostra cache instantaneamente e atualiza status no banco)
+        carregarReceitas(false);
     }
 
     private void encerrarAnimacaoRefresh() {
@@ -179,11 +177,12 @@ public class ListaReceitasFragment extends Fragment {
 
         if (idTurmaSalva != -1) {
             ultimaTurmaCarregada = idTurmaSalva;
-            final String chaveCache = CacheManager.CHAVE_RECEITAS + "_v3_" + idUsuario + "_" + idTurmaSalva;
+            final String chaveCache = CacheManager.CHAVE_RECEITAS + "_v4_" + idUsuario + "_" + idTurmaSalva;
 
             if (forcarAtualizacao) {
                 CacheManager.invalidarChave(requireContext(), chaveCache);
             } else {
+                // Exibe o cache imediatamente para evitar tela vazia, mas continua para sincronizar o status com o MySQL
                 String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
                 if (jsonCache != null) {
                     List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
@@ -192,8 +191,6 @@ public class ListaReceitasFragment extends Fragment {
                         listaReceitas.addAll(receitasEmCache);
                         atualizarSugestoesAutocomplete();
                         aplicarFiltrosCombinados();
-                        encerrarAnimacaoRefresh();
-                        return;
                     }
                 }
             }
@@ -212,13 +209,13 @@ public class ListaReceitasFragment extends Fragment {
                 if (conexao != null) {
                     conexaoOk = true;
 
-                    // Se nenhuma turma estiver salva ainda, busca a primeira turma do usuário (igual à Home)
+                    // Fallback caso nenhuma turma esteja salva ainda na sessão
                     if (idTurmaConsulta == -1 && idUsuario != -1) {
                         String sqlPrimeiraTurma = "SELECT t.id_turma " +
                                 "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
-                                "WHERE ut.id_usuario = ? " +
-                                "ORDER BY t.id_turma ASC LIMIT 1";
+                                "WHERE ut.id_usuario = ? AND t.situacao = 'A' " +
+                                "LIMIT 1";
                         try (PreparedStatement stmtTurma = conexao.prepareStatement(sqlPrimeiraTurma)) {
                             stmtTurma.setInt(1, idUsuario);
                             try (ResultSet rsTurma = stmtTurma.executeQuery()) {
@@ -227,49 +224,43 @@ public class ListaReceitasFragment extends Fragment {
                                     prefs.edit().putInt("id_turma_selecionada", idTurmaConsulta).apply();
                                 }
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception e) {
+                            Log.e(TAG, "Erro ao buscar turma padrão do usuário", e);
+                        }
                     }
 
-                    // 1. Identifica fichas datadas especificamente para a turma consultada
+                    // 1. Mesma regra do FichasService.buscarAcervoReceitasDaTurma no Web:
+                    // Busca agendamentos ativos ('A') da turma selecionada
                     Set<Integer> fichasDatadas = new HashSet<>();
                     String sqlAgendamentos;
                     if (idTurmaConsulta != -1) {
-                        sqlAgendamentos = "SELECT DISTINCT COALESCE(a.id_ficha, tf.id_ficha) AS id_ficha " +
-                                "FROM agendamento a " +
-                                "LEFT JOIN turma_ficha tf ON a.id_turma_ficha = tf.id_turma_ficha " +
-                                "WHERE COALESCE(a.situacao, 'A') = 'A' AND a.data IS NOT NULL " +
-                                "AND COALESCE(a.id_ficha, tf.id_ficha) IS NOT NULL " +
-                                "AND (a.id_turma = ? OR tf.id_turma = ?) " +
-                                "UNION " +
-                                "SELECT DISTINCT tf.id_ficha " +
-                                "FROM turma_ficha tf " +
-                                "WHERE tf.id_turma = ? AND tf.data IS NOT NULL";
+                        sqlAgendamentos = "SELECT DISTINCT id_ficha " +
+                                "FROM agendamento " +
+                                "WHERE id_turma = ? " +
+                                "AND situacao = 'A' " +
+                                "AND id_ficha IS NOT NULL";
                     } else {
-                        sqlAgendamentos = "SELECT DISTINCT COALESCE(a.id_ficha, tf.id_ficha) AS id_ficha " +
-                                "FROM agendamento a " +
-                                "LEFT JOIN turma_ficha tf ON a.id_turma_ficha = tf.id_turma_ficha " +
-                                "WHERE COALESCE(a.situacao, 'A') = 'A' AND a.data IS NOT NULL " +
-                                "AND COALESCE(a.id_ficha, tf.id_ficha) IS NOT NULL " +
-                                "UNION " +
-                                "SELECT DISTINCT tf.id_ficha " +
-                                "FROM turma_ficha tf " +
-                                "WHERE tf.data IS NOT NULL";
+                        sqlAgendamentos = "SELECT DISTINCT id_ficha " +
+                                "FROM agendamento " +
+                                "WHERE situacao = 'A' " +
+                                "AND id_ficha IS NOT NULL";
                     }
 
                     try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos)) {
                         if (idTurmaConsulta != -1) {
                             stmtAg.setInt(1, idTurmaConsulta);
-                            stmtAg.setInt(2, idTurmaConsulta);
-                            stmtAg.setInt(3, idTurmaConsulta);
                         }
                         try (ResultSet rsAg = stmtAg.executeQuery()) {
                             while (rsAg.next()) {
                                 fichasDatadas.add(rsAg.getInt("id_ficha"));
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        Log.e(TAG, "Erro ao buscar agendamentos da turma " + idTurmaConsulta, e);
+                    }
 
-                    // 2. Mesma consulta do FichasRepository do Web (curso_ficha + turma + ficha.situacao = 'A')
+                    // 2. Mesma regra do FichasRepository.findFichasAtivasByTurmaId no Web:
+                    // Fichas ativas ('A') vinculadas ao curso da turma selecionada
                     String sql;
                     if (idTurmaConsulta != -1) {
                         sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
@@ -327,9 +318,8 @@ public class ListaReceitasFragment extends Fragment {
                     }
                 }
 
-                // Só grava no cache se houver resultados (evita prender lista vazia no cache)
                 if (conexaoOk && !resultado.isEmpty() && idTurmaConsulta != -1 && getContext() != null) {
-                    String chaveSalvar = CacheManager.CHAVE_RECEITAS + "_v3_" + idUsuario + "_" + idTurmaConsulta;
+                    String chaveSalvar = CacheManager.CHAVE_RECEITAS + "_v4_" + idUsuario + "_" + idTurmaConsulta;
                     CacheManager.salvarJson(getContext(), chaveSalvar, serializarReceitas(resultado));
                 }
 
@@ -350,7 +340,7 @@ public class ListaReceitasFragment extends Fragment {
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Erro ao carregar receitas", e);
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         encerrarAnimacaoRefresh();

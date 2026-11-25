@@ -128,7 +128,7 @@ public class HomePageFragment extends Fragment {
                     }
                     String jsonSemanaCache = CacheManager.obterJson(
                             context,
-                            CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v2_" + turmaAlvo.getIdTurma(),
+                            CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v3_" + turmaAlvo.getIdTurma(),
                             CacheManager.TEMPO_EXPIRACAO_PADRAO
                     );
                     if (jsonSemanaCache != null) {
@@ -340,9 +340,7 @@ public class HomePageFragment extends Fragment {
                 if (spinnerTurmasHome.getSelectedItemPosition() != i) {
                     spinnerTurmasHome.setSelection(i, false);
                 }
-                if (idSalvo != ultimaTurmaRenderizada) {
-                    carregarReceitasDaTurma(t.getIdTurma(), t.getNomeLaboratorio(), false);
-                }
+                carregarReceitasDaTurma(t.getIdTurma(), t.getNomeLaboratorio(), false);
                 break;
             }
         }
@@ -362,25 +360,30 @@ public class HomePageFragment extends Fragment {
             return;
         }
 
-        String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v2_" + idTurma;
+        String chaveCacheReceitas = CacheManager.CHAVE_HOME_RECEITAS_SEMANA + "_v3_" + idTurma;
+        boolean exibiuCache = false;
 
-        // 1. Tenta recuperar as receitas da semana desta turma no cache (se não for atualização forçada)
-        if (!forcarAtualizacao) {
+        // 1. Exibe o cache imediatamente se existir, mas continua para sincronizar com o MySQL
+        if (forcarAtualizacao) {
+            CacheManager.invalidarChave(context, chaveCacheReceitas);
+        } else {
             String jsonReceitasCache = CacheManager.obterJson(context, chaveCacheReceitas, CacheManager.TEMPO_EXPIRACAO_PADRAO);
             if (jsonReceitasCache != null) {
                 Map<Integer, List<ItemReceitaData>> mapCache = desserializarMapaDias(jsonReceitasCache);
                 ultimaTurmaRenderizada = idTurma;
                 renderizarCardsSemana(view, mapCache, nomeLaboratorio);
-                finalizarRefresh();
-                return;
+                exibiuCache = true;
             }
         }
 
-        containerReceitas.removeAllViews();
+        if (!exibiuCache) {
+            containerReceitas.removeAllViews();
+        }
+
         final int reqId = idRequisicaoHome.incrementAndGet();
         garantirExecutorAtivo();
 
-        // 2. Busca no MySQL usando o vínculo atual (turma_ficha e agendamento)
+        // 2. Busca no MySQL usando a mesma regra do FichasService do Web (agendamento + ficha)
         executorService.execute(() -> {
             Map<Integer, List<ItemReceitaData>> mapDias = new HashMap<>();
             for (int dayIndex = Calendar.MONDAY; dayIndex <= Calendar.FRIDAY; dayIndex++) {
@@ -392,22 +395,16 @@ public class HomePageFragment extends Fragment {
             try (Connection con = ConexaoMySQL.conectar()) {
                 if (con != null) {
                     conexaoOk = true;
-                    String sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, " +
-                            "COALESCE(a.data, tf.data, f.data) AS data_agendamento " +
-                            "FROM ficha f " +
-                            "LEFT JOIN turma_ficha tf ON tf.id_ficha = f.id_ficha AND tf.id_turma = ? " +
-                            "LEFT JOIN agendamento a ON (a.id_turma_ficha = tf.id_turma_ficha OR (a.id_ficha = f.id_ficha AND a.id_turma = ?)) " +
-                            "WHERE COALESCE(f.situacao, 'A') = 'A' " +
-                            "AND (a.id_agendamento IS NULL OR COALESCE(a.situacao, 'A') = 'A') " +
-                            "AND (tf.id_turma = ? OR a.id_turma = ? OR f.id_turma = ?) " +
-                            "AND COALESCE(a.data, tf.data, f.data) IS NOT NULL";
+                    String sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, COALESCE(a.concluido, 'N') AS concluido, a.data " +
+                            "FROM agendamento a " +
+                            "INNER JOIN ficha f ON f.id_ficha = a.id_ficha " +
+                            "WHERE a.id_turma = ? " +
+                            "AND a.situacao = 'A' " +
+                            "AND f.situacao = 'A' " +
+                            "AND a.data IS NOT NULL";
 
                     try (PreparedStatement stmt = con.prepareStatement(sql)) {
                         stmt.setInt(1, idTurma);
-                        stmt.setInt(2, idTurma);
-                        stmt.setInt(3, idTurma);
-                        stmt.setInt(4, idTurma);
-                        stmt.setInt(5, idTurma);
 
                         try (ResultSet rs = stmt.executeQuery()) {
                             ResultSetMetaData metaData = rs.getMetaData();
