@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,8 +40,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ListaReceitasFragment extends Fragment {
+
+    private static final String TAG = "ListaReceitasFragment";
 
     private SwipeRefreshLayout swipeRefreshReceitas;
     private GridLayout gridReceitas;
@@ -50,6 +54,20 @@ public class ListaReceitasFragment extends Fragment {
 
     private String statusFiltroAtual = "TODAS";
     private final List<Receita> listaReceitas = new ArrayList<>();
+
+    private int ultimaTurmaCarregada = Integer.MIN_VALUE;
+    private final AtomicInteger idRequisicaoAtual = new AtomicInteger(0);
+
+    private SharedPreferences sessaoPrefs;
+    private final SharedPreferences.OnSharedPreferenceChangeListener turmaListener =
+            (sharedPreferences, key) -> {
+                if ("id_turma_selecionada".equals(key) && isAdded() && getContext() != null) {
+                    int novaTurma = sharedPreferences.getInt("id_turma_selecionada", -1);
+                    if (novaTurma != ultimaTurmaCarregada) {
+                        carregarReceitas(false);
+                    }
+                }
+            };
 
     @Nullable
     @Override
@@ -70,6 +88,9 @@ public class ListaReceitasFragment extends Fragment {
                 activity.getSupportActionBar().setTitle("Receitas");
             }
         }
+
+        sessaoPrefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
+        sessaoPrefs.registerOnSharedPreferenceChangeListener(turmaListener);
 
         swipeRefreshReceitas = view.findViewById(R.id.swipe_refresh_receitas);
         gridReceitas = view.findViewById(R.id.gridReceitas);
@@ -125,6 +146,14 @@ public class ListaReceitasFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getContext() == null) return;
+        // Sempre sincroniza ao voltar para a aba (mostra cache instantaneamente e atualiza status no banco)
+        carregarReceitas(false);
+    }
+
     private void encerrarAnimacaoRefresh() {
         if (swipeRefreshReceitas != null && swipeRefreshReceitas.isRefreshing()) {
             swipeRefreshReceitas.setRefreshing(false);
@@ -136,6 +165,7 @@ public class ListaReceitasFragment extends Fragment {
             encerrarAnimacaoRefresh();
             return;
         }
+
         SharedPreferences prefs = requireContext().getSharedPreferences("SessaoApp", Context.MODE_PRIVATE);
         int idUsuarioLogado = prefs.getInt("id_usuario", -1);
         if (idUsuarioLogado == -1) {
@@ -143,85 +173,164 @@ public class ListaReceitasFragment extends Fragment {
         }
 
         final int idUsuario = idUsuarioLogado;
-        final String chaveCache = CacheManager.CHAVE_RECEITAS + "_" + idUsuario;
+        final int idTurmaSalva = prefs.getInt("id_turma_selecionada", -1);
 
-        if (forcarAtualizacao) {
-            CacheManager.invalidarChave(requireContext(), chaveCache);
-        } else {
-            String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
-            if (jsonCache != null) {
-                List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
-                listaReceitas.clear();
-                listaReceitas.addAll(receitasEmCache);
-                atualizarSugestoesAutocomplete();
-                aplicarFiltrosCombinados();
-                encerrarAnimacaoRefresh();
-                return;
+        if (idTurmaSalva != -1) {
+            ultimaTurmaCarregada = idTurmaSalva;
+            final String chaveCache = CacheManager.CHAVE_RECEITAS + "_v4_" + idUsuario + "_" + idTurmaSalva;
+
+            if (forcarAtualizacao) {
+                CacheManager.invalidarChave(requireContext(), chaveCache);
+            } else {
+                // Exibe o cache imediatamente para evitar tela vazia, mas continua para sincronizar o status com o MySQL
+                String jsonCache = CacheManager.obterJson(requireContext(), chaveCache, CacheManager.TEMPO_EXPIRACAO_PADRAO);
+                if (jsonCache != null) {
+                    List<Receita> receitasEmCache = desserializarReceitas(jsonCache);
+                    if (!receitasEmCache.isEmpty()) {
+                        listaReceitas.clear();
+                        listaReceitas.addAll(receitasEmCache);
+                        atualizarSugestoesAutocomplete();
+                        aplicarFiltrosCombinados();
+                    }
+                }
             }
         }
+
+        final int requisicaoId = idRequisicaoAtual.incrementAndGet();
 
         new Thread(() -> {
             List<Receita> resultado = new ArrayList<>();
             Connection conexao = null;
             boolean conexaoOk = false;
+            int idTurmaConsulta = idTurmaSalva;
 
             try {
                 conexao = ConexaoMySQL.conectar();
                 if (conexao != null) {
                     conexaoOk = true;
-                    Set<Integer> fichasDatadas = new HashSet<>();
-                    String sqlAgendamentos = "SELECT DISTINCT id_ficha FROM agendamento WHERE situacao = 'A' AND data IS NOT NULL";
-                    try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos);
-                         ResultSet rsAg = stmtAg.executeQuery()) {
-                        while (rsAg.next()) {
-                            fichasDatadas.add(rsAg.getInt("id_ficha"));
-                        }
-                    } catch (Exception ignored) {}
 
-                    String sql;
-                    if (idUsuario != -1) {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
-                                "FROM ficha f " +
-                                "INNER JOIN turma t ON t.id_turma = f.id_turma " +
+                    // Fallback caso nenhuma turma esteja salva ainda na sessão
+                    if (idTurmaConsulta == -1 && idUsuario != -1) {
+                        String sqlPrimeiraTurma = "SELECT t.id_turma " +
+                                "FROM turma t " +
                                 "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
-                                "WHERE ut.id_usuario = ? AND f.situacao = 'A' AND t.situacao = 'A' " +
+                                "WHERE ut.id_usuario = ? AND t.situacao = 'A' " +
+                                "LIMIT 1";
+                        try (PreparedStatement stmtTurma = conexao.prepareStatement(sqlPrimeiraTurma)) {
+                            stmtTurma.setInt(1, idUsuario);
+                            try (ResultSet rsTurma = stmtTurma.executeQuery()) {
+                                if (rsTurma.next()) {
+                                    idTurmaConsulta = rsTurma.getInt("id_turma");
+                                    prefs.edit().putInt("id_turma_selecionada", idTurmaConsulta).apply();
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Erro ao buscar turma padrão do usuário", e);
+                        }
+                    }
+
+                    // 1. Mesma regra do FichasService.buscarAcervoReceitasDaTurma no Web:
+                    // Busca agendamentos ativos ('A') da turma selecionada
+                    Set<Integer> fichasDatadas = new HashSet<>();
+                    String sqlAgendamentos;
+                    if (idTurmaConsulta != -1) {
+                        sqlAgendamentos = "SELECT DISTINCT id_ficha " +
+                                "FROM agendamento " +
+                                "WHERE id_turma = ? " +
+                                "AND situacao = 'A' " +
+                                "AND id_ficha IS NOT NULL";
+                    } else {
+                        sqlAgendamentos = "SELECT DISTINCT id_ficha " +
+                                "FROM agendamento " +
+                                "WHERE situacao = 'A' " +
+                                "AND id_ficha IS NOT NULL";
+                    }
+
+                    try (PreparedStatement stmtAg = conexao.prepareStatement(sqlAgendamentos)) {
+                        if (idTurmaConsulta != -1) {
+                            stmtAg.setInt(1, idTurmaConsulta);
+                        }
+                        try (ResultSet rsAg = stmtAg.executeQuery()) {
+                            while (rsAg.next()) {
+                                fichasDatadas.add(rsAg.getInt("id_ficha"));
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Erro ao buscar agendamentos da turma " + idTurmaConsulta, e);
+                    }
+
+                    // 2. Mesma regra do FichasRepository.findFichasAtivasByTurmaId no Web:
+                    // Fichas ativas ('A') vinculadas ao curso da turma selecionada
+                    String sql;
+                    if (idTurmaConsulta != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
+                                "FROM curso_ficha cf " +
+                                "INNER JOIN ficha f ON f.id_ficha = cf.id_ficha " +
+                                "INNER JOIN turma t ON t.id_curso = cf.id_curso " +
+                                "WHERE t.id_turma = ? " +
+                                "AND f.situacao = 'A' " +
+                                "ORDER BY f.nome_ficha ASC";
+                    } else if (idUsuario != -1) {
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, t.nome_turma " +
+                                "FROM curso_ficha cf " +
+                                "INNER JOIN ficha f ON f.id_ficha = cf.id_ficha " +
+                                "INNER JOIN turma t ON t.id_curso = cf.id_curso " +
+                                "INNER JOIN usuario_turma ut ON ut.id_turma = t.id_turma " +
+                                "WHERE ut.id_usuario = ? " +
+                                "AND f.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
                     } else {
-                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, t.nome_turma " +
+                        sql = "SELECT DISTINCT f.id_ficha, f.nome_ficha, f.preparo, f.categoria, '' AS nome_turma " +
                                 "FROM ficha f " +
-                                "LEFT JOIN turma t ON t.id_turma = f.id_turma " +
                                 "WHERE f.situacao = 'A' " +
                                 "ORDER BY f.nome_ficha ASC";
                     }
 
                     try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
-                        if (idUsuario != -1) {
+                        if (idTurmaConsulta != -1) {
+                            stmt.setInt(1, idTurmaConsulta);
+                        } else if (idUsuario != -1) {
                             stmt.setInt(1, idUsuario);
                         }
+
                         try (ResultSet rs = stmt.executeQuery()) {
                             while (rs.next()) {
                                 int idFicha = rs.getInt("id_ficha");
                                 String nome = rs.getString("nome_ficha");
                                 String preparo = rs.getString("preparo");
+                                String categoriaBanco = rs.getString("categoria");
                                 String turma = rs.getString("nome_turma");
-                                if (turma == null || turma.trim().isEmpty()) {
-                                    turma = "RECEITA GERAL";
+
+                                String subtitulo;
+                                if (categoriaBanco != null && !categoriaBanco.trim().isEmpty()) {
+                                    subtitulo = categoriaBanco.trim();
+                                } else if (turma != null && !turma.trim().isEmpty()) {
+                                    subtitulo = turma.trim();
+                                } else {
+                                    subtitulo = "RECEITA GERAL";
                                 }
 
                                 String status = fichasDatadas.contains(idFicha) ? "DATADA" : "DISPONÍVEL";
 
-                                resultado.add(new Receita(idFicha, nome, preparo, turma, status));
+                                resultado.add(new Receita(idFicha, nome, preparo, subtitulo, status));
                             }
                         }
                     }
                 }
 
-                if (conexaoOk && getContext() != null) {
-                    CacheManager.salvarJson(getContext(), chaveCache, serializarReceitas(resultado));
+                if (conexaoOk && !resultado.isEmpty() && idTurmaConsulta != -1 && getContext() != null) {
+                    String chaveSalvar = CacheManager.CHAVE_RECEITAS + "_v4_" + idUsuario + "_" + idTurmaConsulta;
+                    CacheManager.salvarJson(getContext(), chaveSalvar, serializarReceitas(resultado));
                 }
 
+                final int turmaFinal = idTurmaConsulta;
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
+                        if (!isAdded() || getContext() == null || requisicaoId != idRequisicaoAtual.get()) {
+                            encerrarAnimacaoRefresh();
+                            return;
+                        }
+                        ultimaTurmaCarregada = turmaFinal;
                         listaReceitas.clear();
                         listaReceitas.addAll(resultado);
                         atualizarSugestoesAutocomplete();
@@ -231,11 +340,13 @@ public class ListaReceitasFragment extends Fragment {
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e(TAG, "Erro ao carregar receitas", e);
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(() -> {
                         encerrarAnimacaoRefresh();
-                        Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        if (isAdded() && getContext() != null) {
+                            Toast.makeText(requireContext(), "Erro ao carregar receitas: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
                     });
                 }
             } finally {
@@ -456,6 +567,8 @@ public class ListaReceitasFragment extends Fragment {
     }
 
     private void mostrarReceitas(List<Receita> receitas) {
+        if (gridReceitas == null || txtQuantidadeReceitas == null || !isAdded() || getContext() == null) return;
+
         gridReceitas.removeAllViews();
 
         String textoQuantidade = "RESULTADO DOS FILTROS: <font color='#F59E0B'>"
@@ -513,6 +626,17 @@ public class ListaReceitasFragment extends Fragment {
         bundle.putInt("id_ficha", idFicha);
         NavController navController = Navigation.findNavController(requireView());
         navController.navigate(R.id.nav_detalhes_receita, bundle);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (sessaoPrefs != null) {
+            sessaoPrefs.unregisterOnSharedPreferenceChangeListener(turmaListener);
+        }
+        idRequisicaoAtual.incrementAndGet();
+        ultimaTurmaCarregada = Integer.MIN_VALUE;
+        swipeRefreshReceitas = null;
     }
 
     public static class Receita {
